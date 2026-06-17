@@ -1,0 +1,6 @@
+{
+  "name": "HelloMe",
+  "description": "让智能体完成复杂任务。由 Hermes 驱动，提供 GEO 品牌曝光检测、自媒体、销售获客智能体入口。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
