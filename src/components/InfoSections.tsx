@@ -15,49 +15,72 @@ export default function InfoSections() {
 
   const pricingTiers = [
     {
-      name: '单次任务包',
+      name: '体验版',
       price: '¥49',
-      unit: '/ 任务起',
-      desc: '适合独立创作者或单项品牌的快速冷启动体检检测。',
+      unit: '',
+      tokenAmount: '50,000 Token',
+      desc: '适合首次体验 GEO 检测、短内容生成、小规模任务。',
+      taskHint: '约可完成 3-5 次快速 GEO 检测',
       features: [
-        'GEO 主流大模型评分测试 (5次)',
-        '自媒体合规错字安全审计 (10次)',
-        'Hermes 基础过程控制日志面板',
-        '永久保存检测工单报告记录'
+        'GEO 快速检测',
+        '基础内容生成',
+        '任务过程可视化',
+        '结果保存 7 天',
       ],
       cta: '立即注册体验',
-      highlight: false
+      highlight: false,
     },
     {
-      name: '团队年度额度',
-      price: '¥1,699',
-      unit: '/ 年度',
-      desc: '适合数字创意工作室、公关或销售团队协作，额度全共享。',
+      name: '专业版',
+      price: '¥199',
+      unit: '/ 月',
+      tokenAmount: '500,000 Token / 月',
+      desc: '适合品牌运营、自媒体创作者、销售个人用户。',
+      taskHint: '约可完成 30-50 次标准任务',
       features: [
-        '全核 GEO 品牌可见度诊断体检 (无限次)',
-        '自媒体及PPT文档自动提纲 (200篇/月)',
-        '销售获客智能外联邮件生成 (500封/月)',
-        '专属多成员面板及历史比对分析图表',
-        'Hermes 智能流 DAG 流程优先渲染算力'
+        'GEO 标准检测',
+        '自媒体内容生成',
+        '销售话术生成',
+        '任务历史长期保存',
+        '报告导出',
       ],
-      cta: '开启团队订阅',
-      highlight: true
+      cta: '开启专业版',
+      highlight: true,
     },
     {
-      name: '企业定制方案',
-      price: '定制授权',
-      unit: '',
-      desc: '适合大型跨国企业及特定垂直品类头部大牌的私有化/API场景。',
+      name: '团队版',
+      price: '¥999',
+      unit: '/ 月',
+      tokenAmount: '3,000,000 Token / 月',
+      desc: '适合营销团队、销售团队、内容团队协作。',
+      taskHint: '约可完成 150-300 次标准任务',
       features: [
-        '本地化核心大模型(如私有Gemini、自定义大语言模型)数据对齐',
-        '自定义 Skill 添加（接入内部知识库及关系型数据库）',
-        '全域安全沙盒保证，无训练语料泄露风险',
-        '1对1 资深 GEO 营销架构专家部署与终身运维',
-        '支持高并发生产级别 API 接入'
+        '团队共享 Token',
+        '成员用量统计',
+        'GEO 深度检测',
+        '批量客户分析',
+        '团队任务共享',
+      ],
+      cta: '开启团队版',
+      highlight: false,
+    },
+    {
+      name: '企业定制',
+      price: '定制额度',
+      unit: '',
+      tokenAmount: '专属 Token 额度',
+      desc: '适合大型品牌、代理商、私有化部署或 API 场景。',
+      taskHint: '按企业用量定制',
+      features: [
+        '专属 Token 额度',
+        '自定义智能体',
+        '私有模型或工具接入',
+        '企业权限与白标报告',
+        '专属支持',
       ],
       cta: '联系专属顾问',
-      highlight: false
-    }
+      highlight: false,
+    },
   ];
 
   const faqs: FaqItem[] = [
@@ -114,14 +137,14 @@ export default function InfoSections() {
         <div className="w-full">
         <div className="text-center max-w-2xl mx-auto mb-12 lg:mb-16">
           <h2 className="text-3xl font-extrabold tracking-tight font-display text-black">
-            按任务付费，弹性灵活
+            按 Token 额度使用
           </h2>
           <p className="text-black/55 text-sm mt-2">
-            单次任务、团队额度、企业方案。无任何强制长期订阅捆绑，自由增减。
+            每次任务根据输入规模、检测深度和生成内容长度消耗 Token。开始任务前会显示预估消耗，完成后展示实际消耗。
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
           {pricingTiers.map((tier, i) => (
             <div
               key={i}
@@ -139,12 +162,14 @@ export default function InfoSections() {
                   <h3 className="text-lg font-bold text-black">{tier.name}</h3>
                   <p className="text-xs text-black/50 mt-1 leading-relaxed">{tier.desc}</p>
                 </div>
-                <div className="h-14 flex items-baseline gap-1 shrink-0">
-                  <span className="text-4xl font-extrabold text-black leading-none">{tier.price}</span>
-                  <span className="text-xs text-black/45 leading-none pb-1">
-                    {tier.unit || '\u00A0'}
-                  </span>
+                <div className="h-14 flex flex-col justify-end shrink-0 gap-0.5">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold text-black leading-none">{tier.price}</span>
+                    <span className="text-xs text-black/45 leading-none pb-1">{tier.unit || '\u00A0'}</span>
+                  </div>
+                  <span className="text-xs font-bold text-black/55">包含 {tier.tokenAmount}</span>
                 </div>
+                <p className="text-[11px] text-black/40 mt-2">{tier.taskHint}，实际消耗以任务复杂度为准</p>
                 <ul className="flex-1 space-y-3 pt-4">
                   {tier.features.map((f, fi) => (
                     <li key={fi} className="flex gap-2.5 text-xs text-black/70 items-start">
@@ -184,7 +209,7 @@ export default function InfoSections() {
                 让第一个智能体开始工作
               </h2>
               <p className="text-sm text-black/60 leading-relaxed">
-                现在注册立即获赠 <strong className="text-black">3 次免费 GEO 全通道诊断体检额度</strong>。输入您的企业邮箱，我们的 Hermes 营销架构师将在一小时内为您发送定制化的 AI 提及率分析报告和优化说明。
+                现在注册立即获赠 <strong className="text-black">20,000 Token</strong>，可用于体验 GEO 检测、内容生成和销售线索分析。
               </p>
             </div>
             <div>

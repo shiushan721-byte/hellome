@@ -1,6 +1,11 @@
 import type { GeoResultData } from '../types';
 import type { Task } from '../types/workbench';
 import { getTask, saveTask } from './taskStore';
+import {
+  computeActualTokenUsage,
+  distributeStepTokens,
+} from './tokenBilling';
+import { settleTaskTokens } from './usageStore';
 
 function nowTime(): string {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -19,10 +24,17 @@ function addLog(task: Task, message: string, level: Task['logs'][0]['level'] = '
   });
 }
 
-function setStepStatus(task: Task, stepIndex: number, status: Task['steps'][0]['status']): void {
+function setStepStatus(
+  task: Task,
+  stepIndex: number,
+  status: Task['steps'][0]['status'],
+  tokenUsed?: number,
+): void {
   task.steps = task.steps.map((s, i) => {
-    if (i < stepIndex) return { ...s, status: 'completed' };
-    if (i === stepIndex) return { ...s, status };
+    if (i < stepIndex) return { ...s, status: 'completed' as const };
+    if (i === stepIndex) {
+      return { ...s, status, ...(tokenUsed != null ? { tokenUsed } : {}) };
+    }
     return s;
   });
 }
@@ -43,6 +55,28 @@ async function fetchGeoResult(task: Task): Promise<GeoResultData> {
   return json.data as GeoResultData;
 }
 
+function finalizeTask(task: Task, startMs: number, actualTotal: number, stepTokens: number[]): void {
+  task.steps = task.steps.map((s, i) => ({
+    ...s,
+    tokenUsed: stepTokens[i] ?? s.tokenUsed,
+  }));
+  task.tokenUsed = actualTotal;
+  task.currentTokenUsed = actualTotal;
+  task.completedAt = new Date().toISOString();
+  task.durationMs = Date.now() - startMs;
+  task.status = 'completed';
+  addLog(task, `任务完成，实际消耗 ${actualTotal.toLocaleString('zh-CN')} Token`, 'success');
+  saveTask(task);
+  settleTaskTokens({
+    taskId: task.id,
+    taskName: task.name,
+    agent: 'GEO 智能体',
+    estimatedTokenMin: task.estimatedTokenMin,
+    estimatedTokenMax: task.estimatedTokenMax,
+    tokenUsed: actualTotal,
+  });
+}
+
 const running = new Set<string>();
 
 export function isTaskRunning(id: string): boolean {
@@ -60,11 +94,21 @@ export async function runGeoTask(taskId: string): Promise<void> {
     return;
   }
 
+  const actualTotal = computeActualTokenUsage(
+    taskId,
+    task.estimatedTokenMin,
+    task.estimatedTokenMax,
+  );
+  const stepTokens = distributeStepTokens(actualTotal, task.steps.length);
+  let accumulated = 0;
+
   task.status = 'running';
   task.logs = [];
   task.result = undefined;
   task.pendingConfirmation = undefined;
-  task.steps = task.steps.map((s) => ({ ...s, status: 'pending' }));
+  task.tokenUsed = 0;
+  task.currentTokenUsed = 0;
+  task.steps = task.steps.map((s) => ({ ...s, status: 'pending' as const, tokenUsed: undefined }));
   saveTask(task);
 
   const stepMessages: string[][] = [
@@ -98,12 +142,18 @@ export async function runGeoTask(taskId: string): Promise<void> {
       for (const msg of messages) {
         await delay(i === 1 ? 600 : 450);
         task = getTask(taskId)!;
+        accumulated = stepTokens.slice(0, i).reduce((a, b) => a + b, 0);
+        const partial = Math.round(accumulated + stepTokens[i] * 0.6);
+        task.currentTokenUsed = partial;
         addLog(task, msg, 'info');
         saveTask(task);
       }
 
       if (i === 4) {
         task = getTask(taskId)!;
+        accumulated = stepTokens.slice(0, i + 1).reduce((a, b) => a + b, 0);
+        task.currentTokenUsed = accumulated;
+        setStepStatus(task, i, 'completed', stepTokens[i]);
         task.status = 'waiting_confirmation';
         task.pendingConfirmation = {
           title: '访问公开网页确认',
@@ -118,23 +168,33 @@ export async function runGeoTask(taskId: string): Promise<void> {
       }
 
       task = getTask(taskId)!;
-      setStepStatus(task, i, 'completed');
+      accumulated = stepTokens.slice(0, i + 1).reduce((a, b) => a + b, 0);
+      task.currentTokenUsed = accumulated;
+      setStepStatus(task, i, 'completed', stepTokens[i]);
+      addLog(task, `${task.steps[i].name}：${stepTokens[i].toLocaleString('zh-CN')} Token`, 'info');
       saveTask(task);
     }
 
     const result = apiPromise ? await apiPromise : await fetchGeoResult(task);
     task = getTask(taskId)!;
     task.result = result;
-    task.status = 'completed';
-    task.completedAt = new Date().toISOString();
-    task.durationMs = Date.now() - startMs;
-    addLog(task, 'GEO 报告已生成，任务完成', 'success');
-    saveTask(task);
+    finalizeTask(task, startMs, actualTotal, stepTokens);
   } catch (err) {
     task = getTask(taskId)!;
     task.status = 'failed';
     addLog(task, err instanceof Error ? err.message : '任务执行失败', 'error');
     saveTask(task);
+    if (task.currentTokenUsed && task.currentTokenUsed > 0) {
+      settleTaskTokens({
+        taskId: task.id,
+        taskName: task.name,
+        agent: 'GEO 智能体',
+        estimatedTokenMin: task.estimatedTokenMin,
+        estimatedTokenMax: task.estimatedTokenMax,
+        tokenUsed: task.currentTokenUsed,
+        status: 'failed',
+      });
+    }
   } finally {
     running.delete(taskId);
   }
@@ -143,6 +203,13 @@ export async function runGeoTask(taskId: string): Promise<void> {
 export async function resumeGeoTaskAfterConfirmation(taskId: string): Promise<void> {
   const task = getTask(taskId);
   if (!task || task.status !== 'waiting_confirmation') return;
+
+  const actualTotal = computeActualTokenUsage(
+    taskId,
+    task.estimatedTokenMin,
+    task.estimatedTokenMax,
+  );
+  const stepTokens = distributeStepTokens(actualTotal, task.steps.length);
 
   task.pendingConfirmation = undefined;
   task.status = 'running';
@@ -161,21 +228,18 @@ export async function resumeGeoTaskAfterConfirmation(taskId: string): Promise<vo
 
       await delay(500);
       current = getTask(taskId)!;
-      addLog(current, `完成：${current.steps[i].name}`, 'info');
-      setStepStatus(current, i, 'completed');
+      const accumulated = stepTokens.slice(0, i + 1).reduce((a, b) => a + b, 0);
+      current.currentTokenUsed = accumulated;
+      setStepStatus(current, i, 'completed', stepTokens[i]);
+      addLog(current, `${current.steps[i].name}：${stepTokens[i].toLocaleString('zh-CN')} Token`, 'info');
       saveTask(current);
       await delay(300);
     }
 
-    const input = task.input!;
     const result = await fetchGeoResult(task);
     let final = getTask(taskId)!;
     final.result = result;
-    final.status = 'completed';
-    final.completedAt = new Date().toISOString();
-    final.durationMs = Date.now() - startMs;
-    addLog(final, 'GEO 报告已生成，任务完成', 'success');
-    saveTask(final);
+    finalizeTask(final, startMs, actualTotal, stepTokens);
   } catch (err) {
     const failed = getTask(taskId)!;
     failed.status = 'failed';

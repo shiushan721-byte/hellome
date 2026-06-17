@@ -1,3 +1,5 @@
+import { initUsageForNewUser } from './usageStore';
+
 const AUTH_KEY = 'hellome_auth';
 const USER_KEY = 'hellome_user';
 
@@ -58,6 +60,7 @@ export function loginWithPhone(phone: string): void {
       workspace: '个人空间',
     }),
   );
+  initUsageForNewUser();
 }
 
 export function logout(): void {

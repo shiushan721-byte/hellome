@@ -37,6 +37,11 @@ export default function TaskTimeline({ steps }: TaskTimelineProps) {
             {step.status === 'active' && (
               <p className="text-[11px] text-black/45 mt-0.5">执行中…</p>
             )}
+            {step.tokenUsed != null && step.tokenUsed > 0 && (
+              <p className="text-[11px] font-mono text-black/40 mt-0.5">
+                {step.tokenUsed.toLocaleString('zh-CN')} Token
+              </p>
+            )}
           </div>
         </li>
       ))}

@@ -13,10 +13,13 @@ export type StepStatus = 'pending' | 'active' | 'completed' | 'failed';
 
 export type DetectionDepth = 'quick' | 'standard' | 'deep';
 
+export type LedgerStatus = 'reserved' | 'settled' | 'refunded' | 'failed';
+
 export interface TaskStep {
   id: string;
   name: string;
   status: StepStatus;
+  tokenUsed?: number;
 }
 
 export interface HermesLogEntry {
@@ -43,8 +46,10 @@ export interface Task {
   createdAt: string;
   completedAt?: string;
   durationMs?: number;
-  costType: string;
-  costAmount: number;
+  estimatedTokenMin: number;
+  estimatedTokenMax: number;
+  tokenUsed: number;
+  currentTokenUsed?: number;
   input?: GeoTaskInput;
   steps: TaskStep[];
   logs: HermesLogEntry[];
@@ -59,22 +64,22 @@ export interface Task {
 export interface UsageSnapshot {
   planName: string;
   tokenBalance: number;
-  monthlySpend: number;
-  geoUsed: number;
-  geoLimit: number;
-  contentUsed: number;
-  contentLimit: number;
-  salesUsed: number;
-  salesLimit: number;
+  monthlyTokenLimit: number;
+  monthlyTokenUsed: number;
+  resetAt: string;
+  lowBalanceThreshold: number;
 }
 
 export interface UsageLedgerEntry {
   id: string;
   time: string;
+  taskId: string;
   taskName: string;
   agent: string;
-  costType: string;
-  costAmount: number;
+  estimatedTokenMin: number;
+  estimatedTokenMax: number;
+  tokenUsed: number;
+  status: LedgerStatus;
 }
 
 export interface AuthStatus {
@@ -108,9 +113,35 @@ export const DEFAULT_GEO_MODELS = [
 
 export const DEPTH_CONFIG: Record<
   DetectionDepth,
-  { label: string; desc: string; duration: string; cost: number }
+  {
+    label: string;
+    desc: string;
+    duration: string;
+    estimatedTokenMin: number;
+    estimatedTokenMax: number;
+  }
 > = {
-  quick: { label: '快速检测', desc: '约 1-2 分钟，消耗低', duration: '1-2 分钟', cost: 1 },
-  standard: { label: '标准检测', desc: '约 3-5 分钟，推荐', duration: '3-5 分钟', cost: 1 },
-  deep: { label: '深度检测', desc: '约 8-15 分钟，结果更完整', duration: '8-15 分钟', cost: 2 },
+  quick: {
+    label: '快速检测',
+    desc: '约 1-2 分钟，约 5,000-10,000 Token',
+    duration: '1-2 分钟',
+    estimatedTokenMin: 5000,
+    estimatedTokenMax: 10000,
+  },
+  standard: {
+    label: '标准检测',
+    desc: '约 3-5 分钟，约 12,000-25,000 Token',
+    duration: '3-5 分钟',
+    estimatedTokenMin: 12000,
+    estimatedTokenMax: 25000,
+  },
+  deep: {
+    label: '深度检测',
+    desc: '约 8-15 分钟，约 30,000-80,000 Token',
+    duration: '8-15 分钟',
+    estimatedTokenMin: 30000,
+    estimatedTokenMax: 80000,
+  },
 };
+
+export const SIGNUP_BONUS_TOKENS = 20_000;

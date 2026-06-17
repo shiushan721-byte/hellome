@@ -8,6 +8,7 @@ import TaskStatusBadge, {
   formatDuration,
   formatTime,
 } from '../../components/app/tasks/TaskStatusBadge';
+import { formatTokenRange } from '../../lib/tokenBilling';
 import type { TaskStatus } from '../../types/workbench';
 
 const filters: { value: TaskStatus | 'all'; label: string }[] = [
@@ -68,7 +69,7 @@ export default function TasksPage() {
                 <th className="pb-3 pr-4">状态</th>
                 <th className="pb-3 pr-4 hidden md:table-cell">创建时间</th>
                 <th className="pb-3 pr-4 hidden lg:table-cell">耗时</th>
-                <th className="pb-3 pr-4 hidden lg:table-cell">消耗</th>
+                  <th className="pb-3 pr-4 hidden lg:table-cell">Token 消耗</th>
                 <th className="pb-3">操作</th>
               </tr>
             </thead>
@@ -86,8 +87,10 @@ export default function TasksPage() {
                   <td className="py-3 pr-4 text-xs text-black/45 hidden lg:table-cell">
                     {formatDuration(task.durationMs)}
                   </td>
-                  <td className="py-3 pr-4 text-xs text-black/45 hidden lg:table-cell">
-                    {task.costAmount} {task.costType}
+                  <td className="py-3 pr-4 text-xs text-black/45 hidden lg:table-cell font-mono">
+                    {task.tokenUsed > 0
+                      ? task.tokenUsed.toLocaleString('zh-CN')
+                      : formatTokenRange({ min: task.estimatedTokenMin, max: task.estimatedTokenMax })}
                   </td>
                   <td className="py-3">
                     <div className="flex items-center gap-1">

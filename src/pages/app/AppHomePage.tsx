@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Compass, PenLine, Users } from 'lucide-react';
 import { getTasks, subscribeTasks } from '../../lib/taskStore';
-import { getUsage } from '../../lib/usageStore';
+import { getUsage, getLedger } from '../../lib/usageStore';
+import { formatToken, estimateStandardGeoTaskCount } from '../../lib/tokenBilling';
 import TaskStatusBadge, { agentLabel, formatTime } from '../../components/app/tasks/TaskStatusBadge';
 import { useSyncExternalStore } from 'react';
 
@@ -20,6 +21,10 @@ export default function AppHomePage() {
   const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
   const usage = getUsage();
   const recent = tasks.slice(0, 5);
+  const estTasks = estimateStandardGeoTaskCount(usage.tokenBalance);
+  const last7d = getLedger()
+    .filter((e) => Date.now() - new Date(e.time).getTime() < 7 * 86400000)
+    .reduce((sum, e) => sum + e.tokenUsed, 0);
 
   const handleStart = () => {
     navigate('/app/agents/geo', { state: { prompt } });
@@ -109,11 +114,14 @@ export default function AppHomePage() {
         <section>
           <h2 className="text-xs font-bold uppercase tracking-wider text-black/45 mb-3">用量概览</h2>
           <div className="grid grid-cols-2 gap-3">
-            <UsageCard label="Token 余额" value={`¥${usage.tokenBalance.toFixed(2)}`} />
-            <UsageCard label="本月消耗" value={`¥${usage.monthlySpend.toFixed(2)}`} />
-            <UsageCard label="GEO 检测" value={`${usage.geoUsed} / ${usage.geoLimit}`} />
-            <UsageCard label="内容生成" value={`${usage.contentUsed} / ${usage.contentLimit}`} />
+            <UsageCard label="剩余 Token" value={formatToken(usage.tokenBalance)} />
+            <UsageCard label="本月已用" value={formatToken(usage.monthlyTokenUsed)} />
+            <UsageCard label="本月总额度" value={formatToken(usage.monthlyTokenLimit)} />
+            <UsageCard label="近 7 天消耗" value={formatToken(last7d)} />
           </div>
+          <p className="text-[11px] text-black/40 mt-3">
+            预计还可完成约 {estTasks} 次标准 GEO 检测（仅供参考，实际以任务复杂度为准）
+          </p>
           <button
             type="button"
             onClick={() => navigate('/app/usage')}
@@ -125,7 +133,7 @@ export default function AppHomePage() {
       </div>
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <AgentShortcut icon={Compass} title="GEO 智能体" desc="品牌 AI 可见度检测" to="/app/agents/geo" />
+        <AgentShortcut icon={Compass} title="GEO 智能体" desc="约 8,000-30,000 Token" to="/app/agents/geo" />
         <AgentShortcut icon={PenLine} title="自媒体智能体" desc="即将开放" to="/app/agents" disabled />
         <AgentShortcut icon={Users} title="销售获客智能体" desc="即将开放" to="/app/agents" disabled />
       </section>

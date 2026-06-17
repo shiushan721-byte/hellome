@@ -1,5 +1,5 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, Shield } from 'lucide-react';
 import {
   DEFAULT_GEO_MODELS,
@@ -8,8 +8,9 @@ import {
   type GeoTaskInput,
 } from '../../types/workbench';
 import { createGeoTask } from '../../lib/taskStore';
-import { consumeGeo, getUsage } from '../../lib/usageStore';
+import { canAffordTask, getUsage } from '../../lib/usageStore';
 import { runGeoTask } from '../../lib/geoTaskRunner';
+import { estimateGeoTokens, formatToken, formatTokenRange } from '../../lib/tokenBilling';
 
 export default function GeoAgentPage() {
   const navigate = useNavigate();
@@ -25,7 +26,23 @@ export default function GeoAgentPage() {
   const [error, setError] = useState('');
 
   const usage = getUsage();
-  const cost = DEPTH_CONFIG[depth].cost;
+
+  const draftInput = useMemo(
+    (): GeoTaskInput => ({
+      brandName: brandName.trim(),
+      websiteUrl: websiteUrl.trim(),
+      keywords: keywords.trim(),
+      competitors: competitors.trim(),
+      models,
+      depth,
+    }),
+    [brandName, websiteUrl, keywords, competitors, models, depth],
+  );
+
+  const estimate = useMemo(() => estimateGeoTokens(draftInput), [draftInput]);
+  const affordable = canAffordTask(estimate.max, usage);
+  const remainMin = Math.max(0, usage.tokenBalance - estimate.max);
+  const remainMax = Math.max(0, usage.tokenBalance - estimate.min);
 
   const toggleModel = (m: string) => {
     setModels((prev) =>
@@ -49,22 +66,12 @@ export default function GeoAgentPage() {
       setError('请至少选择一个检测模型');
       return;
     }
-    if (usage.geoUsed + cost > usage.geoLimit) {
-      setError('GEO 检测额度不足，请前往用量页面查看');
+    if (!affordable) {
+      setError('当前余额不足以启动该任务，请充值或降低检测深度');
       return;
     }
 
-    const input: GeoTaskInput = {
-      brandName: brandName.trim(),
-      websiteUrl: websiteUrl.trim(),
-      keywords: keywords.trim(),
-      competitors: competitors.trim(),
-      models,
-      depth,
-    };
-
-    const task = createGeoTask(input);
-    consumeGeo(cost, task.name);
+    const task = createGeoTask(draftInput);
     runGeoTask(task.id);
     navigate(`/app/tasks/${task.id}`);
   };
@@ -168,18 +175,52 @@ export default function GeoAgentPage() {
           </div>
         </Field>
 
-        <div className="flex items-center justify-between pt-2 text-xs text-black/50">
-          <span>预计消耗：{cost} 次 GEO 检测</span>
-          <span>剩余：{usage.geoLimit - usage.geoUsed} 次</span>
+        <div className="p-4 bg-[#F2F0ED]/80 border border-black/8 space-y-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-black/50">预计消耗</span>
+            <span className="font-bold font-mono">{formatTokenRange(estimate)} Token</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-black/50">当前余额</span>
+            <span className="font-mono">{formatToken(usage.tokenBalance)} Token</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-black/50">预计完成后剩余</span>
+            <span className="font-mono text-black/70">
+              约 {formatToken(remainMin)}-{formatToken(remainMax)} Token
+            </span>
+          </div>
+          <p className="text-[11px] text-black/40 pt-1 leading-relaxed">
+            实际消耗会根据网页内容、模型调用次数和生成结果长度浮动。
+          </p>
         </div>
 
         {error && <p className="text-xs text-red-600">{error}</p>}
 
+        {!affordable && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setDepth('quick')}
+              className="px-3 py-2 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
+            >
+              降低为快速检测
+            </button>
+            <Link
+              to="/app/usage"
+              className="px-3 py-2 text-xs font-bold bg-black text-white hover:bg-black/85"
+            >
+              充值 Token
+            </Link>
+          </div>
+        )}
+
         <button
           type="submit"
-          className="w-full py-3.5 bg-black text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-black/85"
+          disabled={!affordable}
+          className="w-full py-3.5 bg-black text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-black/85 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          开始检测
+          开始任务
           <ArrowRight className="w-4 h-4" />
         </button>
       </form>

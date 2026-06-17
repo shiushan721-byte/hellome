@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, ChevronDown, LogOut } from 'lucide-react';
 import { getUser, logout } from '../../lib/auth';
-import { getUsage } from '../../lib/usageStore';
+import { getUsage, isLowBalance } from '../../lib/usageStore';
+import { formatToken } from '../../lib/tokenBilling';
 
 export default function Topbar() {
   const navigate = useNavigate();
   const user = getUser();
   const usage = getUsage();
+  const low = isLowBalance(usage);
 
   const handleLogout = () => {
     logout();
@@ -34,13 +36,18 @@ export default function Topbar() {
           <Bell className="w-4 h-4" />
         </button>
 
-        <div className="hidden md:flex items-center gap-2 text-xs">
-          <span className="text-black/45">Token</span>
-          <span className="font-bold font-mono">¥{usage.tokenBalance.toFixed(2)}</span>
-          <span className="text-black/25">|</span>
-          <span className="text-black/45">GEO</span>
-          <span className="font-bold">{usage.geoUsed}/{usage.geoLimit}</span>
-        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/app/usage')}
+          className={`hidden md:flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border transition-colors ${
+            low
+              ? 'border-amber-300 bg-amber-50 text-amber-800'
+              : 'border-black/8 bg-[#F2F0ED]/50 text-black/70 hover:border-black/15'
+          }`}
+        >
+          <span className="text-black/45">剩余 Token</span>
+          <span className="font-bold font-mono">{formatToken(usage.tokenBalance)}</span>
+        </button>
 
         <div className="relative group">
           <button

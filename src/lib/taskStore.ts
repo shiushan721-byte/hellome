@@ -1,5 +1,6 @@
 import type { GeoTaskInput, Task, TaskStep } from '../types/workbench';
 import { GEO_STEPS } from '../types/workbench';
+import { estimateGeoTokens } from './tokenBilling';
 
 const TASKS_KEY = 'hellome_tasks';
 const EMPTY_TASKS: Task[] = [];
@@ -9,6 +10,27 @@ const listeners = new Set<Listener>();
 
 let snapshot: Task[] = EMPTY_TASKS;
 let snapshotRaw: string | null = '__init__';
+
+function normalizeTask(raw: Task & Record<string, unknown>): Task {
+  const est =
+    raw.estimatedTokenMin != null
+      ? { min: Number(raw.estimatedTokenMin), max: Number(raw.estimatedTokenMax) }
+      : raw.input
+        ? estimateGeoTokens(raw.input)
+        : { min: 12000, max: 25000 };
+
+  return {
+    ...raw,
+    estimatedTokenMin: est.min,
+    estimatedTokenMax: est.max,
+    tokenUsed: Number(raw.tokenUsed ?? 0),
+    currentTokenUsed: raw.currentTokenUsed != null ? Number(raw.currentTokenUsed) : undefined,
+    steps: (raw.steps ?? []).map((s) => ({
+      ...s,
+      tokenUsed: s.tokenUsed != null ? Number(s.tokenUsed) : undefined,
+    })),
+  };
+}
 
 function readTasksFromStorage(): Task[] {
   const raw = localStorage.getItem(TASKS_KEY);
@@ -22,7 +44,7 @@ function readTasksFromStorage(): Task[] {
 
   try {
     const parsed = JSON.parse(raw) as Task[];
-    snapshot = Array.isArray(parsed) ? parsed : EMPTY_TASKS;
+    snapshot = Array.isArray(parsed) ? parsed.map((t) => normalizeTask(t as Task & Record<string, unknown>)) : EMPTY_TASKS;
   } catch {
     snapshot = EMPTY_TASKS;
   }
@@ -71,14 +93,17 @@ function buildSteps(): TaskStep[] {
 }
 
 export function createGeoTask(input: GeoTaskInput): Task {
+  const est = estimateGeoTokens(input);
   const task: Task = {
     id: `task-${Date.now()}`,
     name: `${input.brandName} GEO 可见度检测`,
     agentType: 'geo',
     status: 'running',
     createdAt: new Date().toISOString(),
-    costType: 'GEO 检测次数',
-    costAmount: input.depth === 'deep' ? 2 : 1,
+    estimatedTokenMin: est.min,
+    estimatedTokenMax: est.max,
+    tokenUsed: 0,
+    currentTokenUsed: 0,
     input,
     steps: buildSteps(),
     logs: [],

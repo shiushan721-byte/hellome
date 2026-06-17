@@ -1,0 +1,286 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  Compass,
+  PenLine,
+  Users,
+  BarChart3,
+  Mail,
+  FileText,
+  Globe,
+  Sparkles,
+  Target,
+  LineChart,
+  MessageSquare,
+  Presentation,
+} from 'lucide-react';
+
+export type AgentCategory =
+  | 'all'
+  | 'geo'
+  | 'content'
+  | 'sales'
+  | 'office'
+  | 'growth'
+  | 'data'
+  | 'tech';
+
+export interface AgentItem {
+  id: string;
+  name: string;
+  desc: string;
+  tokenRange: string;
+  category: AgentCategory;
+  creator: string;
+  creatorAvatar: string;
+  heat: string;
+  likes: string;
+  icon: LucideIcon;
+  iconBg: string;
+  iconColor: string;
+  available: boolean;
+  path: string;
+  badge?: string;
+}
+
+export const CATEGORIES: { id: AgentCategory; label: string }[] = [
+  { id: 'all', label: '全部' },
+  { id: 'geo', label: 'GEO 营销' },
+  { id: 'content', label: '内容创作' },
+  { id: 'sales', label: '销售获客' },
+  { id: 'office', label: '办公协同' },
+  { id: 'growth', label: '品牌增长' },
+  { id: 'data', label: '数据分析' },
+  { id: 'tech', label: '技术工程' },
+];
+
+export const RANKING_SECTIONS = [
+  {
+    id: 'picks',
+    title: '为你推荐',
+    subtitle: 'Personal Picks',
+    gradient: 'from-amber-50 via-yellow-50/80 to-orange-50',
+    accent: 'text-amber-500',
+    decor: '👍',
+    agentIds: ['geo', 'media', 'schema-optimizer'],
+  },
+  {
+    id: 'popular',
+    title: '最多使用',
+    subtitle: 'Most Used',
+    gradient: 'from-orange-50 via-rose-50/60 to-red-50',
+    accent: 'text-orange-500',
+    decor: '🔥',
+    agentIds: ['geo', 'sales', 'competitor-scan'],
+  },
+  {
+    id: 'official',
+    title: '官方精选',
+    subtitle: 'Official Picks',
+    gradient: 'from-sky-50 via-blue-50/70 to-indigo-50',
+    accent: 'text-blue-500',
+    decor: '⭐',
+    agentIds: ['geo', 'hermes-report', 'faq-generator'],
+  },
+] as const;
+
+export const AGENTS: AgentItem[] = [
+  {
+    id: 'geo',
+    name: 'GEO 智能体',
+    desc: '检测品牌在 DeepSeek、豆包、Kimi 等 AI 回答里的可见度与推荐率。',
+    tokenRange: '8,000-30,000 Token',
+    category: 'geo',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '2.7w',
+    likes: '1.7k',
+    icon: Compass,
+    iconBg: 'bg-sky-100',
+    iconColor: 'text-sky-600',
+    available: true,
+    path: '/app/agents/geo',
+    badge: '官方',
+  },
+  {
+    id: 'media',
+    name: '自媒体小助手',
+    desc: '公众号、小红书内容起草与发布前合规体检，一键生成爆款标题。',
+    tokenRange: '2,000-20,000 Token',
+    category: 'content',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '1.9w',
+    likes: '1.2k',
+    icon: PenLine,
+    iconBg: 'bg-rose-100',
+    iconColor: 'text-rose-600',
+    available: false,
+    path: '/app/agents',
+    badge: '即将开放',
+  },
+  {
+    id: 'sales',
+    name: '销售获客智能体',
+    desc: '客户画像精准定位，私信与邮件跟进闭环，批量外联脚本生成。',
+    tokenRange: '3,000-8,000 Token',
+    category: 'sales',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '1.5w',
+    likes: '980',
+    icon: Users,
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-600',
+    available: false,
+    path: '/app/agents',
+    badge: '即将开放',
+  },
+  {
+    id: 'schema-optimizer',
+    name: 'Schema 结构化优化',
+    desc: '诊断官网 JSON-LD 标记，输出大模型友好的结构化数据包。',
+    tokenRange: '5,000-15,000 Token',
+    category: 'geo',
+    creator: 'Hermes',
+    creatorAvatar: 'He',
+    heat: '8.4k',
+    likes: '620',
+    icon: Globe,
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-600',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'competitor-scan',
+    name: '竞品占位分析',
+    desc: '模拟 20+ 对比问答场景，识别竞品在 AI 回答中的抢占权重。',
+    tokenRange: '10,000-25,000 Token',
+    category: 'geo',
+    creator: 'Hermes',
+    creatorAvatar: 'He',
+    heat: '6.2k',
+    likes: '540',
+    icon: Target,
+    iconBg: 'bg-orange-100',
+    iconColor: 'text-orange-600',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'hermes-report',
+    name: 'Hermes 诊断报告',
+    desc: '全通道 AI 提及率分析，4.5 秒产出可视化过程日志与工单。',
+    tokenRange: '12,000-30,000 Token',
+    category: 'data',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '5.1k',
+    likes: '480',
+    icon: BarChart3,
+    iconBg: 'bg-indigo-100',
+    iconColor: 'text-indigo-600',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'faq-generator',
+    name: 'FAQ 批量生成',
+    desc: '基于品牌语料自动生成 FAQ 与 LLMs.txt，提升 AI 召回友好度。',
+    tokenRange: '3,000-8,000 Token',
+    category: 'content',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '4.8k',
+    likes: '410',
+    icon: MessageSquare,
+    iconBg: 'bg-cyan-100',
+    iconColor: 'text-cyan-600',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'ppt-outline',
+    name: 'PPT 大纲智能体',
+    desc: '输入主题自动生成演讲结构、分页要点与配图建议。',
+    tokenRange: '15,000-50,000 Token',
+    category: 'office',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '3.6k',
+    likes: '390',
+    icon: Presentation,
+    iconBg: 'bg-amber-100',
+    iconColor: 'text-amber-700',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'outreach-mail',
+    name: '外联开发信',
+    desc: 'B2B 买家决策链痛点提取，多段式精细化跟进邮件生成。',
+    tokenRange: '1,500-4,000 Token',
+    category: 'sales',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '3.2k',
+    likes: '350',
+    icon: Mail,
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-600',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'copy-audit',
+    name: '文案合规审计',
+    desc: '发布前政治敏感、错别字与品牌禁忌一键扫描，降低踩雷风险。',
+    tokenRange: '2,000-6,000 Token',
+    category: 'content',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '2.9k',
+    likes: '310',
+    icon: FileText,
+    iconBg: 'bg-pink-100',
+    iconColor: 'text-pink-600',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'sov-tracker',
+    name: '声量份额追踪',
+    desc: '追踪核心竞品在 AI 首推词中的占位份额比例 (SoV)。',
+    tokenRange: '8,000-20,000 Token',
+    category: 'growth',
+    creator: 'Hermes',
+    creatorAvatar: 'He',
+    heat: '2.4k',
+    likes: '280',
+    icon: LineChart,
+    iconBg: 'bg-lime-100',
+    iconColor: 'text-lime-700',
+    available: false,
+    path: '/app/agents',
+  },
+  {
+    id: 'prompt-lab',
+    name: '提示词实验室',
+    desc: '针对垂直场景测试与迭代提示词，输出可复用 Skill 模板。',
+    tokenRange: '2,000-8,000 Token',
+    category: 'tech',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '2.1k',
+    likes: '240',
+    icon: Sparkles,
+    iconBg: 'bg-fuchsia-100',
+    iconColor: 'text-fuchsia-600',
+    available: false,
+    path: '/app/agents',
+  },
+];
+
+export function getAgentById(id: string): AgentItem | undefined {
+  return AGENTS.find((a) => a.id === id);
+}

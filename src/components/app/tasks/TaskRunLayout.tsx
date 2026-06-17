@@ -3,8 +3,9 @@ import TaskTimeline from './TaskTimeline';
 import HermesLogPanel from './HermesLogPanel';
 import GeoReportPanel from './GeoReportPanel';
 import ResultActionBar from './ResultActionBar';
-import TaskStatusBadge from './TaskStatusBadge';
+import TaskStatusBadge, { formatDuration } from './TaskStatusBadge';
 import ConfirmationNode from './ConfirmationNode';
+import { formatToken, formatTokenRange } from '../../../lib/tokenBilling';
 
 interface TaskRunLayoutProps {
   task: Task;
@@ -36,6 +37,35 @@ export default function TaskRunLayout({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0">
         {/* Left: execution process */}
         <div className="border-b lg:border-b-0 lg:border-r border-black/8 p-6 overflow-y-auto custom-scrollbar space-y-6">
+          <div className="p-3 bg-[#F2F0ED]/80 border border-black/8 space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-black/45">预计消耗</span>
+              <span className="font-mono font-bold">
+                {formatTokenRange({ min: task.estimatedTokenMin, max: task.estimatedTokenMax })} Token
+              </span>
+            </div>
+            {(task.status === 'running' || task.status === 'waiting_confirmation') && (
+              <div className="flex justify-between">
+                <span className="text-black/45">当前已消耗</span>
+                <span className="font-mono font-bold">
+                  {formatToken(task.currentTokenUsed ?? 0)} Token
+                </span>
+              </div>
+            )}
+            {task.status === 'completed' && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-black/45">实际消耗</span>
+                  <span className="font-mono font-bold">{formatToken(task.tokenUsed)} Token</span>
+                </div>
+                <div className="flex justify-between text-black/40">
+                  <span>完成耗时</span>
+                  <span>{formatDuration(task.durationMs)}</span>
+                </div>
+              </>
+            )}
+          </div>
+
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-black/45 mb-2">
               当前步骤
@@ -78,6 +108,18 @@ export default function TaskRunLayout({
 
           {task.result ? (
             <>
+              {task.status === 'completed' && (
+                <div className="mb-4 p-3 bg-emerald-50/80 border border-emerald-200 text-xs space-y-1">
+                  <p>
+                    <span className="text-black/50">实际消耗 </span>
+                    <span className="font-bold font-mono">{formatToken(task.tokenUsed)} Token</span>
+                    <span className="text-black/40">
+                      {' '}
+                      · 预估 {formatTokenRange({ min: task.estimatedTokenMin, max: task.estimatedTokenMax })}
+                    </span>
+                  </p>
+                </div>
+              )}
               <GeoReportPanel result={task.result} brandName={task.input?.brandName} />
               <ResultActionBar result={task.result} onRerun={onRerun} />
               {copyHint && (
