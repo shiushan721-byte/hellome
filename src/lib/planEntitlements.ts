@@ -5,25 +5,21 @@ const PLANS: Record<string, PlanEntitlements> = {
     planName: '体验版',
     monthlyTokenLimit: 50_000,
     enabledAgentLimit: 1,
-    monthlyInstantSwapLimit: 1,
   },
   专业版: {
     planName: '专业版',
     monthlyTokenLimit: 500_000,
     enabledAgentLimit: 3,
-    monthlyInstantSwapLimit: 1,
   },
   团队版: {
     planName: '团队版',
     monthlyTokenLimit: 3_000_000,
     enabledAgentLimit: 8,
-    monthlyInstantSwapLimit: 1,
   },
   企业定制: {
     planName: '企业定制',
     monthlyTokenLimit: 10_000_000,
     enabledAgentLimit: 999,
-    monthlyInstantSwapLimit: 99,
   },
 };
 

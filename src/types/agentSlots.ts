@@ -1,14 +1,11 @@
-export type AgentActivationStatus =
-  | 'inactive'
-  | 'active'
-  | 'cooling_down'
-  | 'unavailable';
+import { AGENTS } from '../data/agentsCatalog';
+
+export type AgentActivationStatus = 'inactive' | 'active' | 'readonly';
 
 export interface PlanEntitlements {
   planName: string;
   monthlyTokenLimit: number;
   enabledAgentLimit: number;
-  monthlyInstantSwapLimit: number;
 }
 
 export interface UserAgentActivation {
@@ -16,48 +13,32 @@ export interface UserAgentActivation {
   status: AgentActivationStatus;
   activatedAt?: string;
   deactivatedAt?: string;
-  slotReleaseAt?: string;
   completedTaskCount: number;
   tokenUsed: number;
 }
 
-export interface AgentSwapQuota {
-  month: string;
-  instantSwapUsed: number;
-  instantSwapLimit: number;
-}
-
-export type DeactivateMode = 'trial_release' | 'instant_swap' | 'cooldown';
-
 export interface EnableCheckResult {
   allowed: boolean;
-  reason?: 'already_active' | 'unavailable' | 'slots_full' | 'cooling';
+  reason?: 'already_active' | 'unavailable' | 'slots_full';
   message?: string;
 }
 
 export interface DeactivateCheckResult {
   allowed: boolean;
-  mode?: DeactivateMode;
   message?: string;
-  releaseAt?: string;
   hasRunningTasks?: boolean;
 }
 
-export const SLOT_RULES = {
-  trialWindowMs: 10 * 60 * 1000,
-  trialTokenThreshold: 1000,
-  cooldownMs: 24 * 60 * 60 * 1000,
-} as const;
+/** 目录中所有智能体均参与名额占用 */
+export const SLOT_AGENT_IDS = AGENTS.map((a) => a.id);
 
-/** Core agents that participate in slot quota */
-export const SLOT_AGENT_IDS = ['geo', 'media', 'sales'] as const;
-export type SlotAgentId = (typeof SLOT_AGENT_IDS)[number];
+export type SlotAgentId = string;
 
-export function isSlotAgent(agentId: string): agentId is SlotAgentId {
-  return (SLOT_AGENT_IDS as readonly string[]).includes(agentId);
+export function isSlotAgent(agentId: string): boolean {
+  return AGENTS.some((a) => a.id === agentId);
 }
 
 export function agentTypeToSlotId(agentType: string): SlotAgentId | null {
-  if (agentType === 'geo' || agentType === 'media' || agentType === 'sales') return agentType;
+  if (isSlotAgent(agentType)) return agentType;
   return null;
 }

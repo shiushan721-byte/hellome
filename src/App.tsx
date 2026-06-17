@@ -6,6 +6,7 @@ import AppShell from './components/app/AppShell';
 import AppHomePage from './pages/app/AppHomePage';
 import AgentsPage from './pages/app/AgentsPage';
 import GeoAgentPage from './pages/app/GeoAgentPage';
+import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
@@ -29,6 +30,7 @@ export default function App() {
         <Route index element={<AppHomePage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="agents/geo" element={<GeoAgentPage />} />
+        <Route path="agents/:agentId" element={<AgentLauncherPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="usage" element={<UsagePage />} />

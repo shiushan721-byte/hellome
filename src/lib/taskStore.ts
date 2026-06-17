@@ -1,6 +1,7 @@
 import type { GeoTaskInput, Task, TaskStep } from '../types/workbench';
 import { GEO_STEPS } from '../types/workbench';
 import { estimateGeoTokens } from './tokenBilling';
+import { ensureDemoTasks } from './taskSeed';
 
 const TASKS_KEY = 'hellome_tasks';
 const EMPTY_TASKS: Task[] = [];
@@ -33,6 +34,7 @@ function normalizeTask(raw: Task & Record<string, unknown>): Task {
 }
 
 function readTasksFromStorage(): Task[] {
+  ensureDemoTasks();
   const raw = localStorage.getItem(TASKS_KEY);
   if (raw === snapshotRaw) return snapshot;
 
@@ -82,6 +84,25 @@ export function deleteTask(id: string): void {
   const tasks = getTasks().filter((t) => t.id !== id);
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
   notify();
+}
+
+const RUNNING_STATUSES = new Set(['running', 'waiting_confirmation']);
+
+export function getRunningTasksForAgent(agentId: string): Task[] {
+  return getTasks().filter((t) => t.agentType === agentId && RUNNING_STATUSES.has(t.status));
+}
+
+/** 取消智能体下所有进行中的任务，返回取消数量 */
+export function cancelRunningTasksForAgent(agentId: string): number {
+  const running = getRunningTasksForAgent(agentId);
+  for (const task of running) {
+    saveTask({
+      ...task,
+      status: 'cancelled',
+      pendingConfirmation: undefined,
+    });
+  }
+  return running.length;
 }
 
 function buildSteps(): TaskStep[] {

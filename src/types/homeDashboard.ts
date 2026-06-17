@@ -4,10 +4,6 @@ export interface AgentQuotaSnapshot {
   planName: string;
   enabledCount: number;
   enabledLimit: number;
-  instantSwapUsed: number;
-  instantSwapLimit: number;
-  coolingDownCount: number;
-  nextSlotReleaseAt?: string;
   slotsRemaining: number;
 }
 

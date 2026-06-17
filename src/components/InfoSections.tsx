@@ -20,7 +20,7 @@ export default function InfoSections() {
       unit: '',
       tokenAmount: '50,000 Token',
       agentSlotAmount: '可启用 1 个智能体',
-      agentSlotNote: '启用后占用名额，10 分钟内可无损撤销',
+      agentSlotNote: '启用后占用名额，停用后立即释放',
       desc: '适合首次体验 GEO 检测、短内容生成、小规模任务。',
       taskHint: '约可完成 3-5 次快速 GEO 检测',
       features: [
@@ -38,7 +38,7 @@ export default function InfoSections() {
       unit: '/ 月',
       tokenAmount: '500,000 Token / 月',
       agentSlotAmount: '可启用 3 个智能体',
-      agentSlotNote: '每月 1 次即时更换，之后 24 小时冷却',
+      agentSlotNote: '可随时停用并更换，停用后立即释放名额',
       desc: '适合品牌运营、自媒体创作者、销售个人用户。',
       taskHint: '约可完成 30-50 次标准任务',
       features: [

@@ -96,8 +96,8 @@ export default function GeoAgentPage() {
           <p className="font-bold mb-1">GEO 智能体尚未启用</p>
           <p className="text-xs text-amber-800/80">
             启用后将占用 1 个可启用智能体名额。请前往
-            <Link to="/app/agents" className="font-bold underline mx-1">
-              智能体广场
+            <Link to="/app/agents?tab=market" className="font-bold underline mx-1">
+              智能体市场
             </Link>
             启用后再发起任务。
           </p>

@@ -1,9 +1,10 @@
-import { useState, useSyncExternalStore } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Trash2, Eye, Copy, RefreshCw } from 'lucide-react';
 import { deleteTask, duplicateTask, getTasks, subscribeTasks } from '../../lib/taskStore';
 import { runGeoTask } from '../../lib/geoTaskRunner';
 import { isAgentActive } from '../../lib/agentSlotStore';
+import { getAgentById } from '../../data/agentsCatalog';
 import TaskStatusBadge, {
   agentLabel,
   formatDuration,
@@ -22,17 +23,29 @@ const filters: { value: TaskStatus | 'all'; label: string }[] = [
 
 export default function TasksPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const agentFilter = searchParams.get('agent');
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
   const [actionError, setActionError] = useState('');
   const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
 
-  const filtered =
-    filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
+  const filtered = useMemo(() => {
+    let list = tasks;
+    if (agentFilter) {
+      list = list.filter((t) => t.agentType === agentFilter);
+    }
+    if (filter !== 'all') {
+      list = list.filter((t) => t.status === filter);
+    }
+    return list;
+  }, [tasks, agentFilter, filter]);
+
+  const agentName = agentFilter ? getAgentById(agentFilter)?.name : null;
 
   const handleRerun = (id: string) => {
     const original = tasks.find((t) => t.id === id);
     if (original?.agentType === 'geo' && !isAgentActive('geo')) {
-      setActionError('GEO 智能体未启用，请先在智能体广场启用后再重新运行');
+      setActionError('GEO 智能体未启用，请先在智能体市场启用后再重新运行');
       return;
     }
     setActionError('');
@@ -47,7 +60,9 @@ export default function TasksPage() {
     <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-display">任务中心</h1>
-        <p className="text-sm text-black/50 mt-1">管理所有 Hermes 执行任务，回看过程与结果</p>
+        <p className="text-sm text-black/50 mt-1">
+          {agentName ? `${agentName} 的任务历史` : '管理所有 Hermes 执行任务，回看过程与结果'}
+        </p>
       </div>
 
       {actionError && (

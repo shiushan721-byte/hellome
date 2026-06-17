@@ -1,0 +1,19 @@
+import { Navigate, useLocation, useParams } from 'react-router-dom';
+import { getAgentById } from '../../data/agentsCatalog';
+import { isAgentActive } from '../../lib/agentSlotStore';
+
+/** /app/agents/:agentId — 从首页进入已启用智能体 */
+export default function AgentLauncherPage() {
+  const { agentId } = useParams<{ agentId: string }>();
+  const location = useLocation();
+  if (!agentId) return <Navigate to="/app/agents?tab=market" replace />;
+
+  const agent = getAgentById(agentId);
+  if (!agent?.available) return <Navigate to="/app/agents?tab=market" replace />;
+
+  if (!isAgentActive(agentId)) {
+    return <Navigate to={`/app/agents?tab=market&enable=${agentId}`} replace />;
+  }
+
+  return <Navigate to={agent.path} replace state={location.state} />;
+}

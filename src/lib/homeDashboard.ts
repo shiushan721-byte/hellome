@@ -6,29 +6,26 @@ import type {
   RecommendedAction,
 } from '../types/homeDashboard';
 import type { Task, TaskStatus } from '../types/workbench';
-import { SLOT_AGENT_IDS, type SlotAgentId } from '../types/agentSlots';
+import { SLOT_AGENT_IDS } from '../types/agentSlots';
 import { getAgentById } from '../data/agentsCatalog';
 import {
   canEnableAgent,
   getActiveAgents,
-  getCoolingAgents,
   getOccupiedSlotCount,
-  getSwapQuota,
   isAgentActive,
 } from './agentSlotStore';
 import { getPlanEntitlements } from './planEntitlements';
 import { getUsage, isLowBalance } from './usageStore';
 import { getTasks } from './taskStore';
 
-const AGENT_KEYWORDS: Record<SlotAgentId, string[]> = {
+const AGENT_KEYWORDS: Partial<Record<string, string[]>> = {
   geo: ['geo', '检测', '可见度', '品牌', 'ai', '搜索', '大模型', '优化', 'faq', '提及'],
   media: ['公众号', '小红书', '自媒体', '文章', '改写', '标题', '内容'],
   sales: ['销售', '客户', '私信', '邮件', '获客', '外联', '跟进', '话术'],
 };
 
-export const AGENT_TASK_TEMPLATES: Record<
-  SlotAgentId,
-  Array<{ id: string; title: string; prompt?: string }>
+export const AGENT_TASK_TEMPLATES: Partial<
+  Record<string, Array<{ id: string; title: string; prompt?: string }>>
 > = {
   geo: [
     { id: 'geo-detect', title: '检测品牌 AI 可见度', prompt: '检测品牌在 AI 搜索里的可见度' },
@@ -46,9 +43,11 @@ export const AGENT_TASK_TEMPLATES: Record<
 
 const ONBOARDING_AGENT_IDS = ['geo', 'media', 'sales'] as const;
 
-function scoreAgent(prompt: string, agentId: SlotAgentId): number {
+function scoreAgent(prompt: string, agentId: string): number {
   const lower = prompt.toLowerCase();
-  return AGENT_KEYWORDS[agentId].reduce((score, kw) => {
+  const keywords = AGENT_KEYWORDS[agentId];
+  if (!keywords?.length) return 0;
+  return keywords.reduce((score, kw) => {
     if (lower.includes(kw.toLowerCase())) return score + 1;
     return score;
   }, 0);
@@ -58,7 +57,25 @@ export function matchPromptToAgent(prompt: string): PromptMatchResult {
   const trimmed = prompt.trim();
   if (!trimmed) return { type: 'no_match' };
 
-  let best: SlotAgentId | null = null;
+  const enabledIds = getActiveAgents().map((a) => a.agentId);
+
+  // 优先在已启用智能体中匹配
+  let bestEnabled: string | null = null;
+  let bestEnabledScore = 0;
+  for (const id of enabledIds) {
+    const s = scoreAgent(trimmed, id);
+    if (s > bestEnabledScore) {
+      bestEnabledScore = s;
+      bestEnabled = id;
+    }
+  }
+  if (bestEnabled && bestEnabledScore > 0) {
+    const agent = getAgentById(bestEnabled);
+    return { type: 'match', agentId: bestEnabled, agentName: agent?.name ?? bestEnabled };
+  }
+
+  // 未命中已启用时，判断最适合但未启用的智能体
+  let best: string | null = null;
   let bestScore = 0;
   for (const id of SLOT_AGENT_IDS) {
     const s = scoreAgent(trimmed, id);
@@ -73,12 +90,8 @@ export function matchPromptToAgent(prompt: string): PromptMatchResult {
   const agent = getAgentById(best);
   const agentName = agent?.name ?? best;
 
-  if (isAgentActive(best)) {
-    return { type: 'match', agentId: best, agentName };
-  }
-
   const check = canEnableAgent(best, agent?.available ?? false);
-  if (check.reason === 'slots_full' || check.reason === 'cooling') {
+  if (check.reason === 'slots_full') {
     return { type: 'slots_full', agentId: best, agentName };
   }
 
@@ -102,7 +115,12 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
       .sort((a, b) => new Date(taskUpdatedAt(b)).getTime() - new Date(taskUpdatedAt(a)).getTime());
 
     const latest = agentTasks[0];
-    const slotId = activation.agentId as SlotAgentId;
+    const slotId = activation.agentId;
+    const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const monthTasks = agentTasks.filter(
+      (t) => t.createdAt.startsWith(monthKey) && (t.status === 'completed' || t.status === 'failed'),
+    );
+    const monthlyTokenFromTasks = monthTasks.reduce((sum, t) => sum + t.tokenUsed, 0);
 
     result.push({
       agentId: activation.agentId,
@@ -110,8 +128,8 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
       description: agent.desc,
       path: agent.path,
       iconSrc: agent.iconSrc,
-      monthlyTaskCount: activation.completedTaskCount,
-      monthlyTokenUsed: activation.tokenUsed,
+      monthlyTaskCount: monthTasks.length || activation.completedTaskCount,
+      monthlyTokenUsed: monthlyTokenFromTasks || activation.tokenUsed,
       latestTask: latest
         ? {
             id: latest.id,
@@ -130,23 +148,12 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
 function buildAgentQuota(): AgentQuotaSnapshot {
   const usage = getUsage();
   const plan = getPlanEntitlements(usage.planName);
-  const swap = getSwapQuota();
-  const cooling = getCoolingAgents();
   const enabledCount = getOccupiedSlotCount();
-
-  const nextRelease = cooling
-    .map((a) => a.slotReleaseAt)
-    .filter(Boolean)
-    .sort()[0];
 
   return {
     planName: usage.planName,
     enabledCount,
     enabledLimit: plan.enabledAgentLimit,
-    instantSwapUsed: swap.instantSwapUsed,
-    instantSwapLimit: swap.instantSwapLimit,
-    coolingDownCount: cooling.length,
-    nextSlotReleaseAt: nextRelease,
     slotsRemaining: Math.max(0, plan.enabledAgentLimit - enabledCount),
   };
 }
@@ -216,6 +223,13 @@ function buildAddableAgentIds(): string[] {
   });
 }
 
+function buildRecentTasks(enabledIds: Set<string>): Task[] {
+  const tasks = getTasks();
+  const enabled = tasks.filter((t) => enabledIds.has(t.agentType));
+  const other = tasks.filter((t) => !enabledIds.has(t.agentType));
+  return [...enabled, ...other].slice(0, 8);
+}
+
 export function getHomeDashboardData(): HomeDashboardData {
   const usage = getUsage();
   const enabledAgents = buildEnabledSummaries();
@@ -225,7 +239,7 @@ export function getHomeDashboardData(): HomeDashboardData {
     usage,
     agentQuota: buildAgentQuota(),
     enabledAgents,
-    recentTasks: getTasks().slice(0, 8),
+    recentTasks: buildRecentTasks(enabledIds),
     recommendedActions: buildRecommendedActions(enabledIds),
     addableAgentIds: buildAddableAgentIds(),
   };

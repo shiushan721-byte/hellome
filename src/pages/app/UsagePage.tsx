@@ -5,11 +5,8 @@ import { formatTime } from '../../components/app/tasks/TaskStatusBadge';
 import { formatToken, formatTokenRange } from '../../lib/tokenBilling';
 import { getPlanEntitlements } from '../../lib/planEntitlements';
 import {
-  formatReleaseCountdown,
   getActiveAgents,
-  getCoolingAgents,
   getOccupiedSlotCount,
-  getSwapQuota,
   subscribeAgentSlots,
 } from '../../lib/agentSlotStore';
 import { getAgentById } from '../../data/agentsCatalog';
@@ -30,9 +27,7 @@ export default function UsagePage() {
   const low = isLowBalance(usage);
   const plan = getPlanEntitlements(usage.planName);
   const occupied = getOccupiedSlotCount();
-  const swap = getSwapQuota();
   const activeAgents = getActiveAgents();
-  const coolingAgents = getCoolingAgents();
   const progressPct =
     usage.monthlyTokenLimit > 0
       ? Math.min(100, (usage.monthlyTokenUsed / usage.monthlyTokenLimit) * 100)
@@ -54,21 +49,15 @@ export default function UsagePage() {
 
       <section className="space-y-4 p-5 bg-[#F2F0ED]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">可启用智能体</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">已启用智能体</h2>
           <span className="font-mono font-bold text-sm">
             {occupied} / {plan.enabledAgentLimit}
           </span>
         </div>
         <p className="text-xs text-black/50 leading-relaxed">
-          套餐内包含一定数量的可启用智能体。启用后可在该智能体内发起任务，任务按 Token 计费。
-          每月 {plan.monthlyInstantSwapLimit} 次即时更换机会，之后停用进入 24 小时冷却。
+          套餐内可同时启用 {plan.enabledAgentLimit} 个智能体。启用后可在该智能体内发起任务，任务按 Token 计费。
+          停用后立即释放名额，已消耗 Token 不会退回。
         </p>
-        <div className="flex justify-between text-xs text-black/55">
-          <span>本月即时更换剩余</span>
-          <span className="font-mono font-bold">
-            {swap.instantSwapLimit - swap.instantSwapUsed} / {swap.instantSwapLimit}
-          </span>
-        </div>
         {activeAgents.length > 0 && (
           <ul className="space-y-2">
             {activeAgents.map((a) => {
@@ -84,16 +73,8 @@ export default function UsagePage() {
             })}
           </ul>
         )}
-        {coolingAgents.map((a) => {
-          const name = getAgentById(a.agentId)?.name ?? a.agentId;
-          return (
-            <p key={a.agentId} className="text-xs text-amber-700">
-              {name} 名额 {formatReleaseCountdown(a.slotReleaseAt!)} 后释放
-            </p>
-          );
-        })}
-        <Link to="/app/agents" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
-          管理智能体 →
+        <Link to="/app/agents?tab=mine" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
+          我的智能体 →
         </Link>
       </section>
 

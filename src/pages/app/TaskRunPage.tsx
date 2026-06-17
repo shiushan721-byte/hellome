@@ -58,7 +58,7 @@ export default function TaskRunPage() {
   const handleRerun = () => {
     if (!id) return;
     if (current.agentType === 'geo' && !isAgentActive('geo')) {
-      setRerunError('GEO 智能体未启用，请先在智能体广场启用后再重新运行');
+      setRerunError('GEO 智能体未启用，请先在智能体市场启用后再重新运行');
       return;
     }
     setRerunError('');
