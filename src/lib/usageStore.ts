@@ -1,8 +1,22 @@
 import type { UsageLedgerEntry, UsageSnapshot } from '../types/workbench';
 import { SIGNUP_BONUS_TOKENS } from '../types/workbench';
+import { getPlanEntitlements } from './planEntitlements';
 
 const USAGE_KEY = 'hellome_usage';
 const LEDGER_KEY = 'hellome_usage_ledger';
+
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+function notifyUsage(): void {
+  usageSnapshotRaw = '__stale__';
+  listeners.forEach((fn) => fn());
+}
+
+export function subscribeUsage(listener: Listener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
 
 function nextMonthResetAt(): string {
   const d = new Date();
@@ -20,6 +34,9 @@ const DEFAULT_USAGE: UsageSnapshot = {
   lowBalanceThreshold: 0.1,
 };
 
+let usageSnapshot: UsageSnapshot = DEFAULT_USAGE;
+let usageSnapshotRaw: string | null = '__init__';
+
 function normalizeUsage(parsed: Partial<UsageSnapshot> & Record<string, unknown>): UsageSnapshot {
   if (parsed.monthlyTokenLimit != null) {
     return {
@@ -36,18 +53,48 @@ function normalizeUsage(parsed: Partial<UsageSnapshot> & Record<string, unknown>
   return { ...DEFAULT_USAGE };
 }
 
-export function getUsage(): UsageSnapshot {
+function readUsageFromStorage(): UsageSnapshot {
   const raw = localStorage.getItem(USAGE_KEY);
-  if (!raw) return { ...DEFAULT_USAGE };
-  try {
-    return normalizeUsage(JSON.parse(raw) as Partial<UsageSnapshot> & Record<string, unknown>);
-  } catch {
-    return { ...DEFAULT_USAGE };
+  if (raw === usageSnapshotRaw) return usageSnapshot;
+
+  usageSnapshotRaw = raw;
+  if (!raw) {
+    usageSnapshot = DEFAULT_USAGE;
+    return usageSnapshot;
   }
+
+  try {
+    usageSnapshot = normalizeUsage(
+      JSON.parse(raw) as Partial<UsageSnapshot> & Record<string, unknown>,
+    );
+  } catch {
+    usageSnapshot = DEFAULT_USAGE;
+  }
+  return usageSnapshot;
+}
+
+export function getUsage(): UsageSnapshot {
+  return readUsageFromStorage();
 }
 
 export function saveUsage(usage: UsageSnapshot): void {
   localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+  usageSnapshot = usage;
+  usageSnapshotRaw = localStorage.getItem(USAGE_KEY);
+  notifyUsage();
+}
+
+/** 调试：切换套餐身份并同步 Token 额度 */
+export function applyDebugPlan(planName: string): void {
+  const ent = getPlanEntitlements(planName);
+  const usage = getUsage();
+  saveUsage({
+    ...usage,
+    planName: ent.planName,
+    monthlyTokenLimit: ent.monthlyTokenLimit,
+    tokenBalance: ent.monthlyTokenLimit,
+    monthlyTokenUsed: 0,
+  });
 }
 
 export function initUsageForNewUser(): void {
@@ -105,10 +152,12 @@ export function settleTaskTokens(params: {
   tokenUsed: number;
   status?: UsageLedgerEntry['status'];
 }): void {
-  const usage = getUsage();
-  usage.tokenBalance = Math.max(0, usage.tokenBalance - params.tokenUsed);
-  usage.monthlyTokenUsed += params.tokenUsed;
-  saveUsage(usage);
+  const prev = getUsage();
+  saveUsage({
+    ...prev,
+    tokenBalance: Math.max(0, prev.tokenBalance - params.tokenUsed),
+    monthlyTokenUsed: prev.monthlyTokenUsed + params.tokenUsed,
+  });
   addLedgerEntry({
     time: new Date().toISOString(),
     taskId: params.taskId,

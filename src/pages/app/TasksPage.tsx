@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Trash2, Eye, Copy, RefreshCw } from 'lucide-react';
 import { deleteTask, duplicateTask, getTasks, subscribeTasks } from '../../lib/taskStore';
 import { runGeoTask } from '../../lib/geoTaskRunner';
+import { isAgentActive } from '../../lib/agentSlotStore';
 import TaskStatusBadge, {
   agentLabel,
   formatDuration,
@@ -22,12 +23,19 @@ const filters: { value: TaskStatus | 'all'; label: string }[] = [
 export default function TasksPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [actionError, setActionError] = useState('');
   const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
 
   const filtered =
     filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
 
   const handleRerun = (id: string) => {
+    const original = tasks.find((t) => t.id === id);
+    if (original?.agentType === 'geo' && !isAgentActive('geo')) {
+      setActionError('GEO 智能体未启用，请先在智能体广场启用后再重新运行');
+      return;
+    }
+    setActionError('');
     const dup = duplicateTask(id);
     if (dup) {
       runGeoTask(dup.id);
@@ -41,6 +49,12 @@ export default function TasksPage() {
         <h1 className="text-2xl font-bold font-display">任务中心</h1>
         <p className="text-sm text-black/50 mt-1">管理所有 Hermes 执行任务，回看过程与结果</p>
       </div>
+
+      {actionError && (
+        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2">
+          {actionError}
+        </p>
+      )}
 
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (

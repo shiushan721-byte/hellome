@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { getTask, subscribeTasks, getTasks, saveTask } from '../../lib/taskStore';
@@ -7,11 +7,14 @@ import {
   resumeGeoTaskAfterConfirmation,
   isTaskRunning,
 } from '../../lib/geoTaskRunner';
+import { isAgentActive } from '../../lib/agentSlotStore';
 import TaskRunLayout from '../../components/app/tasks/TaskRunLayout';
 
 export default function TaskRunPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  const [rerunError, setRerunError] = useState('');
 
   useSyncExternalStore(subscribeTasks, getTasks, getTasks);
   const task = id ? getTask(id) : undefined;
@@ -53,7 +56,13 @@ export default function TaskRunPage() {
   };
 
   const handleRerun = () => {
-    if (id) runGeoTask(id);
+    if (!id) return;
+    if (current.agentType === 'geo' && !isAgentActive('geo')) {
+      setRerunError('GEO 智能体未启用，请先在智能体广场启用后再重新运行');
+      return;
+    }
+    setRerunError('');
+    runGeoTask(id);
   };
 
   return (
@@ -67,6 +76,11 @@ export default function TaskRunPage() {
           <ArrowLeft className="w-3.5 h-3.5" />
           任务中心
         </button>
+        {rerunError && (
+          <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2">
+            {rerunError}
+          </p>
+        )}
       </div>
       <div className="flex-1 min-h-0">
         <TaskRunLayout

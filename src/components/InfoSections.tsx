@@ -19,6 +19,8 @@ export default function InfoSections() {
       price: '¥49',
       unit: '',
       tokenAmount: '50,000 Token',
+      agentSlotAmount: '可启用 1 个智能体',
+      agentSlotNote: '启用后占用名额，10 分钟内可无损撤销',
       desc: '适合首次体验 GEO 检测、短内容生成、小规模任务。',
       taskHint: '约可完成 3-5 次快速 GEO 检测',
       features: [
@@ -35,6 +37,8 @@ export default function InfoSections() {
       price: '¥199',
       unit: '/ 月',
       tokenAmount: '500,000 Token / 月',
+      agentSlotAmount: '可启用 3 个智能体',
+      agentSlotNote: '每月 1 次即时更换，之后 24 小时冷却',
       desc: '适合品牌运营、自媒体创作者、销售个人用户。',
       taskHint: '约可完成 30-50 次标准任务',
       features: [
@@ -52,6 +56,8 @@ export default function InfoSections() {
       price: '¥999',
       unit: '/ 月',
       tokenAmount: '3,000,000 Token / 月',
+      agentSlotAmount: '可启用 8 个智能体',
+      agentSlotNote: '团队共享名额，支持多智能体协作',
       desc: '适合营销团队、销售团队、内容团队协作。',
       taskHint: '约可完成 150-300 次标准任务',
       features: [
@@ -69,6 +75,8 @@ export default function InfoSections() {
       price: '定制额度',
       unit: '',
       tokenAmount: '专属 Token 额度',
+      agentSlotAmount: '不限或自定义',
+      agentSlotNote: '按企业需求定制智能体数量',
       desc: '适合大型品牌、代理商、私有化部署或 API 场景。',
       taskHint: '按企业用量定制',
       features: [
@@ -168,8 +176,11 @@ export default function InfoSections() {
                     <span className="text-xs text-black/45 leading-none pb-1">{tier.unit || '\u00A0'}</span>
                   </div>
                   <span className="text-xs font-bold text-black/55">包含 {tier.tokenAmount}</span>
+                  <span className="text-xs text-black/50">{tier.agentSlotAmount}</span>
                 </div>
-                <p className="text-[11px] text-black/40 mt-2">{tier.taskHint}，实际消耗以任务复杂度为准</p>
+                <p className="text-[11px] text-black/40 mt-2">
+                  {tier.taskHint}，实际消耗以任务复杂度为准。{tier.agentSlotNote}
+                </p>
                 <ul className="flex-1 space-y-3 pt-4">
                   {tier.features.map((f, fi) => (
                     <li key={fi} className="flex gap-2.5 text-xs text-black/70 items-start">

@@ -6,6 +6,7 @@ import {
   distributeStepTokens,
 } from './tokenBilling';
 import { settleTaskTokens } from './usageStore';
+import { recordAgentTaskCompletion } from './agentSlotStore';
 
 function nowTime(): string {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -75,6 +76,7 @@ function finalizeTask(task: Task, startMs: number, actualTotal: number, stepToke
     estimatedTokenMax: task.estimatedTokenMax,
     tokenUsed: actualTotal,
   });
+  recordAgentTaskCompletion('geo', actualTotal);
 }
 
 const running = new Set<string>();
@@ -194,6 +196,7 @@ export async function runGeoTask(taskId: string): Promise<void> {
         tokenUsed: task.currentTokenUsed,
         status: 'failed',
       });
+      recordAgentTaskCompletion('geo', task.currentTokenUsed);
     }
   } finally {
     running.delete(taskId);

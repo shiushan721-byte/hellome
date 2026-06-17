@@ -8,6 +8,7 @@ import {
   Zap,
 } from 'lucide-react';
 import Topbar from './Topbar';
+import PlanDebugPanel from './PlanDebugPanel';
 
 const navItems = [
   { to: '/app', label: '首页', icon: Home, end: true },
@@ -52,6 +53,7 @@ export default function AppShell() {
             </NavLink>
           ))}
         </nav>
+        <PlanDebugPanel />
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">

@@ -1,5 +1,6 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { isAgentActive, subscribeAgentSlots, getOccupiedSlotCount } from '../../lib/agentSlotStore';
 import { ArrowRight, Shield } from 'lucide-react';
 import {
   DEFAULT_GEO_MODELS,
@@ -24,6 +25,9 @@ export default function GeoAgentPage() {
   const [models, setModels] = useState<string[]>([...DEFAULT_GEO_MODELS]);
   const [depth, setDepth] = useState<DetectionDepth>('standard');
   const [error, setError] = useState('');
+
+  useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
+  const geoActive = isAgentActive('geo');
 
   const usage = getUsage();
 
@@ -70,6 +74,10 @@ export default function GeoAgentPage() {
       setError('当前余额不足以启动该任务，请充值或降低检测深度');
       return;
     }
+    if (!geoActive) {
+      setError('请先启用 GEO 智能体后再发起任务');
+      return;
+    }
 
     const task = createGeoTask(draftInput);
     runGeoTask(task.id);
@@ -82,6 +90,19 @@ export default function GeoAgentPage() {
         <h1 className="text-2xl font-bold font-display">GEO 智能体</h1>
         <p className="text-sm text-black/50 mt-1">收集检测参数，启动品牌 AI 可见度检测任务</p>
       </div>
+
+      {!geoActive && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 text-sm text-amber-900">
+          <p className="font-bold mb-1">GEO 智能体尚未启用</p>
+          <p className="text-xs text-amber-800/80">
+            启用后将占用 1 个可启用智能体名额。请前往
+            <Link to="/app/agents" className="font-bold underline mx-1">
+              智能体广场
+            </Link>
+            启用后再发起任务。
+          </p>
+        </div>
+      )}
 
       <div className="flex items-start gap-2 p-3 bg-[#F2F0ED] text-xs text-black/60 mb-6">
         <Shield className="w-4 h-4 shrink-0 mt-0.5" />
@@ -217,7 +238,7 @@ export default function GeoAgentPage() {
 
         <button
           type="submit"
-          disabled={!affordable}
+          disabled={!affordable || !geoActive}
           className="w-full py-3.5 bg-black text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-black/85 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           开始任务

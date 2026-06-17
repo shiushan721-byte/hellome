@@ -1,13 +1,14 @@
+import { useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, ChevronDown, LogOut } from 'lucide-react';
 import { getUser, logout } from '../../lib/auth';
-import { getUsage, isLowBalance } from '../../lib/usageStore';
+import { getUsage, isLowBalance, subscribeUsage } from '../../lib/usageStore';
 import { formatToken } from '../../lib/tokenBilling';
 
 export default function Topbar() {
   const navigate = useNavigate();
   const user = getUser();
-  const usage = getUsage();
+  const usage = useSyncExternalStore(subscribeUsage, getUsage, getUsage);
   const low = isLowBalance(usage);
 
   const handleLogout = () => {

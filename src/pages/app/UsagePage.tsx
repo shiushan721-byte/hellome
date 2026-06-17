@@ -1,7 +1,18 @@
-import { getUsage, getLedger, isLowBalance } from '../../lib/usageStore';
+import { useSyncExternalStore } from 'react';
+import { Link } from 'react-router-dom';
+import { getUsage, getLedger, isLowBalance, subscribeUsage } from '../../lib/usageStore';
 import { formatTime } from '../../components/app/tasks/TaskStatusBadge';
 import { formatToken, formatTokenRange } from '../../lib/tokenBilling';
-import { Link } from 'react-router-dom';
+import { getPlanEntitlements } from '../../lib/planEntitlements';
+import {
+  formatReleaseCountdown,
+  getActiveAgents,
+  getCoolingAgents,
+  getOccupiedSlotCount,
+  getSwapQuota,
+  subscribeAgentSlots,
+} from '../../lib/agentSlotStore';
+import { getAgentById } from '../../data/agentsCatalog';
 
 const STATUS_LABEL: Record<string, string> = {
   settled: '已完成',
@@ -11,9 +22,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function UsagePage() {
+  useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
+  useSyncExternalStore(subscribeUsage, getUsage, getUsage);
+
   const usage = getUsage();
   const ledger = getLedger();
   const low = isLowBalance(usage);
+  const plan = getPlanEntitlements(usage.planName);
+  const occupied = getOccupiedSlotCount();
+  const swap = getSwapQuota();
+  const activeAgents = getActiveAgents();
+  const coolingAgents = getCoolingAgents();
   const progressPct =
     usage.monthlyTokenLimit > 0
       ? Math.min(100, (usage.monthlyTokenUsed / usage.monthlyTokenLimit) * 100)
@@ -32,6 +51,51 @@ export default function UsagePage() {
         <Card label="本月已用" value={formatToken(usage.monthlyTokenUsed)} />
         <Card label="本月总额度" value={formatToken(usage.monthlyTokenLimit)} />
       </div>
+
+      <section className="space-y-4 p-5 bg-[#F2F0ED]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">可启用智能体</h2>
+          <span className="font-mono font-bold text-sm">
+            {occupied} / {plan.enabledAgentLimit}
+          </span>
+        </div>
+        <p className="text-xs text-black/50 leading-relaxed">
+          套餐内包含一定数量的可启用智能体。启用后可在该智能体内发起任务，任务按 Token 计费。
+          每月 {plan.monthlyInstantSwapLimit} 次即时更换机会，之后停用进入 24 小时冷却。
+        </p>
+        <div className="flex justify-between text-xs text-black/55">
+          <span>本月即时更换剩余</span>
+          <span className="font-mono font-bold">
+            {swap.instantSwapLimit - swap.instantSwapUsed} / {swap.instantSwapLimit}
+          </span>
+        </div>
+        {activeAgents.length > 0 && (
+          <ul className="space-y-2">
+            {activeAgents.map((a) => {
+              const name = getAgentById(a.agentId)?.name ?? a.agentId;
+              return (
+                <li key={a.agentId} className="flex justify-between text-xs bg-white px-3 py-2">
+                  <span className="font-medium">{name}</span>
+                  <span className="text-black/45">
+                    任务 {a.completedTaskCount} · {formatToken(a.tokenUsed)} Token
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {coolingAgents.map((a) => {
+          const name = getAgentById(a.agentId)?.name ?? a.agentId;
+          return (
+            <p key={a.agentId} className="text-xs text-amber-700">
+              {name} 名额 {formatReleaseCountdown(a.slotReleaseAt!)} 后释放
+            </p>
+          );
+        })}
+        <Link to="/app/agents" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
+          管理智能体 →
+        </Link>
+      </section>
 
       <section className="space-y-3">
         <div className="flex justify-between text-xs">
