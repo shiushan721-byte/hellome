@@ -130,6 +130,7 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
       iconSrc: agent.iconSrc,
       monthlyTaskCount: monthTasks.length || activation.completedTaskCount,
       monthlyTokenUsed: monthlyTokenFromTasks || activation.tokenUsed,
+      lastUsedAt: latest ? taskUpdatedAt(latest) : activation.activatedAt,
       latestTask: latest
         ? {
             id: latest.id,
@@ -142,7 +143,11 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
     });
   }
 
-  return result;
+  return result.sort((a, b) => {
+    const ta = a.lastUsedAt ? new Date(a.lastUsedAt).getTime() : 0;
+    const tb = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : 0;
+    return tb - ta;
+  });
 }
 
 function buildAgentQuota(): AgentQuotaSnapshot {

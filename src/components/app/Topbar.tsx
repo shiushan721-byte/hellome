@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, ChevronDown, LogOut } from 'lucide-react';
+import { Bell, ChevronDown, LogOut } from 'lucide-react';
 import { getUser, logout } from '../../lib/auth';
 import { getUsage, isLowBalance, subscribeUsage } from '../../lib/usageStore';
 import { formatToken } from '../../lib/tokenBilling';
@@ -17,21 +17,7 @@ export default function Topbar() {
   };
 
   return (
-    <header className="h-16 border-b border-black/8 bg-[#FDFCFB]/95 backdrop-blur-md px-6 flex items-center justify-between gap-4 shrink-0">
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-xs font-bold text-black/50 uppercase tracking-wider shrink-0">
-          {user.workspace}
-        </span>
-        <div className="relative hidden sm:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-black/35" />
-          <input
-            type="search"
-            placeholder="搜索任务…"
-            className="w-48 lg:w-64 pl-9 pr-3 py-2 text-xs bg-[#F2F0ED] border-0 outline-none focus:ring-1 focus:ring-black/15"
-          />
-        </div>
-      </div>
-
+    <header className="h-16 border-b border-black/8 bg-[#FDFCFB]/95 backdrop-blur-md px-6 flex items-center justify-end gap-4 shrink-0">
       <div className="flex items-center gap-4 shrink-0">
         <button type="button" className="text-black/45 hover:text-black transition-colors" aria-label="通知">
           <Bell className="w-4 h-4" />

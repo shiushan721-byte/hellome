@@ -6,13 +6,13 @@ import { isAgentActive } from '../../lib/agentSlotStore';
 export default function AgentLauncherPage() {
   const { agentId } = useParams<{ agentId: string }>();
   const location = useLocation();
-  if (!agentId) return <Navigate to="/app/agents?tab=market" replace />;
+  if (!agentId) return <Navigate to="/app/agents/market" replace />;
 
   const agent = getAgentById(agentId);
-  if (!agent?.available) return <Navigate to="/app/agents?tab=market" replace />;
+  if (!agent?.available) return <Navigate to="/app/agents/market" replace />;
 
   if (!isAgentActive(agentId)) {
-    return <Navigate to={`/app/agents?tab=market&enable=${agentId}`} replace />;
+    return <Navigate to={`/app/agents/market?enable=${agentId}`} replace />;
   }
 
   return <Navigate to={agent.path} replace state={location.state} />;

@@ -6,13 +6,15 @@ import {
   BarChart3,
   Settings,
   Zap,
+  Store,
 } from 'lucide-react';
 import Topbar from './Topbar';
 import PlanDebugPanel from './PlanDebugPanel';
 
 const navItems = [
-  { to: '/app', label: '首页', icon: Home, end: true },
-  { to: '/app/agents?tab=market', label: '智能体', icon: Bot },
+  { to: '/app', label: '首页', icon: Home, end: true as const },
+  { to: '/app/agents/market', label: '智能体市场', icon: Store },
+  { to: '/app/agents/mine', label: '我的智能体', icon: Bot },
   { to: '/app/tasks', label: '任务中心', icon: ListTodo },
   { to: '/app/usage', label: '用量', icon: BarChart3 },
   { to: '/app/settings', label: '设置', icon: Settings },

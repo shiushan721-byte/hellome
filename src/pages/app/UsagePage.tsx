@@ -73,7 +73,7 @@ export default function UsagePage() {
             })}
           </ul>
         )}
-        <Link to="/app/agents?tab=mine" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
+        <Link to="/app/agents/mine" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
           我的智能体 →
         </Link>
       </section>

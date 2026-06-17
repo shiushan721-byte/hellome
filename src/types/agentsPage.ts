@@ -3,7 +3,6 @@ export type AgentsTab = 'market' | 'mine';
 export type AgentMarketStatus =
   | 'inactive'
   | 'active'
-  | 'quota_full'
   | 'plan_unavailable'
   | 'coming_soon';
 

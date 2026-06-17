@@ -32,6 +32,16 @@ export function normalizeAgentsTab(tab: string | null): AgentsTab {
   return 'market';
 }
 
+export function resolveAgentsTabFromPath(pathname: string, tabParam: string | null): AgentsTab {
+  if (pathname.endsWith('/agents/mine')) return 'mine';
+  if (pathname.endsWith('/agents/market')) return 'market';
+  return normalizeAgentsTab(tabParam);
+}
+
+export function agentsTabPath(tab: AgentsTab): string {
+  return `/app/agents/${tab}`;
+}
+
 function parseTokenRange(tokenRange: string): { min: number; max: number } {
   const nums = tokenRange.match(/[\d,]+/g);
   if (!nums || nums.length < 2) return { min: 0, max: 0 };
@@ -51,9 +61,6 @@ function resolveMarketStatus(agentId: string, planAvailable: boolean): AgentMark
 
   if (getAgentDisplayStatus(agentId, true) === 'active') return 'active';
   if (getAgentDisplayStatus(agentId, planAvailable) === 'unavailable') return 'plan_unavailable';
-
-  const plan = getPlanEntitlements(getUsage().planName);
-  if (getOccupiedSlotCount() >= plan.enabledAgentLimit) return 'quota_full';
 
   return 'inactive';
 }
@@ -151,9 +158,12 @@ function buildMyAgents(): MyAgentCard[] {
   return cards;
 }
 
-export function getAgentsPageData(tab: string | null): AgentsPageData {
+export function getAgentsPageData(tab: AgentsTab | string | null): AgentsPageData {
+  const activeTab =
+    tab === 'market' || tab === 'mine' ? tab : normalizeAgentsTab(typeof tab === 'string' ? tab : null);
+
   return {
-    activeTab: normalizeAgentsTab(tab),
+    activeTab,
     quota: buildQuotaSnapshot(),
     marketAgents: buildMarketAgents(),
     myAgents: buildMyAgents(),

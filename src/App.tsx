@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/app/AppShell';
 import AppHomePage from './pages/app/AppHomePage';
 import AgentsPage from './pages/app/AgentsPage';
+import AgentsLegacyRedirect from './pages/app/AgentsLegacyRedirect';
 import GeoAgentPage from './pages/app/GeoAgentPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import TasksPage from './pages/app/TasksPage';
@@ -28,9 +29,11 @@ export default function App() {
         }
       >
         <Route index element={<AppHomePage />} />
-        <Route path="agents" element={<AgentsPage />} />
+        <Route path="agents/market" element={<AgentsPage />} />
+        <Route path="agents/mine" element={<AgentsPage />} />
         <Route path="agents/geo" element={<GeoAgentPage />} />
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
+        <Route path="agents" element={<AgentsLegacyRedirect />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="usage" element={<UsagePage />} />

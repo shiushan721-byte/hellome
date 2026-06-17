@@ -25,6 +25,9 @@ import { formatToken, formatTokenRange } from '../../lib/tokenBilling';
 import TaskStatusBadge, { agentLabel, formatTime } from '../../components/app/tasks/TaskStatusBadge';
 import { getAgentById } from '../../data/agentsCatalog';
 
+const HOME_ENABLED_AGENT_LIMIT = 3;
+import type { AgentEntryState } from '../../types/agentNavigation';
+
 export default function AppHomePage() {
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState('');
@@ -38,14 +41,17 @@ export default function AppHomePage() {
   const { usage, agentQuota, enabledAgents, recentTasks, recommendedActions } = dashboard;
   const lowBalance = isLowBalanceUsage();
   const hasEnabled = enabledAgents.length > 0;
+  const displayedAgents = enabledAgents.slice(0, HOME_ENABLED_AGENT_LIMIT);
+  const hasMoreAgents = enabledAgents.length > HOME_ENABLED_AGENT_LIMIT;
 
-  const enterAgent = (agentId: string, state?: { prompt?: string }) => {
+  const enterAgent = (agentId: string, opts?: { prompt?: string }) => {
     const agent = getAgentById(agentId);
     if (!agent?.available || !isAgentActive(agentId)) {
-      navigate(agentQuota.slotsRemaining > 0 ? '/app/agents?tab=market&mode=add' : '/app/agents?tab=mine');
+      navigate(agentQuota.slotsRemaining > 0 ? '/app/agents/market?mode=add' : '/app/agents/mine');
       return;
     }
-    navigate(`/app/agents/${agentId}`, state ? { state } : undefined);
+    const state: AgentEntryState = { from: '/app', agentId, prompt: opts?.prompt };
+    navigate(`/app/agents/${agentId}`, { state });
   };
 
   const handlePromptSubmit = () => {
@@ -60,8 +66,8 @@ export default function AppHomePage() {
     return (
       <HomeEmptyState
         quota={agentQuota}
-        onEnableGeo={() => navigate('/app/agents?enable=geo')}
-        onViewAll={() => navigate('/app/agents?tab=market')}
+        onEnableGeo={() => navigate('/app/agents/market?enable=geo')}
+        onViewAll={() => navigate('/app/agents/market')}
       />
     );
   }
@@ -97,56 +103,74 @@ export default function AppHomePage() {
         {promptHint && <PromptHint hint={promptHint} quota={agentQuota} navigate={navigate} />}
       </section>
 
-      {/* 已启用智能体 + 名额 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 space-y-3">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">已启用智能体</h2>
-            <p className="text-[11px] text-black/40 mt-0.5">这些智能体当前可直接发起任务</p>
-          </div>
-          <div className="space-y-3">
-            {enabledAgents.map((agent) => (
-              <EnabledAgentCard
-                key={agent.agentId}
-                agent={agent}
-                onStart={(p) => enterAgent(agent.agentId, p ? { prompt: p } : undefined)}
-                onViewLatest={(taskId) => navigate(`/app/tasks/${taskId}`)}
-                onHistory={() => navigate(`/app/tasks?agent=${agent.agentId}`)}
-                onManage={() => navigate('/app/agents?tab=mine')}
-              />
-            ))}
-          </div>
-          {enabledAgents.length === 1 && enabledAgents[0].monthlyTaskCount === 0 && (
-            <p className="text-xs text-black/45 bg-[#F2F0ED] px-3 py-2">
-              你已经启用了 {enabledAgents[0].name}。从一个任务开始：
+      {/* 主内容：左侧列表 + 右侧名额 / Token */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-8 items-start">
+        <div className="lg:col-span-2 space-y-8">
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">已启用智能体</h2>
+              <p className="text-[11px] text-black/40 mt-0.5">这些智能体当前可直接发起任务</p>
+            </div>
+            <div className="space-y-3">
+              {displayedAgents.map((agent) => (
+                <EnabledAgentCard
+                  key={agent.agentId}
+                  agent={agent}
+                  onStart={(p) => enterAgent(agent.agentId, p ? { prompt: p } : undefined)}
+                  onViewLatest={(taskId) => navigate(`/app/tasks/${taskId}`)}
+                  onHistory={() => navigate(`/app/tasks?agent=${agent.agentId}`)}
+                />
+              ))}
+            </div>
+            {hasMoreAgents && (
               <button
                 type="button"
-                onClick={() =>
-                  enterAgent(
-                    enabledAgents[0].agentId,
-                    enabledAgents[0].templates[0]?.prompt
-                      ? { prompt: enabledAgents[0].templates[0].prompt }
-                      : undefined,
-                  )
-                }
-                className="font-bold text-black ml-1 underline"
+                onClick={() => navigate('/app/agents/mine')}
+                className="text-xs font-bold text-black/50 hover:text-black underline underline-offset-2"
               >
-                {enabledAgents[0].templates[0]?.title ?? '开始新任务'}
+                查看更多智能体
               </button>
-            </p>
-          )}
-        </section>
+            )}
+            {enabledAgents.length === 1 && enabledAgents[0].monthlyTaskCount === 0 && (
+              <p className="text-xs text-black/45 bg-[#F2F0ED] px-3 py-2">
+                你已经启用了 {enabledAgents[0].name}。从一个任务开始：
+                <button
+                  type="button"
+                  onClick={() =>
+                    enterAgent(
+                      enabledAgents[0].agentId,
+                      enabledAgents[0].templates[0]?.prompt
+                        ? { prompt: enabledAgents[0].templates[0].prompt }
+                        : undefined,
+                    )
+                  }
+                  className="font-bold text-black ml-1 underline"
+                >
+                  {enabledAgents[0].templates[0]?.title ?? '开始新任务'}
+                </button>
+              </p>
+            )}
+          </section>
 
-        <AgentQuotaCard quota={agentQuota} navigate={navigate} />
-      </div>
+          <section className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">最近任务</h2>
+            <RecentTasksList tasks={recentTasks} navigate={navigate} />
+          </section>
+        </div>
 
-      {/* 最近任务 + Token */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <section className="lg:col-span-2 space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">最近任务</h2>
-          <RecentTasksList tasks={recentTasks} navigate={navigate} />
-        </section>
-        <TokenUsageCard usage={usage} lowBalance={lowBalance} navigate={navigate} />
+        <aside className="flex flex-col gap-y-3 lg:sticky lg:top-6 w-full min-w-0">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">智能体名额</h2>
+            <p className="text-[11px] text-black/40 mt-0.5">当前套餐占用与剩余名额</p>
+          </div>
+          <AgentQuotaCard quota={agentQuota} navigate={navigate} />
+
+          <div className="pt-1">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">Token 用量</h2>
+            <p className="text-[11px] text-black/40 mt-0.5">本月余额与消耗进度</p>
+          </div>
+          <TokenUsageCard usage={usage} lowBalance={lowBalance} navigate={navigate} />
+        </aside>
       </div>
 
       {/* 推荐下一步 */}
@@ -160,7 +184,7 @@ export default function AppHomePage() {
                 action={action}
                 onRun={() => {
                   if (action.requiresActivation) {
-                    navigate('/app/agents?tab=market&mode=add');
+                    navigate('/app/agents/market?mode=add');
                   } else {
                     enterAgent(action.agentId);
                   }
@@ -181,7 +205,7 @@ export default function AppHomePage() {
           <div className="flex flex-wrap gap-2 pt-1">
             <button
               type="button"
-              onClick={() => navigate('/app/agents?tab=mine')}
+              onClick={() => navigate('/app/agents/mine')}
               className="px-3 py-1.5 font-bold bg-black text-white"
             >
               我的智能体
@@ -193,30 +217,6 @@ export default function AppHomePage() {
             >
               升级套餐
             </button>
-          </div>
-        </section>
-      )}
-
-      {/* 可添加智能体（弱化） */}
-      {agentQuota.slotsRemaining > 0 && dashboard.addableAgentIds.length > 0 && (
-        <section className="space-y-3 pt-2 border-t border-black/8">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black/40">可添加智能体</h2>
-          <div className="flex flex-wrap gap-2">
-            {dashboard.addableAgentIds.map((id) => {
-              const agent = getAgentById(id);
-              if (!agent) return null;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => navigate(`/app/agents?enable=${id}`)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-xs bg-[#F2F0ED] hover:bg-[#E8E6E3] transition-colors"
-                >
-                  <AgentIcon src={agent.iconSrc} alt={agent.name} size="sm" />
-                  {agent.name}
-                </button>
-              );
-            })}
           </div>
         </section>
       )}
@@ -237,7 +237,7 @@ function PromptHint({
     return (
       <p className="text-xs text-black/50 bg-[#F2F0ED] px-3 py-2">
         未匹配到合适的已启用智能体。
-        <button type="button" onClick={() => navigate('/app/agents?tab=market&mode=add')} className="font-bold underline ml-1">
+        <button type="button" onClick={() => navigate('/app/agents/market?mode=add')} className="font-bold underline ml-1">
           去智能体市场添加
         </button>
       </p>
@@ -253,12 +253,12 @@ function PromptHint({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => navigate(`/app/agents?enable=${hint.agentId}`)}
+            onClick={() => navigate(`/app/agents/market?enable=${hint.agentId}`)}
             className="px-3 py-1.5 font-bold bg-black text-white"
           >
             启用{hint.agentName}
           </button>
-          <button type="button" onClick={() => navigate('/app/agents?tab=market')} className="px-3 py-1.5 font-bold border border-black/15">
+          <button type="button" onClick={() => navigate('/app/agents/market')} className="px-3 py-1.5 font-bold border border-black/15">
             去智能体市场
           </button>
         </div>
@@ -272,7 +272,7 @@ function PromptHint({
           这个任务适合「{hint.agentName}」，但你的智能体名额已满。请停用一个已启用智能体，或升级套餐。
         </p>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => navigate('/app/agents?tab=mine')} className="px-3 py-1.5 font-bold bg-black text-white">
+          <button type="button" onClick={() => navigate('/app/agents/mine')} className="px-3 py-1.5 font-bold bg-black text-white">
             我的智能体
           </button>
           <button type="button" onClick={() => navigate('/app/usage')} className="px-3 py-1.5 font-bold border border-black/15">
@@ -290,13 +290,11 @@ function EnabledAgentCard({
   onStart,
   onViewLatest,
   onHistory,
-  onManage,
 }: {
   agent: EnabledAgentSummary;
   onStart: (prompt?: string) => void;
   onViewLatest: (taskId: string) => void;
   onHistory: () => void;
-  onManage: () => void;
 }) {
   return (
     <div className="bg-white border border-black/8 p-4 sm:p-5 space-y-4">
@@ -366,13 +364,6 @@ function EnabledAgentCard({
         >
           任务历史
         </button>
-        <button
-          type="button"
-          onClick={onManage}
-          className="ml-auto px-3 py-2 text-[10px] font-bold text-black/40 hover:text-black"
-        >
-          我的智能体 →
-        </button>
       </div>
     </div>
   );
@@ -388,10 +379,9 @@ function AgentQuotaCard({
   const full = quota.enabledCount >= quota.enabledLimit;
 
   return (
-    <section className="bg-[#F2F0ED] p-5 space-y-4 h-fit">
+    <section className="bg-[#F2F0ED] p-5 space-y-4 h-fit w-full">
       <div>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">智能体名额</h2>
-        <p className="text-3xl font-bold font-mono mt-2">
+        <p className="text-3xl font-bold font-mono">
           {quota.enabledCount}
           <span className="text-lg text-black/40"> / {quota.enabledLimit}</span>
         </p>
@@ -419,7 +409,7 @@ function AgentQuotaCard({
         {!full && (
           <button
             type="button"
-            onClick={() => navigate('/app/agents?tab=market&mode=add')}
+            onClick={() => navigate('/app/agents/market?mode=add')}
             className="w-full py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85"
           >
             添加智能体
@@ -427,17 +417,10 @@ function AgentQuotaCard({
         )}
         <button
           type="button"
-          onClick={() => navigate('/app/agents?tab=mine')}
+          onClick={() => navigate('/app/agents/mine')}
           className="w-full py-2.5 text-xs font-bold border border-black/15 hover:bg-white/60"
         >
           我的智能体
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('/app/agents?tab=market')}
-          className="w-full py-2.5 text-xs font-bold border border-black/15 hover:bg-white/60"
-        >
-          智能体市场
         </button>
         {full && (
           <button
@@ -468,8 +451,7 @@ function TokenUsageCard({
       : 0;
 
   return (
-    <section className="bg-white border border-black/8 p-5 space-y-4 h-fit">
-      <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">Token 用量</h2>
+    <section className="bg-white border border-black/8 p-5 space-y-4 h-fit w-full">
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-black/45 text-xs">剩余 Token</span>

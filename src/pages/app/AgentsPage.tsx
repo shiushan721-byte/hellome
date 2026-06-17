@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, ChevronRight, Flame, Heart, Plus } from 'lucide-react';
 import {
   CATEGORIES,
@@ -20,8 +20,9 @@ import {
   subscribeAgentSlots,
 } from '../../lib/agentSlotStore';
 import { formatToken } from '../../lib/tokenBilling';
-import { getAgentsPageData, normalizeAgentsTab } from '../../lib/agentsPageData';
+import { getAgentsPageData, agentsTabPath, resolveAgentsTabFromPath } from '../../lib/agentsPageData';
 import { cancelRunningTasksForAgent, getRunningTasksForAgent } from '../../lib/taskStore';
+import type { AgentEntryState } from '../../types/agentNavigation';
 import type { AgentMarketCard, AgentsTab, MyAgentCard } from '../../types/agentsPage';
 import {
   DeactivateAgentModal,
@@ -31,12 +32,6 @@ import {
   SlotsFullModal,
 } from '../../components/app/agents/AgentSlotModals';
 import AgentIcon from '../../components/app/agents/AgentIcon';
-
-const RANK_STYLES = [
-  'bg-gradient-to-br from-amber-300 to-yellow-500 text-white',
-  'bg-gradient-to-br from-slate-300 to-slate-400 text-white',
-  'bg-gradient-to-br from-orange-300 to-amber-600 text-white',
-];
 
 const MY_STATUS_LABEL: Record<string, string> = {
   active: '已启用',
@@ -51,8 +46,9 @@ type ModalState =
 
 export default function AgentsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = normalizeAgentsTab(searchParams.get('tab'));
+  const activeTab = resolveAgentsTabFromPath(location.pathname, searchParams.get('tab'));
   const pageMode = searchParams.get('mode');
   const highlightId = searchParams.get('highlight');
 
@@ -65,21 +61,26 @@ export default function AgentsPage() {
   useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
 
-  const pageData = getAgentsPageData(searchParams.get('tab'));
+  const pageData = getAgentsPageData(activeTab);
   const { quota } = pageData;
   const usage = getUsage();
   const plan = getPlanEntitlements(usage.planName);
 
   const setTab = (tab: AgentsTab, extra?: Record<string, string>) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('tab', tab);
+    const next = new URLSearchParams();
     if (extra) {
       Object.entries(extra).forEach(([k, v]) => next.set(k, v));
-    } else {
-      next.delete('highlight');
-      next.delete('mode');
     }
-    setSearchParams(next, { replace: true });
+    const qs = next.toString();
+    navigate(qs ? `${agentsTabPath(tab)}?${qs}` : agentsTabPath(tab), { replace: true });
+  };
+
+  const agentsListPath = (tab: AgentsTab = activeTab) => {
+    const next = new URLSearchParams();
+    if (pageMode && tab === 'market') next.set('mode', pageMode);
+    if (highlightId && tab === 'mine') next.set('highlight', highlightId);
+    const qs = next.toString();
+    return qs ? `${agentsTabPath(tab)}?${qs}` : agentsTabPath(tab);
   };
 
   const filteredMarket = useMemo(() => {
@@ -92,7 +93,7 @@ export default function AgentsPage() {
         card.description.toLowerCase().includes(q) ||
         card.creator.toLowerCase().includes(q);
       if (pageMode === 'add') {
-        if (card.status !== 'inactive' && card.status !== 'quota_full') return false;
+        if (card.status !== 'inactive') return false;
       }
       return matchCategory && matchQuery;
     });
@@ -129,7 +130,8 @@ export default function AgentsPage() {
   };
 
   const handleEnter = (agentId: string) => {
-    navigate(`/app/agents/${agentId}`);
+    const state: AgentEntryState = { from: agentsListPath(), agentId };
+    navigate(`/app/agents/${agentId}`, { state });
   };
 
   useEffect(() => {
@@ -143,7 +145,6 @@ export default function AgentsPage() {
     }
     const next = new URLSearchParams(searchParams);
     next.delete('enable');
-    if (!next.get('tab')) next.set('tab', 'market');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run when ?enable= appears
   }, [searchParams.get('enable')]);
@@ -184,16 +185,13 @@ export default function AgentsPage() {
     <div className="min-h-full bg-[#F5F5F7] px-6 lg:px-8 py-6 lg:py-8">
       <div className="max-w-[1400px] mx-auto space-y-6">
         <div className="space-y-2">
-          <div className="flex items-center gap-4">
-            <PageTab active={activeTab === 'market'} onClick={() => setTab('market')}>
-              智能体市场
-            </PageTab>
-            <PageTab active={activeTab === 'mine'} onClick={() => setTab('mine')}>
-              我的智能体
-            </PageTab>
-          </div>
+          <h1 className="text-2xl font-bold text-[#1A1A1A]">
+            {activeTab === 'market' ? '智能体市场' : '我的智能体'}
+          </h1>
           <p className="text-xs text-black/45 max-w-2xl">
-            套餐限制可同时启用的智能体数量。你可以随时停用并更换智能体；任务执行按实际 Token 消耗计费。
+            {activeTab === 'market'
+              ? '选择适合你的智能体启用，启用后即可发起任务。套餐限制可同时启用的智能体数量；任务按实际 Token 消耗计费。'
+              : '这些是你当前已启用的智能体，可直接进入使用或停用更换。停用后立即释放名额，已消耗 Token 不会退回。'}
           </p>
         </div>
 
@@ -245,14 +243,12 @@ export default function AgentsPage() {
             onEnable={handleEnable}
             onEnter={handleEnter}
             onDeactivate={handleDeactivate}
-            onGoMine={() => setTab('mine')}
             onUpgrade={() => navigate('/app/usage')}
             onRankingSelect={(agent) => {
               if (!agent.available) return;
               const card = pageData.marketAgents.find((c) => c.id === agent.id);
               if (card?.status === 'active') return;
               if (card?.status === 'inactive') handleEnable(agent.id);
-              else if (card?.status === 'quota_full') setTab('mine');
             }}
           />
         ) : (
@@ -312,30 +308,6 @@ export default function AgentsPage() {
   );
 }
 
-function PageTab({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`transition-colors ${
-        active
-          ? 'text-2xl font-bold text-[#1A1A1A]'
-          : 'text-lg font-medium text-black/35 hover:text-black/55'
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 function QuotaBar({
   quota,
   onUpgrade,
@@ -380,7 +352,6 @@ function MarketTab({
   onEnable,
   onEnter,
   onDeactivate,
-  onGoMine,
   onUpgrade,
   onRankingSelect,
 }: {
@@ -393,13 +364,11 @@ function MarketTab({
   onEnable: (id: string) => void;
   onEnter: (id: string) => void;
   onDeactivate: (id: string) => void;
-  onGoMine: () => void;
   onUpgrade: () => void;
   onRankingSelect: (agent: AgentItem) => void;
 }) {
   return (
     <div className="space-y-6">
-      <p className="text-xs text-black/45">选择适合你的智能体启用，启用后即可发起任务。</p>
       {pageMode === 'add' && (
         <p className="text-xs font-bold text-sky-700">当前查看：可添加的智能体</p>
       )}
@@ -457,7 +426,6 @@ function MarketTab({
               onEnable={() => onEnable(card.id)}
               onEnter={() => onEnter(card.id)}
               onDeactivate={() => onDeactivate(card.id)}
-              onGoMine={onGoMine}
               onUpgrade={onUpgrade}
             />
           ))}
@@ -490,10 +458,6 @@ function MineTab({
 }) {
   return (
     <div className="space-y-6">
-      <p className="text-xs text-black/45">
-        这些是你当前已启用的智能体，可直接进入使用或停用更换。停用后立即释放名额，已消耗 Token 不会退回。
-      </p>
-
       {agents.length === 0 ? (
         <div className="text-center py-16 space-y-4">
           <p className="text-lg font-bold text-black/70">你还没有启用任何智能体</p>
@@ -531,14 +495,12 @@ function MarketCard({
   onEnable,
   onEnter,
   onDeactivate,
-  onGoMine,
   onUpgrade,
 }: {
   card: AgentMarketCard;
   onEnable: () => void;
   onEnter: () => void;
   onDeactivate: () => void;
-  onGoMine: () => void;
   onUpgrade: () => void;
 }) {
   return (
@@ -601,15 +563,6 @@ function MarketCard({
             className="w-full py-2 text-xs font-bold bg-black text-white hover:bg-black/85"
           >
             启用智能体
-          </button>
-        )}
-        {card.status === 'quota_full' && (
-          <button
-            type="button"
-            onClick={onGoMine}
-            className="w-full py-2 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
-          >
-            去我的智能体
           </button>
         )}
         {card.status === 'coming_soon' && (
@@ -807,18 +760,13 @@ function RankingCard({
         </span>
       </div>
       <ul className="space-y-3">
-        {items.map((agent, index) => (
+        {items.map((agent) => (
           <li key={agent.id}>
             <button
               type="button"
               onClick={() => onSelect(agent)}
               className="w-full flex items-center gap-3 text-left group"
             >
-              <span
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${RANK_STYLES[index]}`}
-              >
-                {index + 1}
-              </span>
               <AgentIcon src={agent.iconSrc} alt={agent.name} size="sm" />
               <span className="text-sm truncate text-black/80 group-hover:text-black">{agent.name}</span>
             </button>

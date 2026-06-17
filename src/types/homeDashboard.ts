@@ -21,6 +21,8 @@ export interface EnabledAgentSummary {
     status: TaskStatus;
     updatedAt: string;
   };
+  /** 最近任务时间或启用时间，用于首页排序 */
+  lastUsedAt?: string;
   templates: Array<{ id: string; title: string; prompt?: string }>;
 }
 
