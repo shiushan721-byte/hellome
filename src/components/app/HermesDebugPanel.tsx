@@ -8,9 +8,9 @@ import {
 } from '../../lib/hermesConnection';
 
 const OPTIONS: Array<{ id: HermesDebugPreset; label: string }> = [
-  { id: 'not_installed', label: '未安装 Hermes' },
-  { id: 'not_paired', label: '未配对 Hermes' },
-  { id: 'paired', label: '已配对 Hermes' },
+  { id: 'not_installed', label: '未安装 Hz-Hermes' },
+  { id: 'not_paired', label: '未配对 Hz-Hermes' },
+  { id: 'paired', label: '已配对 Hz-Hermes' },
 ];
 
 export default function HermesDebugPanel() {
@@ -30,7 +30,7 @@ export default function HermesDebugPanel() {
       >
         <span className="flex items-center gap-2 text-[11px] font-bold text-black/55">
           <Bug className="w-3.5 h-3.5 text-sky-600" />
-          Hermes 调试
+          Hz-Hermes 调试
         </span>
         {open ? (
           <ChevronDown className="w-3.5 h-3.5 text-black/35" />

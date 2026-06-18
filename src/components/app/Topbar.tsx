@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronDown, LogOut, User } from 'lucide-react';
+import { Bell, ChevronDown, LogOut } from 'lucide-react';
 import { logout } from '../../lib/auth';
 import { getProfile, subscribeProfile } from '../../lib/profileStore';
 import UserAvatar from './UserAvatar';
@@ -29,10 +29,10 @@ export default function Topbar() {
   const isNotPaired = hermes.status === 'not_paired' || hermes.status === 'account_mismatch';
 
   const hermesLabel = isConnected
-    ? 'Hermes 已连接'
+    ? 'Hz-Hermes 已连接'
     : isNotPaired
-      ? 'Hermes 未配对 · 去配对'
-      : 'Hermes 离线 · 启动应用';
+      ? 'Hz-Hermes 未配对 · 去配对'
+      : 'Hz-Hermes 离线 · 启动应用';
 
   const handleLogout = () => {
     logout();
@@ -85,14 +85,6 @@ export default function Topbar() {
             <ChevronDown className="w-3.5 h-3.5 text-black/40" />
           </button>
           <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-black/10 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            <button
-              type="button"
-              onClick={() => navigate('/app/settings')}
-              className="w-full px-3 py-2.5 text-xs text-left flex items-center gap-2 hover:bg-[#F2F0ED]"
-            >
-              <User className="w-3.5 h-3.5" />
-              个人资料
-            </button>
             <button
               type="button"
               onClick={handleLogout}

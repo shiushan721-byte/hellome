@@ -25,7 +25,7 @@ export default function MarketingPage() {
                 Hello<span className="font-serif italic font-semibold">Me</span>
               </span>
               <span className="text-[11px] font-medium text-black/45 tracking-[0.18em] leading-none">
-                哈基米
+                哈啰蜜
               </span>
             </div>
           </div>

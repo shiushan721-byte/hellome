@@ -34,7 +34,7 @@ export function generateDefaultNickname(): string {
   const suffix = Array.from({ length: 6 }, () =>
     letters[Math.floor(Math.random() * letters.length)],
   ).join('');
-  return `哈基米${suffix}`;
+  return `哈啰蜜${suffix}`;
 }
 
 function createDefaultProfile(id: string): MeProfile {
@@ -47,8 +47,15 @@ function createDefaultProfile(id: string): MeProfile {
   };
 }
 
+function migrateNickname(nickname: string): string {
+  if (nickname.startsWith('哈基米')) {
+    return `哈啰蜜${nickname.slice(3)}`;
+  }
+  return nickname;
+}
+
 function normalizeProfile(parsed: Partial<MeProfile>, fallbackId: string): MeProfile {
-  const nickname = String(parsed.nickname ?? '').trim();
+  const nickname = migrateNickname(String(parsed.nickname ?? '').trim());
   const hasCustomAvatar = Boolean(parsed.avatarUrl && !parsed.isDefaultAvatar);
   return {
     id: String(parsed.id || fallbackId),
@@ -86,7 +93,12 @@ function readProfileFromStorage(): MeProfile {
   }
 
   try {
-    profileSnapshot = normalizeProfile(JSON.parse(raw) as Partial<MeProfile>, userId);
+    const parsed = JSON.parse(raw) as Partial<MeProfile>;
+    profileSnapshot = normalizeProfile(parsed, userId);
+    const migratedNickname = migrateNickname(String(parsed.nickname ?? '').trim());
+    if (migratedNickname && migratedNickname !== String(parsed.nickname ?? '').trim()) {
+      persistProfile(profileSnapshot);
+    }
   } catch {
     profileSnapshot = createDefaultProfile(userId);
   }

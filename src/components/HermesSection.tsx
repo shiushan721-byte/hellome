@@ -39,7 +39,7 @@ export default function HermesSection() {
       <div className="w-full">
         <div className="text-center max-w-3xl mx-auto mb-12 lg:mb-16">
           <h2 className="text-4xl font-extrabold tracking-tight font-display text-black">
-            由 <span className="font-serif italic text-black font-semibold underline decoration-2 underline-offset-4 decoration-black">Hermes 自动化流程引擎</span> 驱动
+            由 <span className="font-serif italic text-black font-semibold underline decoration-2 underline-offset-4 decoration-black">Hz-Hermes 自动化流程引擎</span> 驱动
           </h2>
           <p className="mt-4 text-xs text-black/70 font-medium leading-relaxed font-sans max-w-2xl mx-auto">
             智能体会自动调用专属 Skills、装载对应分析工具、编排分步任务。整个执行路径毫秒级落格子、全程追踪，企业无需精通任何编程也能实现安全无感提分。
@@ -91,7 +91,7 @@ export default function HermesSection() {
             <div className="pt-6 mt-6 text-left">
               <div className="bg-[#F2F0ED] p-3">
                 <p className="text-[10px] text-black/60 leading-normal font-medium font-sans">
-                  💡 <span className="text-black font-semibold">自适应分配规则</span>：Hermes 系统根据具体工作场景进行纯并发式调用编排，让大模型分析工作不只是跑一段问答反馈，而是生成出标准的数字化质量检查流水线。
+                  💡 <span className="text-black font-semibold">自适应分配规则</span>：Hz-Hermes 系统根据具体工作场景进行纯并发式调用编排，让大模型分析工作不只是跑一段问答反馈，而是生成出标准的数字化质量检查流水线。
                 </p>
               </div>
             </div>

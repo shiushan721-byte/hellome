@@ -17,15 +17,15 @@ export default function HermesActionModal({
   const isNotPaired = status === 'not_paired' || status === 'account_mismatch';
   const isNotInstalled = status === 'capability_missing';
   const title = isOffline
-    ? 'Hermes 当前离线'
+    ? 'Hz-Hermes 当前离线'
     : isNotInstalled
-      ? '请先安装 Hermes'
-      : '请先完成 Hermes 配对';
+      ? '请先安装 Hz-Hermes'
+      : '请先完成 Hz-Hermes 配对';
   const desc = isOffline
-    ? '检测到 Hermes 未在线。启动 Hermes 后即可继续使用智能体功能。'
+    ? '检测到 Hz-Hermes 未在线。启动 Hz-Hermes 后即可继续使用智能体功能。'
     : isNotInstalled
-      ? 'HelloMe 智能体依赖 Hermes 执行。请先安装并打开 Hermes，再回到当前页面。'
-      : '未检测到配对关系。请打开 Hermes 并使用同账号完成一键配对后再继续。';
+      ? 'HelloMe 智能体依赖 Hz-Hermes 执行。请先安装并打开 Hz-Hermes，再回到当前页面。'
+      : '未检测到配对关系。请打开 Hz-Hermes 并使用同账号完成一键配对后再继续。';
 
   const modal = (
     <div className="fixed inset-0 z-[70] bg-black/35 flex items-center justify-center p-4">
@@ -57,7 +57,7 @@ export default function HermesActionModal({
               </div>
               <span className="text-black/35">→</span>
               <div className="flex-1 rounded-lg border border-black/10 bg-white px-2 py-2 text-center">
-                Hermes 同账号登录
+                Hz-Hermes 同账号登录
               </div>
               <span className="text-black/35">→</span>
               <div className="flex-1 rounded-lg border border-black/10 bg-white px-2 py-2 text-center">
@@ -75,7 +75,7 @@ export default function HermesActionModal({
               className="px-4 h-10 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 inline-flex items-center gap-1.5"
             >
               <ExternalLink className="w-4 h-4" />
-              启动 Hermes 应用
+              启动 Hz-Hermes 应用
             </button>
           )}
           {isNotPaired && (
@@ -84,7 +84,7 @@ export default function HermesActionModal({
               onClick={onGoPair}
               className="px-4 h-10 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90"
             >
-              去 Hermes 配对页
+              去 Hz-Hermes 配对页
             </button>
           )}
           <button
@@ -99,7 +99,7 @@ export default function HermesActionModal({
         {(isOffline || isNotInstalled) && (
           <p className="text-xs text-amber-700 inline-flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" />
-            Hermes 恢复在线后即可继续使用智能体。
+            Hz-Hermes 恢复在线后即可继续使用智能体。
           </p>
         )}
       </div>

@@ -48,7 +48,7 @@ app.post("/api/check-brand", async (req, res) => {
   // If Gemini client is ready, let's call the real API!
   if (aiClient) {
     try {
-      const prompt = `You are HelloMe's Hermes GEO (Generative Engine Optimization) Check engine.
+      const prompt = `You are HelloMe's Hz-Hermes GEO (Generative Engine Optimization) Check engine.
 Analyze the brand "${brandName}" in the industry "${normalizedCategory}" relative to its competitor "${normalizedCompetitor}".
 Provide a authentic or high-fidelity simulation of SEO & GEO visibility based on how modern AI Search Engines (like Gemini, Perplexity, OpenAI Search/ChatGPT, SearchGPT) render and recommend this brand in user queries in 2026.
 Return complete data matching the required schema. Ensure values are realistic (e.g. large brands like Tesla/Lululemon get high scores, small unknown brands get reasonable values with optimization priorities).`;
@@ -183,7 +183,7 @@ Return complete data matching the required schema. Ensure values are realistic (
     ]
   };
 
-  // Simulate server latency for Hermes workflow transparency animation!
+  // Simulate server latency for Hz-Hermes workflow transparency animation!
   setTimeout(() => {
     res.json({ success: true, source: "simulation", data: simulatedData });
   }, 1000);

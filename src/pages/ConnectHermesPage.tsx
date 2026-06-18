@@ -35,14 +35,14 @@ export default function ConnectHermesPage() {
   };
 
   const description = isOffline
-    ? 'Hermes 当前离线，请打开 Hermes 客户端并确认已登录当前 HelloMe 账号。'
-    : 'HelloMe 的智能体需要通过 Hermes 执行。请下载 Hermes，并使用同一个账号登录后点击一键配对。';
+    ? 'Hz-Hermes 当前离线，请打开 Hz-Hermes 客户端并确认已登录当前 HelloMe 账号。'
+    : 'HelloMe 的智能体需要通过 Hz-Hermes 执行。请下载 Hz-Hermes，并使用同一个账号登录后点击一键配对。';
 
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-[#1A1A1A] p-4 sm:p-6 lg:p-8">
       <div className="w-full bg-white border border-black/10 rounded-2xl p-6 lg:p-8 space-y-6">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold">连接 Hermes 后开始使用 HelloMe</h1>
+          <h1 className="text-2xl font-bold">连接 Hz-Hermes 后开始使用 HelloMe</h1>
           <p className="text-sm text-black/55">{description}</p>
         </div>
 
@@ -50,10 +50,10 @@ export default function ConnectHermesPage() {
           <section className="bg-[#F6F8FA] border border-black/8 rounded-xl p-4">
             <h2 className="text-sm font-semibold mb-3">操作步骤</h2>
             <ol className="space-y-2 text-sm text-black/65 list-decimal pl-5">
-              <li>下载并安装 Hermes</li>
-              <li>打开 Hermes</li>
-              <li>使用当前 HelloMe 账号登录 Hermes</li>
-              <li>在 Hermes 中点击“一键配对”</li>
+              <li>下载并安装 Hz-Hermes</li>
+              <li>打开 Hz-Hermes</li>
+              <li>使用当前 HelloMe 账号登录 Hz-Hermes</li>
+              <li>在 Hz-Hermes 中点击“一键配对”</li>
               <li>配对成功后自动进入 HelloMe 工作台</li>
             </ol>
           </section>
@@ -63,7 +63,7 @@ export default function ConnectHermesPage() {
               HelloMe 账号：<span className="font-mono">{account || '未识别'}</span>
             </p>
             <p className="text-xs text-black/45">
-              Hermes 状态：
+              Hz-Hermes 状态：
               <span className="ml-1 font-semibold text-black/75">
                 {isConnected ? '已连接' : isOffline ? '离线' : '未配对'}
               </span>
@@ -77,7 +77,7 @@ export default function ConnectHermesPage() {
             {isConnected && snapshot.device ? (
               <p className="text-xs text-emerald-700 inline-flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Hermes 已连接 · {snapshot.device.id} {snapshot.device.version}
+                Hz-Hermes 已连接 · {snapshot.device.id} {snapshot.device.version}
               </p>
             ) : null}
           </section>
@@ -89,7 +89,7 @@ export default function ConnectHermesPage() {
             className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg border border-black/12 bg-white hover:bg-black/[0.02] text-sm font-medium"
           >
             <Download className="w-4 h-4" />
-            下载 Hermes
+            下载 Hz-Hermes
           </button>
           <button
             type="button"
@@ -97,7 +97,7 @@ export default function ConnectHermesPage() {
             className="inline-flex items-center gap-1.5 px-4 h-10 rounded-lg border border-black/12 bg-white hover:bg-black/[0.02] text-sm font-medium"
           >
             <ExternalLink className="w-4 h-4" />
-            打开 Hermes
+            打开 Hz-Hermes
           </button>
           <button
             type="button"

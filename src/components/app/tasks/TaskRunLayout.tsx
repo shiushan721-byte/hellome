@@ -29,7 +29,7 @@ export default function TaskRunLayout({
       <div className="px-6 py-4 border-b border-black/8 flex items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-lg font-bold text-black truncate">{task.name}</h1>
-          <p className="text-xs text-black/45 mt-0.5">Hermes 任务执行看板</p>
+          <p className="text-xs text-black/45 mt-0.5">Hz-Hermes 任务执行看板</p>
         </div>
         <TaskStatusBadge status={task.status} />
       </div>
@@ -129,7 +129,7 @@ export default function TaskRunLayout({
           ) : task.status === 'running' || task.status === 'waiting_confirmation' ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mb-4" />
-              <p className="text-sm text-black/50">Hermes 正在执行任务，结果将在此展示</p>
+              <p className="text-sm text-black/50">Hz-Hermes 正在执行任务，结果将在此展示</p>
             </div>
           ) : (
             <p className="text-sm text-black/45">暂无结果</p>

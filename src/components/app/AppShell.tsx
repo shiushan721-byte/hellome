@@ -40,7 +40,7 @@ export default function AppShell() {
             <span className="text-sm font-bold font-display">
               Hello<span className="font-serif italic font-semibold">Me</span>
             </span>
-            <span className="text-[9px] text-black/40 tracking-[0.15em]">哈基米</span>
+            <span className="text-[9px] text-black/40 tracking-[0.15em]">哈啰蜜</span>
           </div>
         </div>
 

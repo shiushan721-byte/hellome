@@ -59,7 +59,7 @@ export default function GeoAgentPage() {
               + 快速发起
             </button>
             <nav className="mt-3 space-y-1">
-              {['工作台', '品牌管理', 'GEO 分析', 'GEO 监控', '积分与账户', '内容文件', 'Hermes 日志'].map(
+              {['工作台', '品牌管理', 'GEO 分析', 'GEO 监控', '积分与账户', '内容文件', 'Hz-Hermes 日志'].map(
                 (item) => (
                   <button
                     key={item}
@@ -281,7 +281,7 @@ function ExecutionPanel({
           </button>
         )}
       </div>
-      <p className="mt-2 text-sm text-black/45">资料已齐，可提交 Hermes 分析</p>
+      <p className="mt-2 text-sm text-black/45">资料已齐，可提交 Hz-Hermes 分析</p>
 
       <div className="mt-4 space-y-2">
         {['品牌名称', '城市/目标市场', '产品/服务', '官网，链接或补充材料'].map((row) => (
@@ -336,7 +336,7 @@ function ExecutionPanel({
         disabled={disableExecute}
         className="mt-5 w-full h-11 rounded-xl bg-[#87D1C8] hover:bg-[#6fc7bc] disabled:bg-black/10 disabled:text-black/35 text-white text-lg font-semibold"
       >
-        提交 Hermes 快速检测
+        提交 Hz-Hermes 快速检测
       </button>
     </aside>
   );
@@ -360,7 +360,7 @@ function RunningSidePanel({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-4 h-4 rounded-full border-2 border-[#14958A] border-t-transparent animate-spin" />
-          <h3 className="text-xl font-semibold text-black/85">Hermes 正在执行</h3>
+          <h3 className="text-xl font-semibold text-black/85">Hz-Hermes 正在执行</h3>
         </div>
         <button
           type="button"

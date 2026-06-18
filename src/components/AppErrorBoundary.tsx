@@ -36,7 +36,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
         <div className="w-full max-w-2xl bg-white border border-black/10 rounded-2xl p-6 space-y-4">
           <h1 className="text-xl font-bold">页面加载异常</h1>
           <p className="text-sm text-black/60">
-            已拦截运行时错误，避免白屏。你可以先刷新页面，或先去 Hermes 配对页恢复可用状态。
+            已拦截运行时错误，避免白屏。你可以先刷新页面，或先去 Hz-Hermes 配对页恢复可用状态。
           </p>
           <p className="text-xs text-rose-700 break-all">{this.state.message}</p>
           <div className="flex flex-wrap gap-2">
@@ -54,7 +54,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
               }}
               className="px-4 h-10 rounded-lg border border-black/12 bg-white text-sm font-medium hover:bg-black/[0.02]"
             >
-              前往 Hermes 配对页
+              前往 Hz-Hermes 配对页
             </button>
           </div>
         </div>

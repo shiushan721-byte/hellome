@@ -125,7 +125,7 @@ export async function runGeoTask(taskId: string): Promise<void> {
   ];
 
   try {
-    addLog(task, 'Hermes 已接收任务，开始编排执行流程', 'info');
+    addLog(task, 'Hz-Hermes 已接收任务，开始编排执行流程', 'info');
     saveTask(task);
 
     let apiPromise: Promise<GeoResultData> | null = null;

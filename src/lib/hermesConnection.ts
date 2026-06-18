@@ -152,7 +152,7 @@ export function pairHermesWithCurrentAccount(): HermesConnectionSnapshot {
   const next: HermesConnectionSnapshot = {
     status: 'connected',
     device: {
-      id: 'HZ-HERMES',
+      id: 'Hz-Hermes',
       deviceName: 'Shiushan 的电脑',
       os: 'macos',
       version: 'v0.2.3',
@@ -193,7 +193,7 @@ export function applyHermesDebugPreset(preset: HermesDebugPreset): HermesConnect
     const next: HermesConnectionSnapshot = {
       status: 'capability_missing',
       device: null,
-      lastError: '未安装 Hermes',
+      lastError: '未安装 Hz-Hermes',
     };
     setHermesConnection(next);
     return next;
@@ -209,7 +209,7 @@ export function applyHermesDebugPreset(preset: HermesDebugPreset): HermesConnect
   const next: HermesConnectionSnapshot = {
     status: 'connected',
     device: {
-      id: 'HZ-HERMES',
+      id: 'Hz-Hermes',
       deviceName: 'Shiushan 的电脑',
       os: 'macos',
       version: 'v0.2.3',

@@ -16,7 +16,7 @@ export default function HermesLogPanel({ logs }: HermesLogPanelProps) {
     <div className="bg-[#F2F0ED]/60 border border-black/8">
       <div className="px-3 py-2 border-b border-black/8 flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-widest text-black/50">
-          Hermes 操作日志
+          Hz-Hermes 操作日志
         </span>
         <span className="text-[10px] font-mono text-black/35">{logs.length} 条</span>
       </div>

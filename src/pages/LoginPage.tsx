@@ -58,7 +58,7 @@ export default function LoginPage() {
             <span className="text-xl font-bold font-display">
               Hello<span className="font-serif italic font-semibold">Me</span>
             </span>
-            <span className="text-[11px] text-black/45 tracking-[0.18em]">哈基米</span>
+            <span className="text-[11px] text-black/45 tracking-[0.18em]">哈啰蜜</span>
           </div>
         </div>
 

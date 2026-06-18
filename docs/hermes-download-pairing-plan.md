@@ -1,15 +1,15 @@
-# HelloMe 与 Hermes 强制配对准入方案
+# HelloMe 与 Hz-Hermes 强制配对准入方案
 
 ## 1. 核心前提
 
-HelloMe 登录后的所有智能体能力都依赖 Hermes。
+HelloMe 登录后的所有智能体能力都依赖 Hz-Hermes。
 
 因此，能使用 HelloMe 登录后平台的首要前提是：
 
 ```text
-用户必须先下载并安装 Hermes
-用户必须在 Hermes 中登录同一个 HelloMe 账号
-用户必须完成 HelloMe 与 Hermes 的一键配对
+用户必须先下载并安装 Hz-Hermes
+用户必须在 Hz-Hermes 中登录同一个 HelloMe 账号
+用户必须完成 HelloMe 与 Hz-Hermes 的一键配对
 配对成功后，才允许进入 HelloMe 工作台和智能体能力
 ```
 
@@ -17,7 +17,7 @@ HelloMe 登录后的所有智能体能力都依赖 Hermes。
 
 它是平台准入门槛：
 
-> 未完成 Hermes 配对，就不能进入我的工作台、智能体市场、任务中心和智能体执行链路。
+> 未完成 Hz-Hermes 配对，就不能进入我的工作台、智能体市场、任务中心和智能体执行链路。
 
 ## 2. 产品定位
 
@@ -36,9 +36,9 @@ HelloMe 是智能体前台，负责：
 用量统计
 ```
 
-### 2.2 Hermes
+### 2.2 Hz-Hermes
 
-Hermes 是执行器，负责：
+Hz-Hermes 是执行器，负责：
 
 ```text
 本地执行环境
@@ -55,14 +55,14 @@ Hermes 是执行器，负责：
 
 ```text
 HelloMe 发起任务
-Hermes 执行任务
+Hz-Hermes 执行任务
 HelloMe 展示过程和结果
 ```
 
 所以：
 
 ```text
-没有 Hermes 配对，就没有可用的智能体执行环境。
+没有 Hz-Hermes 配对，就没有可用的智能体执行环境。
 ```
 
 ## 3. 用户准入流程
@@ -71,10 +71,10 @@ HelloMe 展示过程和结果
 
 ```text
 用户登录 HelloMe
-系统检查是否已完成 Hermes 配对
-未配对：进入 Hermes 配对引导页
+系统检查是否已完成 Hz-Hermes 配对
+未配对：进入 Hz-Hermes 配对引导页
 已配对且在线：进入我的工作台
-已配对但离线：进入 Hermes 状态页，提示打开 Hermes
+已配对但离线：进入 Hz-Hermes 状态页，提示打开 Hz-Hermes
 ```
 
 流程图：
@@ -82,17 +82,17 @@ HelloMe 展示过程和结果
 ```text
 HelloMe 登录
   ↓
-检查 Hermes 配对状态
+检查 Hz-Hermes 配对状态
   ↓
-未配对 ─→ Hermes 配对引导页
+未配对 ─→ Hz-Hermes 配对引导页
   ↓
 已配对
   ↓
-检查 Hermes 在线状态
+检查 Hz-Hermes 在线状态
   ↓
 在线 ─→ 我的工作台
   ↓
-离线 ─→ Hermes 状态页 / 打开 Hermes 引导
+离线 ─→ Hz-Hermes 状态页 / 打开 Hz-Hermes 引导
 ```
 
 ## 4. 准入页设计
@@ -114,30 +114,30 @@ HelloMe 登录
 页面标题：
 
 ```text
-连接 Hermes 后开始使用 HelloMe
+连接 Hz-Hermes 后开始使用 HelloMe
 ```
 
 说明：
 
 ```text
-HelloMe 的智能体需要通过 Hermes 执行。请下载 Hermes，并使用同一个 HelloMe 账号登录后点击一键配对。
+HelloMe 的智能体需要通过 Hz-Hermes 执行。请下载 Hz-Hermes，并使用同一个 HelloMe 账号登录后点击一键配对。
 ```
 
 步骤：
 
 ```text
-1. 下载并安装 Hermes
-2. 打开 Hermes
-3. 使用当前 HelloMe 账号登录 Hermes
-4. 在 Hermes 中点击“一键配对”
+1. 下载并安装 Hz-Hermes
+2. 打开 Hz-Hermes
+3. 使用当前 HelloMe 账号登录 Hz-Hermes
+4. 在 Hz-Hermes 中点击“一键配对”
 5. 配对成功后自动进入 HelloMe 工作台
 ```
 
 按钮：
 
 ```text
-[下载 Hermes]
-[我已安装，打开 Hermes]
+[下载 Hz-Hermes]
+[我已安装，打开 Hz-Hermes]
 [重新检测配对状态]
 ```
 
@@ -150,9 +150,9 @@ HelloMe 的智能体需要通过 Hermes 执行。请下载 Hermes，并使用同
 用量主页面
 ```
 
-## 5. Hermes 端一键配对
+## 5. Hz-Hermes 端一键配对
 
-根据 Hermes 截图，Hermes 里已有：
+根据 Hz-Hermes 截图，Hz-Hermes 里已有：
 
 ```text
 一键配对 GEO
@@ -161,7 +161,7 @@ WebChat 实例 key
 应用 / 保存
 ```
 
-建议 Hermes 端文案改为更通用：
+建议 Hz-Hermes 端文案改为更通用：
 
 ```text
 一键配对 HelloMe
@@ -176,7 +176,7 @@ WebChat 实例 key
 说明文案：
 
 ```text
-使用当前 Hermes 登录账号自动获取 HelloMe 连接凭证，并写入桥接配置。请确保 Hermes 与 HelloMe 登录的是同一个账号。
+使用当前 Hz-Hermes 登录账号自动获取 HelloMe 连接凭证，并写入桥接配置。请确保 Hz-Hermes 与 HelloMe 登录的是同一个账号。
 ```
 
 按钮：
@@ -196,7 +196,7 @@ WebChat 实例 key
 
 ```text
 配对失败
-请确认 Hermes 与 HelloMe 登录的是同一个账号。
+请确认 Hz-Hermes 与 HelloMe 登录的是同一个账号。
 ```
 
 ## 6. 同账号规则
@@ -207,7 +207,7 @@ WebChat 实例 key
 
 ```text
 HelloMe 当前账号：user@example.com
-Hermes 当前账号：user@example.com
+Hz-Hermes 当前账号：user@example.com
 允许一键配对
 ```
 
@@ -215,7 +215,7 @@ Hermes 当前账号：user@example.com
 
 ```text
 HelloMe 当前账号：user@example.com
-Hermes 当前账号：other@example.com
+Hz-Hermes 当前账号：other@example.com
 不允许配对
 ```
 
@@ -224,7 +224,7 @@ Hermes 当前账号：other@example.com
 ```text
 账号不一致，无法配对
 
-请在 Hermes 中切换为当前 HelloMe 账号，或在 HelloMe 中登录 Hermes 使用的账号。
+请在 Hz-Hermes 中切换为当前 HelloMe 账号，或在 HelloMe 中登录 Hz-Hermes 使用的账号。
 ```
 
 ## 7. 配对成功后的跳转
@@ -261,30 +261,30 @@ Hermes 当前账号：other@example.com
 /app/agents?mode=first-agent
 ```
 
-## 8. 已配对但 Hermes 离线
+## 8. 已配对但 Hz-Hermes 离线
 
 这是和“未配对”不同的状态。
 
-用户已经完成配对，但 Hermes 当前未在线。
+用户已经完成配对，但 Hz-Hermes 当前未在线。
 
 此时可以允许用户进入一个有限状态页，但不应进入完整可操作工作台。
 
 页面：
 
 ```text
-Hermes 当前离线
+Hz-Hermes 当前离线
 ```
 
 说明：
 
 ```text
-请打开 Hermes 客户端，并确认已登录当前 HelloMe 账号。Hermes 在线后即可继续使用智能体。
+请打开 Hz-Hermes 客户端，并确认已登录当前 HelloMe 账号。Hz-Hermes 在线后即可继续使用智能体。
 ```
 
 按钮：
 
 ```text
-[打开 Hermes]
+[打开 Hz-Hermes]
 [重新检测]
 ```
 
@@ -304,11 +304,11 @@ Hermes 当前离线
 继续执行任务
 ```
 
-如果产品希望更严格，也可以把离线状态同样挡在准入页，只保留“打开 Hermes / 重新检测”。
+如果产品希望更严格，也可以把离线状态同样挡在准入页，只保留“打开 Hz-Hermes / 重新检测”。
 
 ## 9. 平台访问控制
 
-未配对状态下，用户访问以下页面时都应重定向到 Hermes 准入页：
+未配对状态下，用户访问以下页面时都应重定向到 Hz-Hermes 准入页：
 
 ```text
 /app
@@ -326,7 +326,7 @@ Hermes 当前离线
 /logout
 官网公开页
 帮助文档
-下载 Hermes 页面
+下载 Hz-Hermes 页面
 ```
 
 访问控制逻辑：
@@ -347,27 +347,27 @@ if logged in and hermes_connected:
 
 ## 10. 配对状态展示
 
-配对成功后，HelloMe 顶部应展示 Hermes 状态。
+配对成功后，HelloMe 顶部应展示 Hz-Hermes 状态。
 
 状态：
 
 ```text
-Hermes 已连接
-Hermes 离线
-Hermes 版本过低
-Hermes 能力缺失
+Hz-Hermes 已连接
+Hz-Hermes 离线
+Hz-Hermes 版本过低
+Hz-Hermes 能力缺失
 ```
 
 示例：
 
 ```text
-Hermes 已连接 · HZ-HERMES v0.2.3
+Hz-Hermes 已连接 · Hz-Hermes v0.2.3
 ```
 
 如果离线：
 
 ```text
-Hermes 离线
+Hz-Hermes 离线
 [重新检测]
 ```
 
@@ -376,10 +376,10 @@ Hermes 离线
 配对成功后保存：
 
 ```text
-Hermes 实例 ID
+Hz-Hermes 实例 ID
 设备名称
 设备系统
-Hermes 版本
+Hz-Hermes 版本
 登录账号
 配对时间
 最后在线时间
@@ -391,7 +391,7 @@ Hermes 版本
 
 ```text
 设备：Shiushan 的 Windows 电脑
-Hermes 版本：v0.2.3
+Hz-Hermes 版本：v0.2.3
 状态：已连接
 最后在线：刚刚
 支持能力：WebChat、浏览器自动化、文件访问
@@ -402,17 +402,17 @@ Hermes 版本：v0.2.3
 MVP 建议：
 
 ```text
-个人版：允许 1 台 Hermes 作为当前执行设备
+个人版：允许 1 台 Hz-Hermes 作为当前执行设备
 团队版：允许多台设备，但任务执行时选择 1 台
 ```
 
 如果用户在第二台设备配对：
 
 ```text
-检测到已有 Hermes 设备
+检测到已有 Hz-Hermes 设备
 
 当前账号已配对：Shiushan 的 Windows 电脑
-是否将任务执行设备切换到当前 Hermes？
+是否将任务执行设备切换到当前 Hz-Hermes？
 
 [取消] [切换到当前设备]
 ```
@@ -421,17 +421,17 @@ MVP 建议：
 
 ### 13.1 我的工作台
 
-只有 Hermes 已连接时才进入。
+只有 Hz-Hermes 已连接时才进入。
 
 ```text
 已连接：直接展示默认智能体工作台
-未配对：重定向到 Hermes 配对页
-离线：重定向到 Hermes 离线页
+未配对：重定向到 Hz-Hermes 配对页
+离线：重定向到 Hz-Hermes 离线页
 ```
 
 ### 13.2 智能体市场
 
-只有 Hermes 已连接时才进入。
+只有 Hz-Hermes 已连接时才进入。
 
 不再支持：
 
@@ -443,22 +443,22 @@ MVP 建议：
 原因：
 
 ```text
-产品使用前提就是 Hermes 已配对。
+产品使用前提就是 Hz-Hermes 已配对。
 智能体市场是登录后能力的一部分，不是公开商城。
 ```
 
 ### 13.3 任务中心
 
-只有 Hermes 已连接时进入完整任务中心。
+只有 Hz-Hermes 已连接时进入完整任务中心。
 
-如果 Hermes 离线：
+如果 Hz-Hermes 离线：
 
 ```text
 可选：只允许查看历史任务和结果
 不允许继续执行
 ```
 
-MVP 可先统一重定向到 Hermes 离线页。
+MVP 可先统一重定向到 Hz-Hermes 离线页。
 
 ### 13.4 用量页面
 
@@ -467,7 +467,7 @@ MVP 可先统一重定向到 Hermes 离线页。
 如果未配对：
 
 ```text
-重定向到 Hermes 配对页
+重定向到 Hz-Hermes 配对页
 ```
 
 ## 14. 状态枚举
@@ -511,21 +511,21 @@ interface HermesDevice {
 ### P0
 
 ```text
-新增 Hermes 准入页
-登录后先检查 Hermes 配对状态
+新增 Hz-Hermes 准入页
+登录后先检查 Hz-Hermes 配对状态
 未配对时重定向到准入页
-Hermes 端支持一键配对
+Hz-Hermes 端支持一键配对
 同账号校验
 配对成功后进入 /app
-顶部展示 Hermes 已连接状态
+顶部展示 Hz-Hermes 已连接状态
 ```
 
 ### P1
 
 ```text
-Hermes 离线状态页
+Hz-Hermes 离线状态页
 重新检测连接
-打开 Hermes 客户端
+打开 Hz-Hermes 客户端
 设备信息展示
 重新配对
 解绑设备
@@ -537,7 +537,7 @@ Hermes 离线状态页
 ```text
 多设备切换
 团队设备管理
-自动唤起 Hermes
+自动唤起 Hz-Hermes
 能力缺失诊断
 深度故障排查
 ```
@@ -547,16 +547,16 @@ Hermes 离线状态页
 ### 16.1 准入页说明
 
 ```text
-连接 Hermes 后开始使用 HelloMe
+连接 Hz-Hermes 后开始使用 HelloMe
 
-HelloMe 的智能体需要通过 Hermes 执行。请下载 Hermes，并使用同一个账号登录后点击一键配对。
+HelloMe 的智能体需要通过 Hz-Hermes 执行。请下载 Hz-Hermes，并使用同一个账号登录后点击一键配对。
 ```
 
 ### 16.2 按钮文案
 
 ```text
-下载 Hermes
-打开 Hermes
+下载 Hz-Hermes
+打开 Hz-Hermes
 重新检测配对状态
 ```
 
@@ -565,17 +565,17 @@ HelloMe 的智能体需要通过 Hermes 执行。请下载 Hermes，并使用同
 ```text
 账号不一致，无法配对
 
-请确认 HelloMe 与 Hermes 登录的是同一个账号。
+请确认 HelloMe 与 Hz-Hermes 登录的是同一个账号。
 ```
 
 ### 16.4 配对成功
 
 ```text
-Hermes 已连接
+Hz-Hermes 已连接
 
 现在可以进入 HelloMe 工作台。
 ```
 
 ## 17. 最终表达
 
-> 使用 HelloMe 登录后平台的首要前提是完成 Hermes 配对。用户必须先下载 Hermes，并用同一个账号一键配对；未配对时只展示配对引导，不进入工作台、智能体市场或任务中心。配对成功后，HelloMe 才进入完整可用状态。
+> 使用 HelloMe 登录后平台的首要前提是完成 Hz-Hermes 配对。用户必须先下载 Hz-Hermes，并用同一个账号一键配对；未配对时只展示配对引导，不进入工作台、智能体市场或任务中心。配对成功后，HelloMe 才进入完整可用状态。

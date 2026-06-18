@@ -129,7 +129,7 @@ export default function AgentsShowcase({ activeTab: controlledTab, onSelectAgent
           <div className="pt-8 mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-1.5">
               <Terminal className="w-4 h-4 text-black/50" />
-              <span className="text-xs text-black/50">底层完全适配 Hermes 执行内核</span>
+              <span className="text-xs text-black/50">底层完全适配 Hz-Hermes 执行内核</span>
             </div>
             <button
               onClick={() => handleActivate(currentAgent.id)}
