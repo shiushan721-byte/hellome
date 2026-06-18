@@ -50,6 +50,7 @@ export default function AppHomePage() {
 
   useEffect(() => {
     if (!requestedAgentId) return;
+    if (!getVisibleRecentAgentIds().includes(requestedAgentId)) return;
     const agent = getAgentById(requestedAgentId);
     if (!agent?.available) return;
 
@@ -95,6 +96,7 @@ export default function AppHomePage() {
 
   if (
     requestedAgentId &&
+    getVisibleRecentAgentIds().includes(requestedAgentId) &&
     getAgentById(requestedAgentId)?.available &&
     isHermesConnected() &&
     !lowBalance

@@ -84,6 +84,20 @@ export function hideAgentTab(agentId: string): void {
   );
 }
 
+/** 关闭工作台标签：隐藏标签并更新最近打开记录 */
+export function closeAgentTab(agentId: string): void {
+  hideAgentTab(agentId);
+  const visible = getVisibleRecentAgentIds();
+  if (getLastOpenedAgentId() === agentId) {
+    const fallback = visible[visible.length - 1] ?? null;
+    if (fallback) setLastOpenedAgentId(fallback);
+    else {
+      localStorage.removeItem(WORKBENCH_LAST_AGENT_KEY);
+      notify();
+    }
+  }
+}
+
 export function setTabOrder(order: string[]): void {
   writeStringArray(WORKBENCH_TAB_ORDER_KEY, order);
 }
@@ -127,9 +141,8 @@ export function getVisibleEnabledAgents(agents: EnabledAgentSummary[]): EnabledA
 
 export function findAdjacentVisibleTabId(
   closingAgentId: string,
-  openedAgentIds: string[],
 ): string | null {
-  const visibleIds = openedAgentIds.filter((id) => isTabVisible(id));
+  const visibleIds = getVisibleRecentAgentIds();
   const idx = visibleIds.indexOf(closingAgentId);
   if (idx < 0) return visibleIds[0] ?? null;
   return visibleIds[idx + 1] ?? visibleIds[idx - 1] ?? null;

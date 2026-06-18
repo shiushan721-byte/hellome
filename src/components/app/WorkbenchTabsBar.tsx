@@ -10,11 +10,10 @@ import {
   subscribeHermesConnection,
 } from '../../lib/hermesConnection';
 import {
+  closeAgentTab,
   findAdjacentVisibleTabId,
   getHiddenTabIds,
   getTabOrder,
-  getVisibleRecentAgentIds,
-  hideAgentTab,
   openAgentTab,
   pruneWorkbenchTabs,
   setTabOrder,
@@ -52,7 +51,7 @@ export default function WorkbenchTabsBar() {
 
   useSyncExternalStore(subscribeTasks, getTasks, getTasks);
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
-  useSyncExternalStore(
+  const workbenchRevision = useSyncExternalStore(
     subscribeWorkbenchTabs,
     () => `${getHiddenTabIds().join(',')}|${getTabOrder().join(',')}`,
     () => '',
@@ -72,15 +71,9 @@ export default function WorkbenchTabsBar() {
     return match?.[1] ?? null;
   }, [location.pathname, location.search]);
 
-  const tabRevision = useSyncExternalStore(
-    subscribeWorkbenchTabs,
-    () => getTabOrder().join(','),
-    () => '',
-  );
-
   const recentAgents = useMemo(
     () => sortRecentAgentSummaries(getHomeDashboardData().recentAgents),
-    [tabRevision],
+    [workbenchRevision],
   );
 
   const availableAgents = useMemo<EnabledAgentSummary[]>(
@@ -142,10 +135,10 @@ export default function WorkbenchTabsBar() {
   };
 
   const closeTab = (e: MouseEvent, agentId: string) => {
+    e.preventDefault();
     e.stopPropagation();
-    const openedIds = getTabOrder();
-    const nextTabId = findAdjacentVisibleTabId(agentId, openedIds);
-    hideAgentTab(agentId);
+    const nextTabId = findAdjacentVisibleTabId(agentId);
+    closeAgentTab(agentId);
     clearHoverState();
 
     if (activeAgentId !== agentId) return;
@@ -156,7 +149,7 @@ export default function WorkbenchTabsBar() {
       return;
     }
 
-    navigate('/app');
+    navigate('/app', { replace: true });
   };
 
   const handleTabMouseEnter = (agent: EnabledAgentSummary, e: MouseEvent<HTMLDivElement>) => {
