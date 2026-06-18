@@ -22,7 +22,7 @@ const items: { key: keyof AuthStatus; label: string; connectedLabel: string; dis
 
 export default function SettingsAuthPage() {
   return (
-    <div className="p-6 lg:p-8 max-w-2xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <Link
         to="/app/settings"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-black/50 hover:text-black"
@@ -33,7 +33,6 @@ export default function SettingsAuthPage() {
 
       <div>
         <h1 className="text-2xl font-bold font-display">授权管理</h1>
-        <p className="text-sm text-black/50 mt-1">查看各平台连接状态，高风险操作前将弹出确认</p>
       </div>
 
       <div className="bg-white border border-black/8 divide-y divide-black/8">

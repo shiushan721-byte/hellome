@@ -177,32 +177,18 @@ export default function AgentsPage() {
 
   const lowBalance = usage.tokenBalance < usage.monthlyTokenLimit * usage.lowBalanceThreshold;
 
-  const slotsBanner = quota.slotsRemaining > 0
-    ? `你还可以启用 ${quota.slotsRemaining} 个智能体。`
-    : '智能体名额已满。如需启用新的智能体，请在「我的智能体」中停用一个，或升级套餐。';
-
   return (
     <div className="min-h-full bg-[#F5F5F7] px-6 lg:px-8 py-6 lg:py-8">
-      <div className="max-w-[1400px] mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-[#1A1A1A]">
             {activeTab === 'market' ? '智能体市场' : '我的智能体'}
           </h1>
-          <p className="text-xs text-black/45 max-w-2xl">
-            {activeTab === 'market'
-              ? '选择适合你的智能体启用，启用后即可发起任务。套餐限制可同时启用的智能体数量；任务按实际 Token 消耗计费。'
-              : '这些是你当前已启用的智能体，可直接进入使用或停用更换。停用后立即释放名额，已消耗 Token 不会退回。'}
-          </p>
         </div>
 
         <QuotaBar quota={quota} onUpgrade={() => navigate('/app/usage')} />
 
         <div className="space-y-1 text-xs">
-          {quota.slotsRemaining > 0 ? (
-            <p className="text-emerald-700">{slotsBanner}</p>
-          ) : (
-            <p className="text-amber-800">{slotsBanner}</p>
-          )}
           {lowBalance && (
             <p className="text-amber-700">
               Token 余额不足，已启用智能体仍会保留。充值后即可继续发起任务。

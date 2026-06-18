@@ -34,10 +34,9 @@ export default function UsagePage() {
       : 0;
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 w-full space-y-8">
       <div>
         <h1 className="text-2xl font-bold font-display">用量与套餐</h1>
-        <p className="text-sm text-black/50 mt-1">查看 Token 余额、套餐额度和任务消耗明细</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -73,8 +72,8 @@ export default function UsagePage() {
             })}
           </ul>
         )}
-        <Link to="/app/agents/mine" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
-          我的智能体 →
+        <Link to="/app/agents" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
+          智能体市场 →
         </Link>
       </section>
 

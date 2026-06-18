@@ -5,4 +5,4 @@ export interface AgentEntryState {
   prompt?: string;
 }
 
-export const DEFAULT_AGENT_RETURN_PATH = '/app/agents/mine';
+export const DEFAULT_AGENT_RETURN_PATH = '/app';

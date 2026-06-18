@@ -15,5 +15,10 @@ export default function AgentLauncherPage() {
     return <Navigate to={`/app/agents/market?enable=${agentId}`} replace />;
   }
 
+  // Workbench tabs should stay in agent workbench flow instead of bouncing to task center.
+  if (agent.path.startsWith('/app/tasks')) {
+    return <Navigate to="/app/agents/geo" replace state={{ ...location.state, agentId }} />;
+  }
+
   return <Navigate to={agent.path} replace state={location.state} />;
 }

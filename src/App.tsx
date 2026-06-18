@@ -13,12 +13,21 @@ import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
 import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
+import ConnectHermesPage from './pages/ConnectHermesPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<MarketingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/connect-hermes"
+        element={
+          <ProtectedRoute>
+            <ConnectHermesPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route
         path="/app"
@@ -29,15 +38,17 @@ export default function App() {
         }
       >
         <Route index element={<AppHomePage />} />
-        <Route path="agents/market" element={<AgentsPage />} />
-        <Route path="agents/mine" element={<AgentsPage />} />
+        <Route path="agents" element={<AgentsPage />} />
+        <Route path="agents/market" element={<Navigate to="/app/agents" replace />} />
+        <Route path="agents/mine" element={<Navigate to="/app/agents" replace />} />
         <Route path="agents/geo" element={<GeoAgentPage />} />
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
-        <Route path="agents" element={<AgentsLegacyRedirect />} />
+        <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="usage" element={<UsagePage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/profile" element={<Navigate to="/app/settings" replace />} />
         <Route path="settings/auth" element={<SettingsAuthPage />} />
       </Route>
 

@@ -57,12 +57,9 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-display">任务中心</h1>
-        <p className="text-sm text-black/50 mt-1">
-          {agentName ? `${agentName} 的任务历史` : '管理所有 Hermes 执行任务，回看过程与结果'}
-        </p>
       </div>
 
       {actionError && (

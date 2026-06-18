@@ -1,7 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Home,
-  Bot,
   ListTodo,
   BarChart3,
   Settings,
@@ -10,17 +9,26 @@ import {
 } from 'lucide-react';
 import Topbar from './Topbar';
 import PlanDebugPanel from './PlanDebugPanel';
+import HermesDebugPanel from './HermesDebugPanel';
+import WorkbenchTabsBar from './WorkbenchTabsBar';
 
 const navItems = [
-  { to: '/app', label: '首页', icon: Home, end: true as const },
-  { to: '/app/agents/market', label: '智能体市场', icon: Store },
-  { to: '/app/agents/mine', label: '我的智能体', icon: Bot },
+  {
+    to: '/app',
+    label: '我的工作台',
+    icon: Home,
+    match: (pathname: string) => pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(pathname),
+  },
+  { to: '/app/agents', label: '智能体市场', icon: Store, end: true as const },
   { to: '/app/tasks', label: '任务中心', icon: ListTodo },
   { to: '/app/usage', label: '用量', icon: BarChart3 },
   { to: '/app/settings', label: '设置', icon: Settings },
 ];
 
 export default function AppShell() {
+  const location = useLocation();
+  const showWorkbenchTabs = location.pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(location.pathname);
+
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] flex">
       <aside className="w-56 shrink-0 border-r border-black/8 bg-[#FDFCFB] flex flex-col">
@@ -37,14 +45,14 @@ export default function AppShell() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
-          {navItems.map(({ to, label, icon: Icon, end }) => (
+          {navItems.map(({ to, label, icon: Icon, end, match }) => (
             <NavLink
               key={to}
               to={to}
               end={end}
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
+                  (match ? match(location.pathname) : isActive)
                     ? 'bg-black text-white'
                     : 'text-black/60 hover:bg-[#F2F0ED] hover:text-black'
                 }`
@@ -55,11 +63,15 @@ export default function AppShell() {
             </NavLink>
           ))}
         </nav>
-        <PlanDebugPanel />
+        <div className="mt-auto">
+          <HermesDebugPanel />
+          <PlanDebugPanel />
+        </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
+        {showWorkbenchTabs && <WorkbenchTabsBar />}
         <main className="flex-1 overflow-auto custom-scrollbar">
           <Outlet />
         </main>

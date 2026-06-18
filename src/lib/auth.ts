@@ -1,4 +1,5 @@
 import { initUsageForNewUser } from './usageStore';
+import { syncProfileOnLogin } from './profileStore';
 
 const AUTH_KEY = 'hellome_auth';
 const USER_KEY = 'hellome_user';
@@ -49,17 +50,17 @@ export function verifyDemoCode(phone: string, code: string): boolean {
 
 export function loginWithPhone(phone: string): void {
   const digits = phone.replace(/\D/g, '');
-  const displayName = digits.length >= 4 ? `用户 ${digits.slice(-4)}` : '用户';
   localStorage.setItem(AUTH_KEY, 'true');
   localStorage.setItem(
     USER_KEY,
     JSON.stringify({
-      name: displayName,
+      name: '',
       phone: digits,
       email: '',
       workspace: '个人空间',
     }),
   );
+  syncProfileOnLogin(digits);
   initUsageForNewUser();
 }
 

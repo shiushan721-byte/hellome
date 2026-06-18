@@ -1,96 +1,178 @@
-import { Link } from 'react-router-dom';
+import { useRef, useState, useSyncExternalStore } from 'react';
+import { Camera, Pencil } from 'lucide-react';
 import { getUser } from '../../lib/auth';
-import type { AuthStatus } from '../../types/workbench';
+import {
+  getProfile,
+  getDisplayAvatarUrl,
+  readAvatarFile,
+  subscribeProfile,
+  updateProfile,
+  validateAvatarFile,
+  validateNickname,
+} from '../../lib/profileStore';
+import UserAvatar from '../../components/app/UserAvatar';
 
-const DEFAULT_AUTH: AuthStatus = {
-  browserAutomation: true,
-  localFileAccess: false,
-  wechatOfficial: false,
-  xiaohongshu: false,
-  feishu: false,
-  email: false,
-};
-
-const authItems: { key: keyof AuthStatus; label: string }[] = [
-  { key: 'browserAutomation', label: '浏览器自动化' },
-  { key: 'localFileAccess', label: '本地文件访问' },
-  { key: 'wechatOfficial', label: '公众号' },
-  { key: 'xiaohongshu', label: '小红书' },
-  { key: 'feishu', label: '飞书' },
-  { key: 'email', label: '邮箱' },
-];
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 11) {
+    return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`;
+  }
+  return digits || '未绑定';
+}
 
 export default function SettingsPage() {
+  const profile = useSyncExternalStore(subscribeProfile, getProfile, getProfile);
   const user = getUser();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState(profile.nickname);
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success');
+
+  const showMessage = (text: string, type: 'success' | 'error') => {
+    setMessage(text);
+    setMessageType(type);
+    window.setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handlePickAvatar = async (file: File) => {
+    const fileError = validateAvatarFile(file);
+    if (fileError) {
+      showMessage(fileError, 'error');
+      return;
+    }
+    try {
+      const dataUrl = await readAvatarFile(file);
+      const result = updateProfile({
+        nickname: profile.nickname,
+        avatarUrl: dataUrl,
+        isDefaultAvatar: false,
+      });
+      if (!result.ok) {
+        showMessage(result.error, 'error');
+        return;
+      }
+      showMessage('头像已更新', 'success');
+    } catch {
+      showMessage('头像上传失败，请稍后重试', 'error');
+    }
+  };
+
+  const startEditNickname = () => {
+    setNicknameDraft(profile.nickname);
+    setEditingNickname(true);
+  };
+
+  const saveNickname = () => {
+    const trimmed = nicknameDraft.trim();
+    if (trimmed === profile.nickname) {
+      setEditingNickname(false);
+      return;
+    }
+    const error = validateNickname(trimmed);
+    if (error) {
+      showMessage(error, 'error');
+      return;
+    }
+    const result = updateProfile({ nickname: trimmed });
+    if (!result.ok) {
+      showMessage(result.error, 'error');
+      return;
+    }
+    setEditingNickname(false);
+    showMessage('昵称已更新', 'success');
+  };
+
+  const cancelEditNickname = () => {
+    setNicknameDraft(profile.nickname);
+    setEditingNickname(false);
+  };
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl mx-auto space-y-10">
+    <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-display">设置</h1>
-        <p className="text-sm text-black/50 mt-1">账号、通知与授权管理</p>
       </div>
+
+      {message && (
+        <p
+          className={`text-xs px-3 py-2 border max-w-xl ${
+            messageType === 'error'
+              ? 'text-red-800 bg-red-50 border-red-200'
+              : 'text-emerald-800 bg-emerald-50 border-emerald-200'
+          }`}
+        >
+          {message}
+        </p>
+      )}
 
       <section className="space-y-4">
         <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">个人资料</h2>
-        <div className="bg-white border border-black/8 p-5 space-y-3 text-sm">
-          <Row label="姓名" value={user.name} />
-          <Row label="手机号" value={user.phone || '未绑定'} />
-          <Row label="邮箱" value={user.email || '未绑定'} />
-          <Row label="工作空间" value={user.workspace} />
-        </div>
-      </section>
+        <div className="bg-white border border-black/8 p-5 sm:p-6 max-w-xl">
+          <div className="flex items-start gap-5">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="group relative w-16 h-16 shrink-0 rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+              aria-label="更换头像"
+            >
+              <UserAvatar profile={profile} size="md" className="w-full h-full" />
+              <div className="absolute inset-0 rounded-full bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handlePickAvatar(file);
+                e.target.value = '';
+              }}
+            />
 
-      <section className="space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">账号安全</h2>
-        <div className="bg-white border border-black/8 p-5 text-sm text-black/55">
-          <p>支持 SSO 企业登录及一键认证（演示模式暂未接入）</p>
-        </div>
-      </section>
-
-      <section className="space-y-4" id="auth">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">授权管理</h2>
-          <Link to="/app/settings/auth" className="text-xs font-bold text-black/50 hover:text-black">
-            详情 →
-          </Link>
-        </div>
-        <div className="bg-white border border-black/8 divide-y divide-black/8">
-          {authItems.map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between px-5 py-3 text-sm">
-              <span>{label}</span>
-              <AuthBadge connected={DEFAULT_AUTH[key]} />
+            <div className="min-w-0 flex-1 pt-1 space-y-2">
+              {editingNickname ? (
+                <input
+                  type="text"
+                  value={nicknameDraft}
+                  maxLength={20}
+                  autoFocus
+                  onChange={(e) => setNicknameDraft(e.target.value)}
+                  onBlur={saveNickname}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      saveNickname();
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault();
+                      cancelEditNickname();
+                    }
+                  }}
+                  className="w-full border border-black/20 px-2 py-1 text-sm font-medium focus:outline-none focus:border-black/40"
+                />
+              ) : (
+                <div className="flex items-center gap-2 min-w-0">
+                  <p className="text-sm font-medium truncate">{profile.nickname}</p>
+                  <button
+                    type="button"
+                    onClick={startEditNickname}
+                    className="shrink-0 p-1 text-black/40 hover:text-black transition-colors"
+                    aria-label="编辑昵称"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-black/45">{formatPhone(user.phone)}</p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">隐私与数据</h2>
-        <div className="bg-white border border-black/8 p-5 text-sm text-black/55 leading-relaxed">
-          所有传输数据均执行 TLS 加密。未经授权不会将商业数据用于外部大模型公开训练。
+          </div>
         </div>
       </section>
     </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-4">
-      <span className="text-black/45">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function AuthBadge({ connected }: { connected: boolean }) {
-  return (
-    <span
-      className={`text-[10px] font-bold uppercase px-2 py-0.5 ${
-        connected ? 'bg-emerald-50 text-emerald-700' : 'bg-black/5 text-black/40'
-      }`}
-    >
-      {connected ? '已开启' : connected === false ? '未连接' : '未开启'}
-    </span>
   );
 }

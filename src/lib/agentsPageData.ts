@@ -28,18 +28,16 @@ const TASK_STATUS_LABEL: Record<string, string> = {
 };
 
 export function normalizeAgentsTab(tab: string | null): AgentsTab {
-  if (tab === 'mine' || tab === 'enabled' || tab === 'cooling') return 'mine';
   return 'market';
 }
 
-export function resolveAgentsTabFromPath(pathname: string, tabParam: string | null): AgentsTab {
+export function resolveAgentsTabFromPath(pathname: string, _tabParam: string | null): AgentsTab {
   if (pathname.endsWith('/agents/mine')) return 'mine';
-  if (pathname.endsWith('/agents/market')) return 'market';
-  return normalizeAgentsTab(tabParam);
+  return 'market';
 }
 
 export function agentsTabPath(tab: AgentsTab): string {
-  return `/app/agents/${tab}`;
+  return tab === 'mine' ? '/app/agents/mine' : '/app/agents';
 }
 
 function parseTokenRange(tokenRange: string): { min: number; max: number } {

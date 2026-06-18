@@ -1,24 +1,17 @@
-import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  Cpu,
-  Inbox,
-  Target,
-} from 'lucide-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Link2, Search } from 'lucide-react';
 import { getAgentById } from '../../data/agentsCatalog';
-import { isAgentActive, subscribeAgentSlots, getOccupiedSlotCount } from '../../lib/agentSlotStore';
-import { getTasks, subscribeTasks } from '../../lib/taskStore';
-import { buildGeoWorkbenchStats } from '../../lib/geoWorkbenchStats';
-import GeoTaskFormModal from '../../components/app/geo/GeoTaskFormModal';
 import type { AgentEntryState } from '../../types/agentNavigation';
 import { DEFAULT_AGENT_RETURN_PATH } from '../../types/agentNavigation';
+import {
+  getHermesConnection,
+  refreshHermesConnection,
+  subscribeHermesConnection,
+} from '../../lib/hermesConnection';
+import HermesActionModal from '../../components/app/HermesActionModal';
 
-const WORKFLOW_STEPS = ['关键词挖掘', '词库', '检测', '写文', '发布', '收录'] as const;
-
-const GEO_TEAL = '#14958A';
+const MODELS = ['豆包', 'DeepSeek', '腾讯元宝', 'Kimi', '文心一言', 'Qwen', '智谱', 'MiniMax'];
 
 export default function GeoAgentPage() {
   const navigate = useNavigate();
@@ -28,407 +21,384 @@ export default function GeoAgentPage() {
   const agentName = agent?.name ?? 'GEO 智能体';
   const returnPath = entry.from ?? DEFAULT_AGENT_RETURN_PATH;
 
-  const [showForm, setShowForm] = useState(false);
-  const [trendRange, setTrendRange] = useState<'7' | '30' | '90'>('30');
+  const [executionCollapsed, setExecutionCollapsed] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runProgress, setRunProgress] = useState(10);
+  const [showHermesModal, setShowHermesModal] = useState(false);
+  const hermes = useSyncExternalStore(
+    subscribeHermesConnection,
+    getHermesConnection,
+    getHermesConnection,
+  );
 
-  useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
-  const tasks = useSyncExternalStore(subscribeTasks, getTasks, () => []);
+  useEffect(() => {
+    setIsRunning(false);
+    setRunProgress(10);
+    setExecutionCollapsed(false);
+  }, []);
 
-  const geoActive = isAgentActive('geo');
-  const stats = useMemo(() => buildGeoWorkbenchStats(tasks), [tasks]);
-
-  const trendSlice = useMemo(() => {
-    const days = trendRange === '7' ? 7 : trendRange === '30' ? 30 : 90;
-    return stats.trendData.slice(-days);
-  }, [stats.trendData, trendRange]);
-
-  const maxTrend = Math.max(1, ...trendSlice.flatMap((d) => [d.publish, d.indexed]));
+  useEffect(() => {
+    if (!isRunning) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setRunProgress((prev) => Math.min(98, prev + (prev < 40 ? 8 : prev < 70 ? 5 : 2)));
+    }, 1800);
+    return () => window.clearInterval(timer);
+  }, [isRunning]);
 
   return (
     <div className="min-h-full bg-[#F0F2F5]">
-      <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-5">
-        <div className="rounded-2xl border border-black/10 bg-[#F5F6F7] overflow-hidden min-h-[760px] flex">
-          <aside className="w-[188px] shrink-0 border-r border-black/8 bg-[#F3F4F5] p-3 hidden lg:flex flex-col">
+      <div className="p-4 sm:p-6 lg:p-8 w-full">
+        <div className="relative grid gap-4 lg:grid-cols-[188px_minmax(0,1fr)]">
+          <aside className="hidden lg:flex flex-col bg-[#EEF1F3] border border-black/8 rounded-2xl p-3">
             <button
               type="button"
-              onClick={() => setShowForm(true)}
-              className="w-full py-2.5 text-xs font-bold bg-[#14958A] text-white rounded-md hover:bg-[#128278]"
+              className="w-full h-9 rounded-lg bg-[#14958A] text-white text-xs font-semibold hover:bg-[#128278]"
             >
               + 快速发起
             </button>
-            <nav className="mt-4 space-y-0.5 text-[12px]">
-              {[
-                '工作台',
-                '品牌管理',
-                'GEO 分析',
-                'GEO 监控',
-                '积分与账户',
-                '内容文件',
-                'Hermes 日志',
-                '生成 GEO 文案',
-              ].map((item, idx) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
-                    idx === 0 || idx === 7
-                      ? 'bg-white text-[#1A1A1A] font-semibold'
-                      : 'text-black/50 hover:bg-white/70'
-                  }`}
-                >
-                  {item}
-                </button>
-              ))}
+            <nav className="mt-3 space-y-1">
+              {['工作台', '品牌管理', 'GEO 分析', 'GEO 监控', '积分与账户', '内容文件', 'Hermes 日志'].map(
+                (item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`w-full text-left px-3 py-2 rounded-md text-xs ${
+                      item === 'GEO 分析'
+                        ? 'bg-white text-black/90 font-semibold'
+                        : 'text-black/55 hover:bg-white/70'
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ),
+              )}
             </nav>
           </aside>
 
-          <div className="flex-1 min-w-0">
-            <div className="h-14 px-5 border-b border-black/8 bg-white flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(returnPath)}
-                  className="shrink-0 flex items-center justify-center w-7 h-7 rounded-md border border-black/10 text-black/55 hover:bg-[#F2F0ED] hover:text-black transition-colors"
-                  aria-label="返回"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <h1 className="text-sm font-bold text-[#1A1A1A] truncate">{agentName}</h1>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Hermes 已连接
-                </span>
-              </div>
+          <div
+            className={`grid gap-4 ${
+              isRunning
+                ? executionCollapsed
+                  ? 'lg:grid-cols-[minmax(0,1fr)_56px]'
+                  : 'lg:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_360px]'
+                : 'grid-cols-1'
+            }`}
+          >
+            <div className="space-y-4 min-w-0">
+            <section className="bg-white border border-black/8 rounded-2xl p-4 md:p-5">
+            <div className="flex items-center gap-2">
+              <button className="px-3 py-1.5 text-xs rounded-lg bg-[#EEF5FF] text-[#3971C6] font-semibold">
+                快速检测
+              </button>
+              <button className="px-3 py-1.5 text-xs rounded-lg text-black/50 hover:bg-black/[0.03]">深度分析</button>
             </div>
 
-            <div className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-bold">工作台</div>
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="px-3 py-1.5 text-[11px] font-bold border border-black/12 rounded-md hover:bg-white"
-                >
-                  刷新
-                </button>
-              </div>
+            <div className="mt-3">
+              <h2 className="text-[28px] leading-none font-semibold tracking-tight text-black/85">GEO 快速检测</h2>
+              <p className="mt-2 text-sm text-black/45">补齐品牌资料后即可提交，检测 AI 平台提及与内容缺口。</p>
+            </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <HermesCard onDetect={() => setShowForm(true)} />
-                <PendingCard stats={stats} onInbox={() => navigate('/app/tasks?agent=geo')} />
-              </div>
+            <div className="mt-5 grid md:grid-cols-2 gap-3">
+              <Field label="品牌名称 *" value="UU教育" hint="4/20" />
+              <Field label="城市 / 目标市场 *" value="北京市/通州区" />
+              <Field label="产品 / 服务 *" value="UU教育; UU教育怎么样, UU教育靠谱吗, UU考研" hint="300/300" />
+              <Field label="官网 URL（可选）" value="https://www.example.com" />
+            </div>
 
-              <WorkflowBar onStartDetect={() => setShowForm(true)} />
+            <p className="mt-2 text-[11px] text-[#14958A] font-medium">
+              本次检测引用：{agentName}（切换请使用顶部品牌选择器）
+            </p>
 
-              <section className="bg-white rounded-xl border border-black/[0.06] shadow-sm p-4">
-                <h2 className="text-sm font-bold text-black/70 mb-4">指标与趋势</h2>
-                <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-6">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <MetricTile label="累计发布" value={stats.totalPublished} />
-                    <MetricTile label="今日发布" value={stats.publishedToday} />
-                    <MetricTile label="生成文章" value={stats.articlesGenerated} />
-                    <MetricTile
-                      label="命中关键词"
-                      value={stats.keywordsHit > 0 ? `${stats.keywordsHit}%` : '0'}
-                      sub={stats.keywordsHitDelta}
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-6 justify-center xl:justify-end">
-                    <DonutGauge label="平台命中率" value={stats.platformHitRate} color={GEO_TEAL} />
-                    <DonutGauge label="品牌提及率" value={stats.brandMentionRate} color="#3B82F6" />
-                  </div>
+            <section className="mt-4 rounded-xl bg-[#F7F8FA] border border-black/6 p-3">
+              <h3 className="text-sm font-semibold text-black/80">输入材料 *</h3>
+              <p className="mt-1 text-xs text-black/35">至少填写官网、一条参考链接或补充说明中的一项。</p>
+
+              <div className="mt-3 rounded-xl bg-white border border-black/8 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-black/60">参考链接</p>
+                  <p className="text-[11px] text-black/35">已添加 0/10 条</p>
                 </div>
-              </section>
-
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <section className="bg-white rounded-xl border border-black/[0.06] shadow-sm p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
-                    <div>
-                      <h3 className="text-sm font-bold">发布与收录趋势</h3>
-                      <p className="text-[11px] text-black/40 mt-0.5">近 30 天 · 内容产出 vs 收录命中</p>
-                    </div>
-                    <div className="flex gap-1 text-[11px]">
-                      {(['7', '30', '90'] as const).map((r) => (
-                        <button
-                          key={r}
-                          type="button"
-                          onClick={() => setTrendRange(r)}
-                          className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
-                            trendRange === r
-                              ? 'bg-[#14958A] text-white'
-                              : 'text-black/45 hover:bg-[#F2F0ED]'
-                          }`}
-                        >
-                          {r}天
-                        </button>
-                      ))}
-                    </div>
+                <div className="mt-2 flex gap-2">
+                  <div className="flex-1 min-w-0 h-10 border border-black/10 rounded-lg px-3 flex items-center gap-2 text-black/35 text-sm">
+                    <Link2 className="w-4 h-4" />
+                    粘贴文章、竞品或发布内容链接
                   </div>
-                  <div className="flex items-center gap-4 text-[10px] text-black/45 mb-3">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#14958A]" />
-                      发布
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#60A5FA]" />
-                      收录命中
-                    </span>
-                  </div>
-                  <div className="h-44 flex items-end gap-0.5 px-1">
-                    {trendSlice.map((d) => (
-                      <div key={d.label} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-                        <div className="w-full flex items-end justify-center gap-px h-36">
-                          <div
-                            className="w-[42%] rounded-t-sm bg-[#14958A]/80 transition-all"
-                            style={{ height: `${(d.publish / maxTrend) * 100}%`, minHeight: d.publish ? 4 : 0 }}
-                            title={`发布 ${d.publish}`}
-                          />
-                          <div
-                            className="w-[42%] rounded-t-sm bg-[#60A5FA]/70 transition-all"
-                            style={{ height: `${(d.indexed / maxTrend) * 100}%`, minHeight: d.indexed ? 4 : 0 }}
-                            title={`收录 ${d.indexed}`}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="bg-white rounded-xl border border-black/[0.06] shadow-sm p-4 flex flex-col min-h-[280px]">
-                  <h3 className="text-sm font-bold mb-4">AI 平台收录分布</h3>
-                  {stats.platformDistribution.length > 0 ? (
-                    <div className="flex-1 space-y-3">
-                      {stats.platformDistribution.map((p) => (
-                        <div key={p.name}>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="font-medium">{p.name}</span>
-                            <span className="font-mono text-black/50">{p.pct}%</span>
-                          </div>
-                          <div className="h-2 bg-[#F0F2F5] rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-[#14958A] rounded-full transition-all"
-                              style={{ width: `${Math.min(100, p.pct)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => navigate('/app/tasks')}
-                        className="mt-auto w-full py-2.5 text-xs font-bold text-[#14958A] border border-[#14958A]/30 rounded-xl hover:bg-[#14958A]/5"
-                      >
-                        查看检测报告
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                      <div className="w-14 h-14 rounded-2xl bg-[#F0F2F5] flex items-center justify-center mb-4">
-                        <Target className="w-7 h-7 text-black/20" />
-                      </div>
-                      <p className="text-sm font-medium text-black/55">暂无收录分布</p>
-                      <p className="text-xs text-black/40 mt-1 max-w-[240px] leading-relaxed">
-                        创建检测计划后，将按平台展示命中率
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setShowForm(true)}
-                        className="mt-5 px-5 py-2.5 text-xs font-bold text-white bg-[#14958A] rounded-xl hover:bg-[#128278]"
-                      >
-                        去收录排名
-                      </button>
-                    </div>
-                  )}
-                </section>
-              </div>
-
-              {!geoActive && (
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-900 flex flex-wrap items-center justify-between gap-3">
-                  <p>
-                    <span className="font-bold">GEO 智能体尚未启用。</span>
-                    启用后可在此工作台发起检测任务。
-                  </p>
-                  <Link
-                    to="/app/agents/market?enable=geo"
-                    className="px-4 py-2 text-xs font-bold bg-amber-900 text-white rounded-lg hover:bg-amber-800"
+                  <button
+                    type="button"
+                    className="w-[92px] h-10 border border-black/10 rounded-lg text-sm text-black/45 hover:bg-black/[0.02]"
                   >
-                    去启用
-                  </Link>
+                    + 添加
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+
+              <div className="mt-3 rounded-xl bg-white border border-black/8 p-3">
+                <p className="text-xs font-medium text-black/60">补充说明</p>
+                <div className="mt-2 rounded-lg border border-black/10 bg-[#FCFCFD] px-3 py-2 text-sm text-black/70 leading-relaxed min-h-[96px]">
+                  UU教育(北京鸿途优学教育科技有限公司)创立于2015年，总部位于北京市通州区，是一家以法律职业资格、注册会计师为核心，
+                  覆盖医药、建筑、考研、财会等多领域的互联网职业教育平台，提供直播课程、在线精品课、真机模拟、学管师陪学等服务。
+                </div>
+                <p className="mt-1 text-right text-[11px] text-black/30">136/300 字</p>
+              </div>
+            </section>
+
+            <section className="mt-4">
+              <p className="text-sm font-medium text-black/70">目标平台</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {MODELS.map((model) => (
+                  <button
+                    key={model}
+                    type="button"
+                    className={`px-3 py-1.5 rounded-full text-xs border ${
+                      model === '豆包' || model === '腾讯元宝' || model === 'Kimi'
+                        ? 'border-[#14958A]/35 text-[#14958A] bg-[#EAF6F4]'
+                        : 'border-black/10 text-black/55 bg-white'
+                    }`}
+                  >
+                    {model}
+                  </button>
+                ))}
+              </div>
+            </section>
+            </section>
+
+            <ExecutionPanel
+              collapsed={false}
+              onToggle={() => {}}
+              onExecute={() => {
+                if (hermes.status !== 'connected') {
+                  setShowHermesModal(true);
+                  return;
+                }
+                setIsRunning(true);
+                setRunProgress(10);
+              }}
+              forceExpanded={isRunning}
+              disableExecute={isRunning}
+            />
+          </div>
+
+            {isRunning && !executionCollapsed ? (
+              <RunningSidePanel
+                onCollapse={() => setExecutionCollapsed(true)}
+                progress={runProgress}
+                onOpenTask={() => navigate('/app/tasks?agent=geo')}
+                onOpenAll={() => navigate('/app/tasks')}
+                onBack={() => setIsRunning(false)}
+              />
+            ) : null}
+
+            {isRunning && executionCollapsed ? (
+              <aside className="hidden lg:flex flex-col items-center shrink-0 w-14 min-w-[56px]">
+                <button
+                  type="button"
+                  onClick={() => setExecutionCollapsed(false)}
+                  className="sticky top-24 w-10 h-10 rounded-xl border border-black/12 bg-white hover:bg-black/[0.02] flex items-center justify-center shadow-sm"
+                  aria-label="展开执行面板"
+                  title="展开执行面板"
+                >
+                  <ChevronLeft className="w-4 h-4 text-black/55" />
+                </button>
+              </aside>
+            ) : null}
           </div>
         </div>
+        {showHermesModal && (
+          <HermesActionModal
+            status={hermes.status}
+            onClose={() => setShowHermesModal(false)}
+            onOpenHermes={refreshHermesConnection}
+            onGoPair={() => {
+              setShowHermesModal(false);
+              navigate('/connect-hermes');
+            }}
+          />
+        )}
       </div>
-
-      <GeoTaskFormModal
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        initialKeywords={entry.prompt ?? ''}
-        geoActive={geoActive}
-      />
     </div>
   );
 }
 
-function HermesCard({ onDetect }: { onDetect: () => void }) {
+function Field({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <section className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 relative">
-      <button
-        type="button"
-        onClick={onDetect}
-        className="absolute top-4 right-4 px-3 py-1 text-[11px] font-bold text-[#14958A] border border-[#14958A]/40 rounded-lg hover:bg-[#14958A]/5"
-      >
-        检测
-      </button>
-      <div className="flex items-center gap-2 mb-3">
-        <Cpu className="w-4 h-4 text-black/40" />
-        <h2 className="text-sm font-bold">本机 Hermes</h2>
+    <div>
+      <p className="text-sm text-black/65 mb-1.5">{label}</p>
+      <div className="h-11 rounded-lg border border-black/10 bg-white px-3 flex items-center justify-between gap-3">
+        <span className="text-sm text-black/75 truncate">{value}</span>
+        {hint && <span className="text-[11px] text-black/30 shrink-0">{hint}</span>}
       </div>
-      <div className="flex items-center gap-2 mb-5">
-        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-        <span className="text-xs font-medium text-emerald-700">已连接</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="px-3 py-2 text-xs font-medium border border-black/10 rounded-lg hover:bg-[#F2F0ED] text-black/60"
-        >
-          管理本机 Hermes
-        </button>
-        <Link
-          to="/app/tasks?agent=geo"
-          className="px-3 py-2 text-xs font-medium border border-black/10 rounded-lg hover:bg-[#F2F0ED] text-black/60"
-        >
-          查看运行日志
-        </Link>
-      </div>
-    </section>
+    </div>
   );
 }
 
-function PendingCard({
-  stats,
-  onInbox,
+function ExecutionPanel({
+  collapsed,
+  onToggle,
+  onExecute,
+  forceExpanded = false,
+  disableExecute = false,
 }: {
-  stats: ReturnType<typeof buildGeoWorkbenchStats>;
-  onInbox: () => void;
+  collapsed: boolean;
+  onToggle: () => void;
+  onExecute: () => void;
+  forceExpanded?: boolean;
+  disableExecute?: boolean;
 }) {
-  return (
-    <section className="bg-white rounded-2xl border border-black/[0.06] shadow-sm p-5 flex flex-col">
-      <div className="flex items-center gap-2 mb-3">
-        <Inbox className="w-4 h-4 text-black/40" />
-        <h2 className="text-sm font-bold">待处理结果</h2>
-      </div>
-      <p className="text-xs text-black/45 mb-1">
-        {stats.pendingCount > 0
-          ? `${stats.pendingCount} 个结果待确认`
-          : '暂无待确认结果'}
-      </p>
-      <p className="text-[11px] text-black/40 mb-5">
-        今日查询任务：排队 {stats.queuedCount}，执行中 {stats.runningCount}，已完成{' '}
-        {stats.completedToday}
-      </p>
-      <button
-        type="button"
-        onClick={onInbox}
-        className="mt-auto w-full sm:w-auto self-start px-5 py-2.5 text-xs font-bold text-white bg-[#14958A] rounded-xl hover:bg-[#128278]"
-      >
-        查看结果收件箱
-      </button>
-    </section>
-  );
-}
+  const actualCollapsed = forceExpanded ? false : collapsed;
 
-function WorkflowBar({ onStartDetect }: { onStartDetect: () => void }) {
+  if (actualCollapsed) {
+    return (
+      <aside className="bg-white border border-black/8 rounded-2xl p-2">
+        <div className="flex flex-col items-center">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="w-8 h-8 rounded-md border border-black/10 hover:bg-black/[0.02] flex items-center justify-center"
+            aria-label="展开执行面板"
+          >
+            <ChevronLeft className="w-4 h-4 text-black/55" />
+          </button>
+          <span className="-rotate-90 mt-6 text-[10px] text-black/35 whitespace-nowrap">执行</span>
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <section className="bg-white rounded-2xl border border-black/[0.06] shadow-sm px-5 py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-bold text-black/55 shrink-0">推荐下一步</span>
-        {WORKFLOW_STEPS.map((step, i) => (
-          <span key={step} className="inline-flex items-center gap-2">
-            <span
-              className={`px-2.5 py-1 rounded-lg ${
-                step === '检测'
-                  ? 'bg-[#14958A]/10 text-[#14958A] font-bold'
-                  : 'text-black/45'
-              }`}
-            >
-              {step}
-            </span>
-            {i < WORKFLOW_STEPS.length - 1 && (
-              <ChevronRight className="w-3.5 h-3.5 text-black/25 shrink-0" />
-            )}
-          </span>
+    <aside className="bg-white border border-black/8 rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-[28px] leading-none font-semibold tracking-tight text-black/85">AI 拆解方案</h3>
+        {!forceExpanded && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="w-8 h-8 rounded-md border border-black/10 hover:bg-black/[0.02] flex items-center justify-center"
+            aria-label="收起执行面板"
+          >
+            <ChevronRight className="w-4 h-4 text-black/55" />
+          </button>
+        )}
+      </div>
+      <p className="mt-2 text-sm text-black/45">资料已齐，可提交 Hermes 分析</p>
+
+      <div className="mt-4 space-y-2">
+        {['品牌名称', '城市/目标市场', '产品/服务', '官网，链接或补充材料'].map((row) => (
+          <div key={row} className="h-10 px-3 rounded-lg bg-[#EAF6F4] border border-[#14958A]/18 flex items-center justify-between">
+            <span className="text-sm text-black/60">{row}</span>
+            <span className="text-xs text-[#14958A] font-semibold">已填</span>
+          </div>
         ))}
       </div>
+
+      <section className="mt-4">
+        <p className="text-sm font-semibold text-black/75">分析模式</p>
+        <div className="mt-2 rounded-xl border border-[#3B82F6]/20 bg-[#F3F7FF] px-3 py-2">
+          <p className="text-xl font-semibold leading-none text-black/85">快速检测</p>
+          <p className="mt-1 text-xs text-black/45">平台提及与内容缺口，适合首次体检</p>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-xl bg-[#F7F8FA] p-3 border border-black/6">
+        <p className="text-sm text-black/45">AI 分析项</p>
+        <p className="mt-1 text-3xl leading-none font-semibold text-black/85">12 条</p>
+      </section>
+
+      <section className="mt-4">
+        <p className="text-sm font-semibold text-black/75">将执行</p>
+        <div className="mt-2 space-y-1.5 text-sm text-black/50">
+          <p className="flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5" />
+            平台提及巡检
+          </p>
+          <p className="flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5" />
+            内容可引用性快检
+          </p>
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-xl bg-white border border-black/10 p-3">
+        <p className="text-sm font-semibold text-black/75">预计产物</p>
+        <ul className="mt-2 text-sm text-black/50 space-y-1">
+          <li>· AI 平台提及巡检摘要</li>
+          <li>· 内容缺口与优先修复建议</li>
+        </ul>
+        <button type="button" className="mt-2 text-sm text-[#14958A] font-semibold hover:underline">
+          查看任务详情
+        </button>
+      </section>
+
       <button
         type="button"
-        onClick={onStartDetect}
-        className="shrink-0 px-5 py-2.5 text-xs font-bold text-white bg-[#14958A] rounded-xl hover:bg-[#128278] flex items-center gap-1.5"
+        onClick={onExecute}
+        disabled={disableExecute}
+        className="mt-5 w-full h-11 rounded-xl bg-[#87D1C8] hover:bg-[#6fc7bc] disabled:bg-black/10 disabled:text-black/35 text-white text-lg font-semibold"
       >
-        前往 关键词挖掘
-        <ArrowRight className="w-3.5 h-3.5" />
+        提交 Hermes 快速检测
       </button>
-    </section>
+    </aside>
   );
 }
 
-function MetricTile({
-  label,
-  value,
-  sub,
+function RunningSidePanel({
+  onCollapse,
+  progress,
+  onOpenTask,
+  onOpenAll,
+  onBack,
 }: {
-  label: string;
-  value: string | number;
-  sub?: string;
+  onCollapse: () => void;
+  progress: number;
+  onOpenTask: () => void;
+  onOpenAll: () => void;
+  onBack: () => void;
 }) {
   return (
-    <div className="p-4 rounded-xl bg-[#F8F9FA] border border-black/[0.04]">
-      <p className="text-[11px] text-black/45 mb-2">{label}</p>
-      <p className="text-2xl font-bold font-mono text-[#1A1A1A]">{value}</p>
-      {sub && <p className="text-[10px] text-black/35 mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function DonutGauge({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color: string;
-}) {
-  const r = 36;
-  const c = 2 * Math.PI * r;
-  const offset = c - (value / 100) * c;
-
-  return (
-    <div className="flex flex-col items-center gap-2 min-w-[120px]">
-      <div className="relative w-24 h-24">
-        <svg viewBox="0 0 96 96" className="w-full h-full -rotate-90">
-          <circle cx="48" cy="48" r={r} fill="none" stroke="#F0F2F5" strokeWidth="10" />
-          <circle
-            cx="48"
-            cy="48"
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={offset}
-            className="transition-all duration-700"
-          />
-        </svg>
-        <span className="absolute inset-0 flex items-center justify-center text-lg font-bold font-mono">
-          {value}%
-        </span>
+    <aside className="bg-[#F5F6F8] border border-black/10 rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-4 rounded-full border-2 border-[#14958A] border-t-transparent animate-spin" />
+          <h3 className="text-xl font-semibold text-black/85">Hermes 正在执行</h3>
+        </div>
+        <button
+          type="button"
+          onClick={onCollapse}
+          className="w-8 h-8 rounded-md border border-black/10 hover:bg-white flex items-center justify-center"
+          aria-label="收起执行面板"
+        >
+          <ChevronRight className="w-4 h-4 text-black/55" />
+        </button>
       </div>
-      <p className="text-[11px] text-black/50 text-center">{label}</p>
-    </div>
+      <p className="mt-2 text-sm text-black/50">已创建任务： UU教育 · GEO 快速检测</p>
+      <p className="mt-2 text-sm text-black/60">进度 {progress}%</p>
+      <p className="mt-1 text-sm text-black/45">
+        任务处理中，完成前暂无法提交新任务。可前往结果中心查看进度，完成后我们会通知你。
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onOpenTask}
+          className="px-4 h-9 rounded-lg bg-[#14958A] text-white text-sm font-semibold hover:bg-[#128278]"
+        >
+          查看本任务分进度
+        </button>
+        <button
+          type="button"
+          onClick={onOpenAll}
+          className="px-4 h-9 rounded-lg bg-white border border-black/12 text-sm font-medium hover:bg-black/[0.02]"
+        >
+          全部任务
+        </button>
+        <button
+          type="button"
+          onClick={onBack}
+          className="px-4 h-9 rounded-lg bg-white border border-black/12 text-sm font-medium hover:bg-black/[0.02]"
+        >
+          返回工作台
+        </button>
+      </div>
+    </aside>
   );
 }
