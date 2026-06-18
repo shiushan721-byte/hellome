@@ -6,7 +6,6 @@ import type { EnabledAgentSummary } from '../../types/homeDashboard';
 
 interface EnabledAgentsPanelProps {
   agents: EnabledAgentSummary[];
-  slotsRemaining: number;
   onUseAgent: (agentId: string) => void;
   onViewTasks: (agentId: string) => void;
   onGoMarket: () => void;
@@ -14,7 +13,6 @@ interface EnabledAgentsPanelProps {
 
 export default function EnabledAgentsPanel({
   agents,
-  slotsRemaining,
   onUseAgent,
   onViewTasks,
   onGoMarket,
@@ -80,9 +78,7 @@ export default function EnabledAgentsPanel({
             <Plus className="w-5 h-5 text-black/40" />
           </div>
           <p className="text-sm font-bold text-black/70">启用更多智能体</p>
-          {slotsRemaining > 0 && (
-            <p className="text-xs text-black/45">你还可以启用 {slotsRemaining} 个智能体。</p>
-          )}
+          <p className="text-xs text-black/45">智能体可随时启用，不消耗 Token。</p>
           <button
             type="button"
             onClick={onGoMarket}

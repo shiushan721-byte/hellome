@@ -1,12 +1,12 @@
 import { useSyncExternalStore } from 'react';
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 import {
-  Home,
+  LayoutDashboard,
   ListTodo,
   BarChart3,
   Settings,
   Zap,
-  Store,
+  Home,
 } from 'lucide-react';
 import Topbar from './Topbar';
 import PlanDebugPanel from './PlanDebugPanel';
@@ -26,14 +26,20 @@ import {
 
 const navItems = [
   {
+    to: '/app/agents',
+    label: '首页',
+    icon: Home,
+    match: (pathname: string) =>
+      pathname === '/app/agents' || pathname.startsWith('/app/agents/mine'),
+  },
+  {
     to: '/app',
     label: '我的工作台',
-    icon: Home,
+    icon: LayoutDashboard,
     match: (pathname: string) => pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(pathname),
   },
-  { to: '/app/agents', label: '智能体市场', icon: Store, end: true as const },
   { to: '/app/tasks', label: '任务中心', icon: ListTodo },
-  { to: '/app/usage', label: '智能体驾驶舱', icon: BarChart3 },
+  { to: '/app/usage', label: '算力中心', icon: BarChart3 },
   { to: '/app/settings', label: '设置', icon: Settings },
 ];
 
@@ -90,7 +96,7 @@ export default function AppShell() {
 
         <nav className="flex-1 p-3 space-y-0.5">
           {navItems.map(({ to, label, icon: Icon, end, match }) => {
-            const disabled = restricted && to !== '/app';
+            const disabled = restricted && to !== '/app' && to !== '/app/agents';
             const isActive = match ? match(location.pathname) : location.pathname === to;
 
             if (disabled) {

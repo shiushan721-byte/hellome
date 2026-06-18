@@ -1,6 +1,8 @@
-import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import MarketingPage from './pages/MarketingPage';
 import LoginPage from './pages/LoginPage';
+import PublicAgentsPage from './pages/PublicAgentsPage';
+import PublicAgentDetailPage from './pages/PublicAgentDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppShell from './components/app/AppShell';
 import AppHomePage from './pages/app/AppHomePage';
@@ -14,23 +16,20 @@ import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
 import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
-
-function ConnectHermesRedirect() {
-  const [searchParams] = useSearchParams();
-  const qs = searchParams.toString();
-  return <Navigate to={qs ? `/app?${qs}` : '/app'} replace />;
-}
+import ConnectHermesPage from './pages/ConnectHermesPage';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<MarketingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/agents" element={<PublicAgentsPage />} />
+      <Route path="/agents/:agentId" element={<PublicAgentDetailPage />} />
       <Route
         path="/connect-hermes"
         element={
           <ProtectedRoute>
-            <ConnectHermesRedirect />
+            <ConnectHermesPage />
           </ProtectedRoute>
         }
       />

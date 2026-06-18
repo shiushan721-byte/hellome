@@ -5,7 +5,6 @@ import type { EnabledAgentSummary } from '../../types/homeDashboard';
 
 interface WorkbenchOpenAgentModalProps {
   agents: EnabledAgentSummary[];
-  slotsRemaining: number;
   onOpen: (agentId: string) => void;
   onGoMarket: () => void;
   onClose: () => void;
@@ -47,7 +46,6 @@ function OpenAgentPickerCard({
 
 export default function WorkbenchOpenAgentModal({
   agents,
-  slotsRemaining,
   onOpen,
   onGoMarket,
   onClose,
@@ -88,11 +86,7 @@ export default function WorkbenchOpenAgentModal({
         </div>
 
         <div className="px-4 py-3 border-t border-black/8 flex items-center justify-between gap-3">
-          <p className="text-xs text-black/45">
-            {slotsRemaining > 0
-              ? `还可启用 ${slotsRemaining} 个智能体`
-              : '智能体名额已满，可停用后更换'}
-          </p>
+          <p className="text-xs text-black/45">已启用的智能体可随时打开或关闭标签</p>
           <button
             type="button"
             onClick={onGoMarket}

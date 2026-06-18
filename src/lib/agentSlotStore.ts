@@ -4,8 +4,6 @@ import type {
   UserAgentActivation,
 } from '../types/agentSlots';
 import { isSlotAgent } from '../types/agentSlots';
-import { getPlanEntitlements } from './planEntitlements';
-import { getUsage } from './usageStore';
 import { getTasks } from './taskStore';
 
 const ACTIVATIONS_KEY = 'hellome_agent_activations';
@@ -106,23 +104,12 @@ export function canEnableAgent(agentId: string, planAvailable = true): EnableChe
     return { allowed: false, reason: 'unavailable', message: '该智能体暂不支持启用' };
   }
   if (!planAvailable) {
-    return { allowed: false, reason: 'unavailable', message: '当前套餐不支持该智能体，请升级套餐' };
+    return { allowed: false, reason: 'unavailable', message: '该智能体即将开放' };
   }
 
   const existing = getActivation(agentId);
   if (existing?.status === 'active') {
     return { allowed: true, reason: 'already_active' };
-  }
-
-  const plan = getPlanEntitlements(getUsage().planName);
-  const occupied = getOccupiedSlotCount();
-
-  if (occupied >= plan.enabledAgentLimit) {
-    return {
-      allowed: false,
-      reason: 'slots_full',
-      message: '当前套餐可同时启用的智能体名额已满，请先停用一个已启用智能体或升级套餐',
-    };
   }
 
   return { allowed: true };
@@ -149,7 +136,7 @@ export function canDeactivateAgent(agentId: string): DeactivateCheckResult {
   return {
     allowed: true,
     message:
-      '停用后会立即释放 1 个智能体名额。历史任务和结果仍可查看，但你将不能继续发起该智能体任务、继续生成或重新运行历史任务。已消耗的 Token 不会退回。',
+      '停用后，它将从我的工作台移除，你将不能继续发起该智能体新任务。历史任务、成果和已下载文件仍会保留。你可以随时重新启用。',
   };
 }
 

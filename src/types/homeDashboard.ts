@@ -1,10 +1,8 @@
 import type { Task, TaskStatus, UsageSnapshot } from './workbench';
 
 export interface AgentQuotaSnapshot {
-  planName: string;
   enabledCount: number;
-  enabledLimit: number;
-  slotsRemaining: number;
+  tokenBalance: number;
 }
 
 export interface EnabledAgentSummary {
@@ -39,7 +37,6 @@ export interface RecommendedAction {
 export type PromptMatchResult =
   | { type: 'match'; agentId: string; agentName: string }
   | { type: 'needs_enable'; agentId: string; agentName: string }
-  | { type: 'slots_full'; agentId: string; agentName: string }
   | { type: 'no_match' };
 
 export interface HomeDashboardData {

@@ -19,10 +19,14 @@ import {
 } from '../lib/hermesConnection';
 import {
   buildOnboardingState,
-  getPostPairingPath,
   HERMES_DOWNLOAD_URL,
   type FirstRunHermesStatus,
 } from '../lib/firstRunOnboarding';
+import {
+  parseIntentFromSearchParams,
+  replayPendingIntent,
+  stashIntent,
+} from '../lib/pendingAgentIntent';
 import { getProfile, subscribeProfile } from '../lib/profileStore';
 
 const FAQ = [
@@ -96,12 +100,23 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
     forceOffline && status !== 'connected' ? 'offline' : status;
 
   useEffect(() => {
+    const intent = parseIntentFromSearchParams(searchParams);
+    if (intent.agentId || intent.action || intent.redirect) {
+      stashIntent(intent);
+    }
+  }, [searchParams]);
+
+  const finishPairing = () => {
+    navigate(replayPendingIntent(), { replace: true });
+  };
+
+  useEffect(() => {
     if (snapshot.status === 'connected' && !forceOffline) {
       if (!embedded) {
-        navigate(getPostPairingPath(), { replace: true });
+        finishPairing();
       }
     }
-  }, [snapshot.status, forceOffline, navigate, embedded]);
+  }, [snapshot.status, forceOffline, embedded]);
 
   const handleRefresh = async () => {
     setChecking(true);
@@ -109,7 +124,7 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
       const next = refreshHermesConnection();
       setChecking(false);
       if (next.status === 'connected') {
-        navigate(getPostPairingPath(), { replace: true });
+        finishPairing();
       }
     }, 600);
   };
@@ -117,12 +132,12 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
   const handlePair = () => {
     const next = pairHermesWithCurrentAccount();
     if (next.status === 'connected') {
-      navigate(getPostPairingPath(), { replace: true });
+      finishPairing();
     }
   };
 
   const enterWorkbench = () => {
-    navigate(getPostPairingPath(), { replace: true });
+    finishPairing();
   };
 
   return (

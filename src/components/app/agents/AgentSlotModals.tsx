@@ -32,27 +32,20 @@ function ConsequenceList({ items }: { items: string[] }) {
 
 export function EnableAgentModal({
   agentName,
-  planName,
-  enabledLimit,
-  occupiedCount,
   onConfirm,
   onClose,
 }: {
   agentName: string;
-  planName: string;
-  enabledLimit: number;
-  occupiedCount: number;
   onConfirm: () => void;
   onClose: () => void;
 }) {
   return (
     <ModalShell title={`启用 ${agentName}？`} onClose={onClose}>
       <p className="text-sm text-black/60 leading-relaxed">
-        你的{planName}套餐可同时启用 {enabledLimit} 个智能体，当前已启用 {occupiedCount} 个。
-        启用后将占用 1 个智能体名额。该智能体内的任务会按实际 Token 消耗计费。
+        启用后会出现在我的工作台顶部标签栏。
       </p>
       <p className="text-xs text-black/45 leading-relaxed">
-        你可以随时在「我的智能体」中停用并更换智能体。停用不会删除历史任务和结果，已消耗 Token 不会退回。
+        启用智能体不消耗 Token，只有执行任务时才会按实际用量消耗 Token。
       </p>
       <div className="flex gap-2 pt-2">
         <button
@@ -93,8 +86,10 @@ export function DeactivateAgentModal({
 }) {
   if (check.hasRunningTasks) {
     return (
-      <ModalShell title="该智能体还有进行中的任务" onClose={onClose}>
-        <p className="text-sm text-black/60 leading-relaxed">{check.message}</p>
+      <ModalShell title={`${agentName} 当前有执行中的任务`} onClose={onClose}>
+        <p className="text-sm text-black/60 leading-relaxed">
+          你可以先查看任务，或取消任务后停用。取消任务会按已完成部分结算已消耗 Token。
+        </p>
         {runningTaskCount > 0 && (
           <p className="text-xs font-mono text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2">
             当前有 {runningTaskCount} 个任务进行中或等待确认
@@ -104,7 +99,7 @@ export function DeactivateAgentModal({
           items={[
             '选择「取消任务并停用」将终止未完成任务',
             '已产生的 Token 按实际消耗结算',
-            '停用后立即释放智能体名额',
+            '停用后将从工作台标签栏移除',
           ]}
         />
         <div className="flex flex-col sm:flex-row gap-2 pt-2">
@@ -158,9 +153,9 @@ export function DeactivateAgentModal({
       <p className="text-sm text-black/60 leading-relaxed">{check.message}</p>
       <ConsequenceList
         items={[
-          '停用后立即释放名额',
           '历史任务和结果仍可查看',
           '已消耗 Token 不会退回',
+          '可随时重新启用',
         ]}
       />
       <div className="flex gap-2 pt-2">
@@ -183,80 +178,6 @@ export function DeactivateAgentModal({
   );
 }
 
-export function SlotsFullModal({
-  message,
-  onClose,
-  onViewMine,
-  onUpgrade,
-}: {
-  message: string;
-  onClose: () => void;
-  onViewMine?: () => void;
-  onUpgrade?: () => void;
-}) {
-  return (
-    <ModalShell title="智能体名额已满" onClose={onClose}>
-      <p className="text-sm text-black/60 leading-relaxed">
-        {message ||
-          '你的当前套餐可同时启用的智能体名额已全部使用。如需启用新的智能体，请在「我的智能体」中停用一个已启用智能体，或升级套餐。'}
-      </p>
-      <div className="flex gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 py-2.5 text-xs font-bold border border-black/15 rounded-lg"
-        >
-          关闭
-        </button>
-        {onViewMine && (
-          <button
-            type="button"
-            onClick={onViewMine}
-            className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
-          >
-            去我的智能体
-          </button>
-        )}
-        {onUpgrade && (
-          <button
-            type="button"
-            onClick={onUpgrade}
-            className="flex-1 py-2.5 text-xs font-bold bg-black text-white rounded-lg"
-          >
-            升级套餐
-          </button>
-        )}
-      </div>
-    </ModalShell>
-  );
-}
-
-export function EnableSuccessBanner({
-  agentName,
-  onViewMine,
-  onDismiss,
-}: {
-  agentName: string;
-  onViewMine: () => void;
-  onDismiss: () => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm">
-      <p className="text-emerald-800 font-medium flex-1">{agentName} 已启用</p>
-      <button
-        type="button"
-        onClick={onViewMine}
-        className="px-3 py-1.5 text-xs font-bold bg-black text-white rounded-lg"
-      >
-        查看我的智能体
-      </button>
-      <button type="button" onClick={onDismiss} className="text-xs text-black/40 hover:text-black">
-        关闭
-      </button>
-    </div>
-  );
-}
-
 export function DeactivateSuccessBanner({
   agentName,
   onDismiss,
@@ -269,7 +190,7 @@ export function DeactivateSuccessBanner({
   return (
     <div className="flex flex-wrap items-center gap-3 bg-[#F2F0ED] border border-black/10 px-4 py-3 text-sm">
       <p className="text-black/75 font-medium flex-1">
-        {agentName} 已停用，名额已立即释放。历史任务和结果仍可查看。
+        {agentName} 已停用。历史任务和结果仍可查看。
       </p>
       {onGoMarket && (
         <button

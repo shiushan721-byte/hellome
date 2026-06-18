@@ -66,8 +66,6 @@ export default function WorkbenchTabsBar() {
   }, [location.pathname, location.search]);
 
   const enabledAgents = getHomeDashboardData().enabledAgents;
-  const agentQuota = getHomeDashboardData().agentQuota;
-  const slotsRemaining = Math.max(0, agentQuota.enabledLimit - agentQuota.enabledCount);
   const enabledIds = useMemo(() => new Set(enabledAgents.map((agent) => agent.agentId)), [enabledAgents]);
 
   useEffect(() => {
@@ -276,7 +274,6 @@ export default function WorkbenchTabsBar() {
       {openAgentModal && (
         <WorkbenchOpenAgentModal
           agents={enabledAgents}
-          slotsRemaining={slotsRemaining}
           onOpen={(agentId) => {
             openAgent(agentId);
             setOpenAgentModal(false);

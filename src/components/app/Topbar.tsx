@@ -60,6 +60,17 @@ export default function Topbar() {
         </button>
         <button
           type="button"
+          onClick={() => navigate('/app/usage')}
+          className={`hidden md:inline-flex text-xs px-3 py-1.5 rounded-full border font-bold transition-colors ${
+            low
+              ? 'border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200'
+              : 'border-black/15 bg-white text-black/70 hover:border-black/25'
+          }`}
+        >
+          {low ? '充值算力' : '充值'}
+        </button>
+        <button
+          type="button"
           onClick={() => {
             if (isConnected) refreshHermesConnection();
             else setShowHermesModal(true);

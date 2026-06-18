@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Zap, ArrowRight } from 'lucide-react';
 import {
   isAuthenticated,
@@ -8,17 +8,30 @@ import {
   DEMO_PHONE,
   DEMO_CODE,
 } from '../lib/auth';
+import { isHermesConnected } from '../lib/firstRunOnboarding';
+import {
+  parseIntentFromSearchParams,
+  resolvePostLoginPath,
+  replayPendingIntent,
+} from '../lib/pendingAgentIntent';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [phone, setPhone] = useState(DEMO_PHONE);
   const [code, setCode] = useState(DEMO_CODE);
   const [error, setError] = useState('');
   const [codeSent, setCodeSent] = useState(true);
 
   useEffect(() => {
-    if (isAuthenticated()) navigate('/app', { replace: true });
-  }, [navigate]);
+    if (!isAuthenticated()) return;
+    const intent = parseIntentFromSearchParams(searchParams);
+    if (isHermesConnected()) {
+      navigate(replayPendingIntent(), { replace: true });
+    } else {
+      navigate(resolvePostLoginPath(intent), { replace: true });
+    }
+  }, [navigate, searchParams]);
 
   const handleSendCode = () => {
     const digits = phone.replace(/\D/g, '');
@@ -44,7 +57,8 @@ export default function LoginPage() {
     }
 
     loginWithPhone(digits);
-    navigate('/app');
+    const intent = parseIntentFromSearchParams(searchParams);
+    navigate(resolvePostLoginPath(intent), { replace: true });
   };
 
   return (
@@ -65,7 +79,7 @@ export default function LoginPage() {
         <div className="bg-white border border-black/8 p-8 space-y-6">
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-bold font-display">手机号登录</h1>
-            <p className="text-sm text-black/50">验证码授权登录，进入任务驾驶舱</p>
+            <p className="text-sm text-black/50">登录后启用智能体并连接 Hz-Hermes</p>
           </div>
 
           <div className="text-[11px] text-black/45 bg-[#F2F0ED] px-3 py-2 leading-relaxed">
@@ -120,6 +134,9 @@ export default function LoginPage() {
           </form>
 
           <p className="text-[11px] text-black/40 text-center">
+            <Link to="/agents" className="hover:text-black underline mr-3">
+              浏览智能体市场
+            </Link>
             <Link to="/" className="hover:text-black underline">
               返回官网首页
             </Link>

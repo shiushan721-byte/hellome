@@ -9,13 +9,10 @@ import type {
 } from '../types/agentsPage';
 import {
   canDeactivateAgent,
-  getActivation,
   getActivations,
   getActiveAgents,
   getAgentDisplayStatus,
-  getOccupiedSlotCount,
 } from './agentSlotStore';
-import { getPlanEntitlements } from './planEntitlements';
 import { getTasks } from './taskStore';
 import { getUsage } from './usageStore';
 
@@ -56,30 +53,27 @@ function currentMonthKey(): string {
 
 function resolveMarketStatus(agentId: string, planAvailable: boolean): AgentMarketStatus {
   if (!planAvailable) return 'coming_soon';
-
   if (getAgentDisplayStatus(agentId, true) === 'active') return 'active';
-  if (getAgentDisplayStatus(agentId, planAvailable) === 'unavailable') return 'plan_unavailable';
-
   return 'inactive';
 }
 
 function buildQuotaSnapshot(): AgentQuotaSnapshot {
   const usage = getUsage();
-  const plan = getPlanEntitlements(usage.planName);
-  const occupied = getOccupiedSlotCount();
 
   return {
     enabledCount: getActiveAgents().length,
-    enabledLimit: plan.enabledAgentLimit,
     tokenBalance: usage.tokenBalance,
-    planName: usage.planName,
-    slotsRemaining: Math.max(0, plan.enabledAgentLimit - occupied),
   };
 }
 
-function buildMarketAgents(): AgentMarketCard[] {
+function buildMarketAgents(guestMode = false): AgentMarketCard[] {
   return AGENTS.map((agent) => {
     const { min, max } = parseTokenRange(agent.tokenRange);
+    const status: AgentMarketStatus = guestMode
+      ? agent.available
+        ? 'inactive'
+        : 'coming_soon'
+      : resolveMarketStatus(agent.id, agent.available);
     return {
       id: agent.id,
       name: agent.name,
@@ -93,20 +87,10 @@ function buildMarketAgents(): AgentMarketCard[] {
       heat: agent.heat,
       likes: agent.likes,
       iconSrc: agent.iconSrc,
-      status: resolveMarketStatus(agent.id, agent.available),
+      status,
       badge: agent.badge,
     };
   });
-}
-
-function isReadonlyAgent(agentId: string): boolean {
-  const activation = getActivation(agentId);
-  if (!activation || activation.status !== 'active') return false;
-
-  const plan = getPlanEntitlements(getUsage().planName);
-  const active = getActiveAgents();
-  const idx = active.findIndex((a) => a.agentId === agentId);
-  return idx >= 0 && idx >= plan.enabledAgentLimit;
 }
 
 function buildMyAgents(): MyAgentCard[] {
@@ -125,17 +109,14 @@ function buildMyAgents(): MyAgentCard[] {
       .filter((t) => t.agentType === activation.agentId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
 
-    const readonly = isReadonlyAgent(activation.agentId);
-    const status = readonly ? 'readonly' : 'active';
-    const deactivateCheck =
-      status === 'active' ? canDeactivateAgent(activation.agentId) : { allowed: false };
+    const deactivateCheck = canDeactivateAgent(activation.agentId);
 
     cards.push({
       id: agent.id,
       name: agent.name,
       description: agent.desc,
       iconSrc: agent.iconSrc,
-      status,
+      status: 'active',
       monthlyTaskCount: agentTasks.length,
       monthlyTokenUsed: activation.tokenUsed,
       latestTask: latest
@@ -154,6 +135,15 @@ function buildMyAgents(): MyAgentCard[] {
   }
 
   return cards;
+}
+
+export function getGuestAgentsPageData(): AgentsPageData {
+  return {
+    activeTab: 'market',
+    quota: { enabledCount: 0, tokenBalance: 0 },
+    marketAgents: buildMarketAgents(true),
+    myAgents: [],
+  };
 }
 
 export function getAgentsPageData(tab: AgentsTab | string | null): AgentsPageData {

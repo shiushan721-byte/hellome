@@ -60,7 +60,6 @@ export function isWorkbenchNavRestricted(): boolean {
 }
 
 const UNPAIRED_BLOCKED_PATHS = [
-  /^\/app\/agents(\/|$)/,
   /^\/app\/tasks(\/|$)/,
   /^\/app\/usage$/,
   /^\/app\/settings(\/|$)/,

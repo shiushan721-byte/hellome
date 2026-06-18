@@ -16,8 +16,8 @@ import {
   openAgentTab,
   subscribeWorkbenchTabs,
 } from '../../lib/workbenchTabs';
-import type { AgentQuotaSnapshot } from '../../types/homeDashboard';
 import type { AgentEntryState } from '../../types/agentNavigation';
+import { formatToken } from '../../lib/tokenBilling';
 
 export default function AppHomePage() {
   const navigate = useNavigate();
@@ -97,7 +97,6 @@ export default function AppHomePage() {
     return (
       <EnabledAgentsPanel
         agents={enabledAgents}
-        slotsRemaining={agentQuota.slotsRemaining}
         onUseAgent={handleUseAgent}
         onViewTasks={(agentId) => navigate(`/app/tasks?agent=${agentId}`)}
         onGoMarket={() => navigate('/app/agents')}
@@ -118,7 +117,7 @@ function HomeEmptyState({
   onEnableAgent,
   onViewMarket,
 }: {
-  quota: AgentQuotaSnapshot;
+  quota: { tokenBalance: number };
   onEnableAgent: (agentId: string) => void;
   onViewMarket: () => void;
 }) {
@@ -133,16 +132,10 @@ function HomeEmptyState({
         <p className="text-sm text-black/50">先去智能体市场启用一个智能体，开始你的第一个任务。</p>
       </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-center text-xs text-black/45">
-        <div className="bg-[#F2F0ED] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-black/35 mb-1">当前套餐</p>
-          <p className="font-bold text-black">{quota.planName}</p>
-        </div>
-        <div className="bg-[#F2F0ED] p-4">
-          <p className="text-[10px] uppercase tracking-wider text-black/35 mb-1">可启用智能体</p>
-          <p className="font-bold font-mono text-black">
-            {quota.enabledCount} / {quota.enabledLimit}
-          </p>
+      <div className="flex justify-center">
+        <div className="bg-[#F2F0ED] px-6 py-4 text-center text-xs">
+          <p className="text-[10px] uppercase tracking-wider text-black/35 mb-1">剩余 Token</p>
+          <p className="font-bold font-mono text-lg text-black">{formatToken(quota.tokenBalance)}</p>
         </div>
       </div>
 
@@ -160,7 +153,6 @@ function HomeEmptyState({
                 })
               }
               onDeactivate={() => {}}
-              onUpgrade={() => navigate('/app/usage')}
             />
           ))}
         </div>

@@ -115,6 +115,22 @@ export function isLowBalance(usage = getUsage()): boolean {
   return usage.tokenBalance < threshold;
 }
 
+export function getComputeStats(usage = getUsage()) {
+  const ledger = getLedger();
+  const ledgerUsed = ledger.reduce(
+    (sum, entry) => sum + (entry.status === 'refunded' ? 0 : entry.tokenUsed),
+    0,
+  );
+  const lifetimeUsedTokens = Math.max(ledgerUsed, usage.monthlyTokenUsed);
+  const lifetimePurchasedTokens = usage.tokenBalance + lifetimeUsedTokens;
+
+  return {
+    lifetimeUsedTokens,
+    lifetimePurchasedTokens,
+    monthlyUsed: usage.monthlyTokenUsed,
+  };
+}
+
 export function canAffordTask(estimatedMax: number, usage = getUsage()): boolean {
   return usage.tokenBalance >= estimatedMax;
 }

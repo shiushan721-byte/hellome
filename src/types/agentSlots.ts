@@ -19,7 +19,7 @@ export interface UserAgentActivation {
 
 export interface EnableCheckResult {
   allowed: boolean;
-  reason?: 'already_active' | 'unavailable' | 'slots_full';
+  reason?: 'already_active' | 'unavailable';
   message?: string;
 }
 

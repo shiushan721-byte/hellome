@@ -14,7 +14,6 @@ import {
   getOccupiedSlotCount,
   isAgentActive,
 } from './agentSlotStore';
-import { getPlanEntitlements } from './planEntitlements';
 import { getUsage, isLowBalance } from './usageStore';
 import { getTasks } from './taskStore';
 import { getAgentsPageData } from './agentsPageData';
@@ -98,8 +97,8 @@ export function matchPromptToAgent(prompt: string): PromptMatchResult {
   const agentName = agent?.name ?? best;
 
   const check = canEnableAgent(best, agent?.available ?? false);
-  if (check.reason === 'slots_full') {
-    return { type: 'slots_full', agentId: best, agentName };
+  if (!check.allowed && check.reason === 'unavailable') {
+    return { type: 'no_match' };
   }
 
   return { type: 'needs_enable', agentId: best, agentName };
@@ -159,14 +158,10 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
 
 function buildAgentQuota(): AgentQuotaSnapshot {
   const usage = getUsage();
-  const plan = getPlanEntitlements(usage.planName);
-  const enabledCount = getOccupiedSlotCount();
 
   return {
-    planName: usage.planName,
-    enabledCount,
-    enabledLimit: plan.enabledAgentLimit,
-    slotsRemaining: Math.max(0, plan.enabledAgentLimit - enabledCount),
+    enabledCount: getOccupiedSlotCount(),
+    tokenBalance: usage.tokenBalance,
   };
 }
 

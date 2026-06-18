@@ -1,19 +1,12 @@
 export type AgentsTab = 'market' | 'mine';
 
-export type AgentMarketStatus =
-  | 'inactive'
-  | 'active'
-  | 'plan_unavailable'
-  | 'coming_soon';
+export type AgentMarketStatus = 'inactive' | 'active' | 'coming_soon';
 
-export type MyAgentStatus = 'active' | 'readonly';
+export type MyAgentStatus = 'active';
 
 export interface AgentQuotaSnapshot {
   enabledCount: number;
-  enabledLimit: number;
   tokenBalance: number;
-  planName: string;
-  slotsRemaining: number;
 }
 
 export interface AgentMarketCard {

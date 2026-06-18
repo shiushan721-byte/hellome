@@ -15,12 +15,10 @@ export default function InfoSections() {
 
   const pricingTiers = [
     {
-      name: '体验版',
+      name: '新手算力包',
       price: '¥49',
       unit: '',
       tokenAmount: '50,000 Token',
-      agentSlotAmount: '可启用 1 个智能体',
-      agentSlotNote: '启用后占用名额，停用后立即释放',
       desc: '适合首次体验 GEO 检测、短内容生成、小规模任务。',
       taskHint: '约可完成 3-5 次快速 GEO 检测',
       features: [
@@ -29,17 +27,15 @@ export default function InfoSections() {
         '任务过程可视化',
         '结果保存 7 天',
       ],
-      cta: '立即注册体验',
+      cta: '立即充值',
       highlight: false,
     },
     {
-      name: '专业版',
+      name: '标准算力包',
       price: '¥199',
-      unit: '/ 月',
-      tokenAmount: '500,000 Token / 月',
-      agentSlotAmount: '可启用 3 个智能体',
-      agentSlotNote: '可随时停用并更换，停用后立即释放名额',
-      desc: '适合品牌运营、自媒体创作者、销售个人用户。',
+      unit: '',
+      tokenAmount: '500,000 Token',
+      desc: '适合品牌运营、自媒体创作者、销售个人用户持续使用。',
       taskHint: '约可完成 30-50 次标准任务',
       features: [
         'GEO 标准检测',
@@ -48,17 +44,15 @@ export default function InfoSections() {
         '任务历史长期保存',
         '报告导出',
       ],
-      cta: '开启专业版',
+      cta: '获取算力',
       highlight: true,
     },
     {
-      name: '团队版',
+      name: '团队算力包',
       price: '¥999',
-      unit: '/ 月',
-      tokenAmount: '3,000,000 Token / 月',
-      agentSlotAmount: '可启用 8 个智能体',
-      agentSlotNote: '团队共享名额，支持多智能体协作',
-      desc: '适合营销团队、销售团队、内容团队协作。',
+      unit: '',
+      tokenAmount: '3,000,000 Token',
+      desc: '适合营销团队、销售团队、内容团队协作批量执行任务。',
       taskHint: '约可完成 150-300 次标准任务',
       features: [
         '团队共享 Token',
@@ -67,16 +61,14 @@ export default function InfoSections() {
         '批量客户分析',
         '团队任务共享',
       ],
-      cta: '开启团队版',
+      cta: '获取算力',
       highlight: false,
     },
     {
-      name: '企业定制',
+      name: '企业算力包',
       price: '定制额度',
       unit: '',
       tokenAmount: '专属 Token 额度',
-      agentSlotAmount: '不限或自定义',
-      agentSlotNote: '按企业需求定制智能体数量',
       desc: '适合大型品牌、代理商、私有化部署或 API 场景。',
       taskHint: '按企业用量定制',
       features: [
@@ -86,7 +78,7 @@ export default function InfoSections() {
         '企业权限与白标报告',
         '专属支持',
       ],
-      cta: '联系专属顾问',
+      cta: '联系顾问',
       highlight: false,
     },
   ];
@@ -145,10 +137,10 @@ export default function InfoSections() {
         <div className="w-full">
         <div className="text-center max-w-2xl mx-auto mb-12 lg:mb-16">
           <h2 className="text-3xl font-extrabold tracking-tight font-display text-black">
-            按 Token 额度使用
+            算力充值
           </h2>
           <p className="text-black/55 text-sm mt-2">
-            每次任务根据输入规模、检测深度和生成内容长度消耗 Token。开始任务前会显示预估消耗，完成后展示实际消耗。
+            智能体可随时启用和停用，任务执行按实际 Token 消耗结算。开始任务前会显示预估消耗，完成后展示实际消耗。
           </p>
         </div>
 
@@ -176,10 +168,9 @@ export default function InfoSections() {
                     <span className="text-xs text-black/45 leading-none pb-1">{tier.unit || '\u00A0'}</span>
                   </div>
                   <span className="text-xs font-bold text-black/55">包含 {tier.tokenAmount}</span>
-                  <span className="text-xs text-black/50">{tier.agentSlotAmount}</span>
                 </div>
                 <p className="text-[11px] text-black/40 mt-2">
-                  {tier.taskHint}，实际消耗以任务复杂度为准。{tier.agentSlotNote}
+                  {tier.taskHint}，实际消耗以任务复杂度为准。
                 </p>
                 <ul className="flex-1 space-y-3 pt-4">
                   {tier.features.map((f, fi) => (
