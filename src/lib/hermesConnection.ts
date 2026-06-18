@@ -34,7 +34,13 @@ export interface HermesConnectionSnapshot {
   device: HermesDevice | null;
   lastError?: string;
 }
-export type HermesDebugPreset = 'not_installed' | 'not_paired' | 'paired';
+export type HermesDebugPreset =
+  | 'first_run_empty'
+  | 'not_installed'
+  | 'not_paired'
+  | 'account_mismatch'
+  | 'offline'
+  | 'paired';
 
 const DEFAULT_SNAPSHOT: HermesConnectionSnapshot = {
   status: 'not_paired',
@@ -189,6 +195,16 @@ export function clearHermesPairing(): void {
 export function applyHermesDebugPreset(preset: HermesDebugPreset): HermesConnectionSnapshot {
   const account = getCurrentAccountId();
   const now = new Date().toISOString();
+
+  if (preset === 'first_run_empty' || preset === 'not_paired') {
+    const next: HermesConnectionSnapshot = {
+      status: 'not_paired',
+      device: null,
+    };
+    setHermesConnection(next);
+    return next;
+  }
+
   if (preset === 'not_installed') {
     const next: HermesConnectionSnapshot = {
       status: 'capability_missing',
@@ -198,14 +214,32 @@ export function applyHermesDebugPreset(preset: HermesDebugPreset): HermesConnect
     setHermesConnection(next);
     return next;
   }
-  if (preset === 'not_paired') {
+
+  if (preset === 'account_mismatch') {
     const next: HermesConnectionSnapshot = {
-      status: 'not_paired',
-      device: null,
+      status: 'account_mismatch',
+      device: {
+        id: 'Hz-Hermes',
+        deviceName: '其他设备',
+        os: 'windows',
+        version: 'v0.2.3',
+        accountEmail: 'other@example.com',
+        pairedAt: now,
+        lastSeenAt: now,
+        status: 'account_mismatch',
+        capabilities: ['browser_automation'],
+      },
+      lastError: '账号不一致，无法配对',
     };
     setHermesConnection(next);
     return next;
   }
+
+  if (preset === 'offline') {
+    pairHermesWithCurrentAccount();
+    return markHermesOffline();
+  }
+
   const next: HermesConnectionSnapshot = {
     status: 'connected',
     device: {

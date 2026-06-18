@@ -58,14 +58,14 @@ export function EnableAgentModal({
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
+          className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
         >
           取消
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="flex-1 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85"
+          className="flex-1 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
         >
           确认启用
         </button>
@@ -111,7 +111,7 @@ export function DeactivateAgentModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
+            className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
           >
             取消
           </button>
@@ -119,7 +119,7 @@ export function DeactivateAgentModal({
             <button
               type="button"
               onClick={onViewTasks}
-              className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
+              className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
             >
               查看任务
             </button>
@@ -128,7 +128,7 @@ export function DeactivateAgentModal({
             <button
               type="button"
               onClick={onCancelTasksAndDeactivate}
-              className="flex-1 py-2.5 text-xs font-bold bg-amber-700 text-white hover:bg-amber-800"
+              className="flex-1 py-2.5 text-xs font-bold bg-amber-700 text-white hover:bg-amber-800 rounded-lg"
             >
               取消任务并停用
             </button>
@@ -145,7 +145,7 @@ export function DeactivateAgentModal({
         <button
           type="button"
           onClick={onClose}
-          className="w-full py-2.5 text-xs font-bold border border-black/15"
+          className="w-full py-2.5 text-xs font-bold border border-black/15 rounded-lg"
         >
           知道了
         </button>
@@ -167,14 +167,14 @@ export function DeactivateAgentModal({
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
+          className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
         >
           取消
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="flex-1 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85"
+          className="flex-1 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
         >
           确认停用
         </button>
@@ -204,7 +204,7 @@ export function SlotsFullModal({
         <button
           type="button"
           onClick={onClose}
-          className="flex-1 py-2.5 text-xs font-bold border border-black/15"
+          className="flex-1 py-2.5 text-xs font-bold border border-black/15 rounded-lg"
         >
           关闭
         </button>
@@ -212,7 +212,7 @@ export function SlotsFullModal({
           <button
             type="button"
             onClick={onViewMine}
-            className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED]"
+            className="flex-1 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
           >
             去我的智能体
           </button>
@@ -221,7 +221,7 @@ export function SlotsFullModal({
           <button
             type="button"
             onClick={onUpgrade}
-            className="flex-1 py-2.5 text-xs font-bold bg-black text-white"
+            className="flex-1 py-2.5 text-xs font-bold bg-black text-white rounded-lg"
           >
             升级套餐
           </button>
@@ -246,7 +246,7 @@ export function EnableSuccessBanner({
       <button
         type="button"
         onClick={onViewMine}
-        className="px-3 py-1.5 text-xs font-bold bg-black text-white"
+        className="px-3 py-1.5 text-xs font-bold bg-black text-white rounded-lg"
       >
         查看我的智能体
       </button>
@@ -275,7 +275,7 @@ export function DeactivateSuccessBanner({
         <button
           type="button"
           onClick={onGoMarket}
-          className="px-3 py-1.5 text-xs font-bold bg-black text-white"
+          className="px-3 py-1.5 text-xs font-bold bg-black text-white rounded-lg"
         >
           去智能体市场
         </button>

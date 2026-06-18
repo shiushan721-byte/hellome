@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FolderOpen, X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { getHomeDashboardData } from '../../lib/homeDashboard';
 import { getOccupiedSlotCount, subscribeAgentSlots } from '../../lib/agentSlotStore';
 import { getTasks, subscribeTasks } from '../../lib/taskStore';
@@ -10,22 +10,47 @@ import {
   refreshHermesConnection,
   subscribeHermesConnection,
 } from '../../lib/hermesConnection';
+import {
+  findAdjacentVisibleTabId,
+  getHiddenTabIds,
+  getTabOrder,
+  getVisibleEnabledAgents,
+  hideAgentTab,
+  openAgentTab,
+  pruneWorkbenchTabs,
+  setTabOrder,
+  subscribeWorkbenchTabs,
+} from '../../lib/workbenchTabs';
+import type { EnabledAgentSummary } from '../../types/homeDashboard';
 import HermesActionModal from './HermesActionModal';
+import WorkbenchOpenAgentModal from './WorkbenchOpenAgentModal';
 
-const HIDDEN_KEY = 'hellome_workbench_hidden_tabs';
-const ORDER_KEY = 'hellome_workbench_tab_order';
+const TAB_ACTIVE_BG = '#FDFCFB';
+const PREVIEW_DELAY_MS = 600;
+
+interface TabPreview {
+  agent: EnabledAgentSummary;
+  x: number;
+  y: number;
+}
 
 export default function WorkbenchTabsBar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [hiddenTabs, setHiddenTabs] = useState<string[]>([]);
-  const [orderedTabs, setOrderedTabs] = useState<string[]>([]);
   const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
   const [openAgentModal, setOpenAgentModal] = useState(false);
   const [showHermesModal, setShowHermesModal] = useState(false);
+  const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
+  const [previewTab, setPreviewTab] = useState<TabPreview | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
   useSyncExternalStore(subscribeTasks, getTasks, getTasks);
+  useSyncExternalStore(
+    subscribeWorkbenchTabs,
+    () => `${getHiddenTabIds().join(',')}|${getTabOrder().join(',')}`,
+    () => '',
+  );
   const hermes = useSyncExternalStore(
     subscribeHermesConnection,
     getHermesConnection,
@@ -33,183 +58,237 @@ export default function WorkbenchTabsBar() {
   );
 
   const activeAgentId = useMemo(() => {
-    const m = location.pathname.match(/^\/app\/agents\/([^/]+)$/);
-    return m?.[1] ?? null;
-  }, [location.pathname]);
+    if (location.pathname === '/app') {
+      return new URLSearchParams(location.search).get('agent');
+    }
+    const match = location.pathname.match(/^\/app\/agents\/([^/]+)$/);
+    return match?.[1] ?? null;
+  }, [location.pathname, location.search]);
 
   const enabledAgents = getHomeDashboardData().enabledAgents;
-  const enabledIds = useMemo(() => new Set(enabledAgents.map((a) => a.agentId)), [enabledAgents]);
+  const agentQuota = getHomeDashboardData().agentQuota;
+  const slotsRemaining = Math.max(0, agentQuota.enabledLimit - agentQuota.enabledCount);
+  const enabledIds = useMemo(() => new Set(enabledAgents.map((agent) => agent.agentId)), [enabledAgents]);
 
   useEffect(() => {
-    const load = (key: string): string[] => {
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return [];
-        const parsed = JSON.parse(raw) as string[];
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
+    pruneWorkbenchTabs(enabledIds);
+  }, [enabledIds]);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     };
-    setHiddenTabs(load(HIDDEN_KEY));
-    setOrderedTabs(load(ORDER_KEY));
   }, []);
 
-  const save = (key: string, next: string[]) => {
-    localStorage.setItem(key, JSON.stringify(next));
+  const visibleAgents = useMemo(
+    () => getVisibleEnabledAgents(enabledAgents),
+    [enabledAgents],
+  );
+
+  const clearHoverState = () => {
+    setHoveredTabId(null);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setPreviewTab(null);
   };
-
-  const visibleAgents = useMemo(() => {
-    const orderMap = new Map(orderedTabs.map((id, idx) => [id, idx]));
-    return enabledAgents
-      .filter((a) => !hiddenTabs.includes(a.agentId))
-      .sort((a, b) => {
-        const aIdx = orderMap.get(a.agentId) ?? Number.MAX_SAFE_INTEGER;
-        const bIdx = orderMap.get(b.agentId) ?? Number.MAX_SAFE_INTEGER;
-        return aIdx - bIdx;
-      });
-  }, [enabledAgents, hiddenTabs, orderedTabs]);
-
-  useEffect(() => {
-    const nextHidden = hiddenTabs.filter((id) => enabledIds.has(id));
-    if (nextHidden.length !== hiddenTabs.length) {
-      setHiddenTabs(nextHidden);
-      save(HIDDEN_KEY, nextHidden);
-    }
-    const nextOrder = orderedTabs.filter((id) => enabledIds.has(id));
-    if (nextOrder.length !== orderedTabs.length) {
-      setOrderedTabs(nextOrder);
-      save(ORDER_KEY, nextOrder);
-    }
-  }, [enabledIds, hiddenTabs, orderedTabs]);
 
   const openAgent = (agentId: string) => {
     if (hermes.status !== 'connected') {
       setShowHermesModal(true);
       return;
     }
-    navigate(`/app/agents/${agentId}`);
+    openAgentTab(agentId);
+    navigate(`/app?agent=${agentId}`);
   };
 
-  const hideTab = (agentId: string) => {
-    const next = Array.from(new Set([...hiddenTabs, agentId]));
-    setHiddenTabs(next);
-    save(HIDDEN_KEY, next);
-    if (activeAgentId === agentId) navigate('/app');
+  const closeTab = (e: MouseEvent, agentId: string) => {
+    e.stopPropagation();
+    const nextTabId = findAdjacentVisibleTabId(
+      agentId,
+      enabledAgents.map((agent) => agent.agentId),
+    );
+    hideAgentTab(agentId);
+    clearHoverState();
+
+    if (activeAgentId !== agentId) return;
+
+    if (nextTabId) {
+      openAgentTab(nextTabId);
+      navigate(`/app?agent=${nextTabId}`);
+      return;
+    }
+
+    navigate('/app');
   };
 
-  const restoreTab = (agentId: string) => {
-    const next = hiddenTabs.filter((id) => id !== agentId);
-    setHiddenTabs(next);
-    save(HIDDEN_KEY, next);
-    openAgent(agentId);
+  const handleTabMouseEnter = (agent: EnabledAgentSummary, e: MouseEvent<HTMLDivElement>) => {
+    setHoveredTabId(agent.agentId);
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    hoverTimeoutRef.current = setTimeout(() => {
+      setPreviewTab({ agent, x: rect.left + rect.width / 2, y: rect.bottom });
+    }, PREVIEW_DELAY_MS);
   };
 
   const reorderByDrop = (targetId: string) => {
     if (!draggingTabId || draggingTabId === targetId) return;
-    const visibleIds = visibleAgents.map((a) => a.agentId);
+    const visibleIds = visibleAgents.map((agent) => agent.agentId);
     const sourceIndex = visibleIds.indexOf(draggingTabId);
     const targetIndex = visibleIds.indexOf(targetId);
     if (sourceIndex < 0 || targetIndex < 0) return;
     const nextVisible = [...visibleIds];
     nextVisible.splice(sourceIndex, 1);
     nextVisible.splice(targetIndex, 0, draggingTabId);
-    const leftovers = enabledAgents.map((a) => a.agentId).filter((id) => !nextVisible.includes(id));
-    const nextOrder = [...nextVisible, ...leftovers];
-    setOrderedTabs(nextOrder);
-    save(ORDER_KEY, nextOrder);
+    const leftovers = enabledAgents
+      .map((agent) => agent.agentId)
+      .filter((id) => !nextVisible.includes(id));
+    setTabOrder([...nextVisible, ...leftovers]);
   };
 
-  return (
-    <div className="border-b border-black/8 bg-[#FDFCFB] px-4 py-2 space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {visibleAgents.map((agent) => {
-          const active = agent.agentId === activeAgentId;
-          return (
-            <div
-              key={agent.agentId}
-              draggable
-              onDragStart={() => setDraggingTabId(agent.agentId)}
-              onDragEnd={() => setDraggingTabId(null)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => reorderByDrop(agent.agentId)}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 border rounded-t-md text-xs ${
-                active
-                  ? 'bg-white border-black/30 text-black shadow-[inset_0_-2px_0_0_rgba(0,0,0,0.75)]'
-                  : 'bg-[#F2F0ED] border-black/15 text-black/65 hover:bg-white'
-              }`}
-            >
-              {agent.latestTask?.status === 'running' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
-              {agent.latestTask?.status === 'waiting_confirmation' && (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-              )}
-              <button type="button" onClick={() => openAgent(agent.agentId)} className="max-w-[150px] truncate text-left">
-                {agent.name}
-              </button>
-              <button type="button" onClick={() => hideTab(agent.agentId)} className="text-black/35 hover:text-black/65">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => {
-            if (hermes.status !== 'connected') setShowHermesModal(true);
-            else setOpenAgentModal(true);
-          }}
-          className="inline-flex items-center gap-1.5 h-8 px-2.5 text-xs border border-black/15 rounded-t-md bg-[#F2F0ED] hover:bg-white"
-        >
-          <FolderOpen className="w-3.5 h-3.5 text-black/55" />
-          打开智能体
-        </button>
-      </div>
+  if (enabledAgents.length === 0 || visibleAgents.length === 0) {
+    return null;
+  }
 
-      {openAgentModal && (
-        <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-black/10 rounded-2xl shadow-xl">
-            <div className="px-4 py-3 border-b border-black/8 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">打开智能体</h3>
-              <button
-                type="button"
-                onClick={() => setOpenAgentModal(false)}
-                className="w-7 h-7 rounded-md border border-black/10 hover:bg-[#F2F0ED] flex items-center justify-center"
-                aria-label="关闭"
+  const lastAgent = visibleAgents[visibleAgents.length - 1];
+  const lastTabIsActive = lastAgent.agentId === activeAgentId;
+  const lastTabIsHovered = lastAgent.agentId === hoveredTabId;
+  const showPlusSeparator = !lastTabIsActive && !lastTabIsHovered;
+
+  return (
+    <div className="relative">
+      <div className="flex items-end w-full h-[46px] bg-[#dee1e6] px-2 pt-2 overflow-hidden select-none">
+        <div className="flex flex-1 h-full min-w-0 items-end overflow-hidden relative pr-2">
+          {visibleAgents.map((agent, index) => {
+            const isActive = agent.agentId === activeAgentId;
+            const isHovered = agent.agentId === hoveredTabId;
+            const isPrevActiveOrHovered =
+              index > 0 &&
+              (visibleAgents[index - 1].agentId === activeAgentId ||
+                visibleAgents[index - 1].agentId === hoveredTabId);
+            const showSeparator = !isActive && !isHovered && !isPrevActiveOrHovered && index !== 0;
+
+            return (
+              <div
+                key={agent.agentId}
+                draggable
+                onDragStart={() => setDraggingTabId(agent.agentId)}
+                onDragEnd={() => setDraggingTabId(null)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => reorderByDrop(agent.agentId)}
+                onMouseEnter={(e) => handleTabMouseEnter(agent, e)}
+                onMouseLeave={clearHoverState}
+                onClick={() => openAgent(agent.agentId)}
+                className={`group relative flex items-center h-[36px] min-w-[60px] max-w-[240px] flex-1 shrink cursor-pointer px-3 rounded-t-[8px] transition-colors duration-150 ease-in-out ${
+                  isActive ? 'z-20' : isHovered ? 'z-10 bg-[#ebeced]' : 'z-0 bg-transparent hover:bg-[#ebeced]'
+                }`}
+                style={isActive ? { backgroundColor: TAB_ACTIVE_BG } : undefined}
               >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div className="p-3 max-h-[60vh] overflow-auto space-y-1.5">
-              {enabledAgents.length === 0 ? (
-                <p className="px-2 py-6 text-center text-xs text-black/45">暂无已启用智能体</p>
-              ) : (
-                enabledAgents.map((agent) => {
-                  const hidden = hiddenTabs.includes(agent.agentId);
-                  const alreadyOpen = !hidden;
-                  return (
-                    <button
-                      key={agent.agentId}
-                      type="button"
-                      disabled={alreadyOpen}
-                      onClick={() => {
-                        if (hidden) restoreTab(agent.agentId);
-                        setOpenAgentModal(false);
-                      }}
-                      className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm ${
-                        alreadyOpen
-                          ? 'border-black/8 bg-[#F5F4F2] text-black/35 cursor-not-allowed'
-                          : 'border-black/10 hover:bg-[#F6F5F3]'
-                      }`}
-                    >
-                      <span className="truncate pr-3">{agent.name}</span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+                {isActive && (
+                  <>
+                    <div
+                      className="absolute -left-2 bottom-0 w-2 h-2 rounded-br-[8px] pointer-events-none"
+                      style={{ boxShadow: `4px 0 0 0 ${TAB_ACTIVE_BG}` }}
+                    />
+                    <div
+                      className="absolute -right-2 bottom-0 w-2 h-2 rounded-bl-[8px] pointer-events-none"
+                      style={{ boxShadow: `-4px 0 0 0 ${TAB_ACTIVE_BG}` }}
+                    />
+                  </>
+                )}
+
+                {showSeparator && (
+                  <div className="absolute -left-px top-1/2 -translate-y-1/2 w-px h-5 bg-gray-400 opacity-60 pointer-events-none" />
+                )}
+
+                <div className="relative shrink-0 w-4 h-4 mr-2">
+                  <img
+                    src={agent.iconSrc}
+                    alt=""
+                    className="w-4 h-4 rounded-full object-cover bg-white"
+                    loading="lazy"
+                  />
+                  {agent.latestTask?.status === 'running' && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-1 ring-white" />
+                  )}
+                  {agent.latestTask?.status === 'waiting_confirmation' && (
+                    <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white" />
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0 overflow-hidden text-xs whitespace-nowrap text-ellipsis text-[#3c4043]">
+                  {agent.name}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => closeTab(e, agent.agentId)}
+                  aria-label={`关闭 ${agent.name} 标签`}
+                  className={`shrink-0 ml-1 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-200 transition-all ${
+                    isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                >
+                  <X size={14} className="text-gray-600" />
+                </button>
+              </div>
+            );
+          })}
+
+          <div className="relative shrink-0 flex items-center h-[36px] pl-2">
+            {showPlusSeparator && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-px h-5 bg-gray-400 opacity-60 pointer-events-none" />
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (hermes.status !== 'connected') setShowHermesModal(true);
+                else setOpenAgentModal(true);
+              }}
+              title="打开智能体"
+              aria-label="打开智能体"
+              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#d0d4cd] transition-colors"
+            >
+              <Plus size={20} className="text-gray-600" />
+            </button>
           </div>
         </div>
+      </div>
+
+      {previewTab && (
+        <div
+          className="fixed z-50 bg-white border border-gray-200 shadow-xl rounded-lg p-3 w-[280px] pointer-events-none"
+          style={{
+            left: Math.max(10, previewTab.x - 140),
+            top: previewTab.y + 4,
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2 min-w-0">
+            <img
+              src={previewTab.agent.iconSrc}
+              alt=""
+              className="w-4 h-4 rounded-full object-cover shrink-0"
+            />
+            <h3 className="text-sm font-medium text-gray-800 line-clamp-2">{previewTab.agent.name}</h3>
+          </div>
+          <p className="text-xs text-gray-500 line-clamp-2">{previewTab.agent.description}</p>
+        </div>
       )}
+
+      {openAgentModal && (
+        <WorkbenchOpenAgentModal
+          agents={enabledAgents}
+          slotsRemaining={slotsRemaining}
+          onOpen={(agentId) => {
+            openAgent(agentId);
+            setOpenAgentModal(false);
+          }}
+          onGoMarket={() => {
+            setOpenAgentModal(false);
+            navigate('/app/agents');
+          }}
+          onClose={() => setOpenAgentModal(false)}
+        />
+      )}
+
       {showHermesModal && (
         <HermesActionModal
           status={hermes.status}
@@ -217,7 +296,7 @@ export default function WorkbenchTabsBar() {
           onOpenHermes={refreshHermesConnection}
           onGoPair={() => {
             setShowHermesModal(false);
-            navigate('/connect-hermes');
+            navigate('/app');
           }}
         />
       )}

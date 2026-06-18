@@ -1,17 +1,23 @@
-import { useMemo, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import AgentIcon from '../../components/app/agents/AgentIcon';
+import MarketCard from '../../components/app/agents/MarketCard';
+import EnabledAgentsPanel from '../../components/app/EnabledAgentsPanel';
 import { getTasks, subscribeTasks } from '../../lib/taskStore';
 import { getUsage, subscribeUsage } from '../../lib/usageStore';
-import { getOccupiedSlotCount, subscribeAgentSlots } from '../../lib/agentSlotStore';
-import { getHomeDashboardData, getOnboardingAgents } from '../../lib/homeDashboard';
+import { activateAgent, getOccupiedSlotCount, subscribeAgentSlots } from '../../lib/agentSlotStore';
+import { getHermesConnection, subscribeHermesConnection } from '../../lib/hermesConnection';
+import ConnectHermesPage from '../ConnectHermesPage';
+import { getHomeDashboardData, getOnboardingMarketCards } from '../../lib/homeDashboard';
+import {
+  getHiddenTabIds,
+  getLastOpenedAgentId,
+  getTabOrder,
+  getVisibleEnabledAgents,
+  openAgentTab,
+  subscribeWorkbenchTabs,
+} from '../../lib/workbenchTabs';
 import type { AgentQuotaSnapshot } from '../../types/homeDashboard';
 import type { AgentEntryState } from '../../types/agentNavigation';
-
-const WORKBENCH_LAST_AGENT_KEY = 'hellome_workbench_last_agent';
-const WORKBENCH_HIDDEN_TABS_KEY = 'hellome_workbench_hidden_tabs';
-const WORKBENCH_TAB_ORDER_KEY = 'hellome_workbench_tab_order';
-const WORKBENCH_PINNED_TABS_KEY = 'hellome_workbench_pinned_tabs';
 
 export default function AppHomePage() {
   const navigate = useNavigate();
@@ -20,75 +26,111 @@ export default function AppHomePage() {
   useSyncExternalStore(subscribeTasks, getTasks, getTasks);
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
   useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
+  const workbenchRevision = useSyncExternalStore(
+    subscribeWorkbenchTabs,
+    () => `${getHiddenTabIds().join(',')}|${getTabOrder().join(',')}`,
+    () => '',
+  );
+  const hermes = useSyncExternalStore(subscribeHermesConnection, getHermesConnection, getHermesConnection);
 
   const dashboard = getHomeDashboardData();
   const { agentQuota, enabledAgents } = dashboard;
   const hasEnabled = enabledAgents.length > 0;
   const requestedAgentId = searchParams.get('agent');
-  const visibleAgents = useMemo(() => {
-    const hidden = readStringArray(WORKBENCH_HIDDEN_TABS_KEY);
-    const order = readStringArray(WORKBENCH_TAB_ORDER_KEY);
-    const pinned = new Set(readStringArray(WORKBENCH_PINNED_TABS_KEY));
-    const orderMap = new Map(order.map((id, idx) => [id, idx]));
-    return enabledAgents
-      .filter((a) => !hidden.includes(a.agentId))
-      .sort((a, b) => {
-        const pinDiff = Number(pinned.has(b.agentId)) - Number(pinned.has(a.agentId));
-        if (pinDiff !== 0) return pinDiff;
-        const aIdx = orderMap.get(a.agentId) ?? Number.MAX_SAFE_INTEGER;
-        const bIdx = orderMap.get(b.agentId) ?? Number.MAX_SAFE_INTEGER;
-        return aIdx - bIdx;
-      });
-  }, [enabledAgents]);
+
+  useEffect(() => {
+    if (!requestedAgentId) return;
+    if (!enabledAgents.some((agent) => agent.agentId === requestedAgentId)) return;
+    openAgentTab(requestedAgentId);
+  }, [requestedAgentId, enabledAgents]);
+
+  const visibleAgents = useMemo(
+    () => getVisibleEnabledAgents(enabledAgents),
+    [enabledAgents, workbenchRevision],
+  );
+
+  const showEnabledPanel = enabledAgents.length > 0 && visibleAgents.length === 0;
 
   const defaultAgentId = useMemo(() => {
-    const waiting = visibleAgents.find((a) => a.latestTask?.status === 'waiting_confirmation');
+    const waiting = visibleAgents.find((agent) => agent.latestTask?.status === 'waiting_confirmation');
     if (waiting?.agentId) return waiting.agentId;
 
-    const lastOpened = localStorage.getItem(WORKBENCH_LAST_AGENT_KEY);
-    if (lastOpened && visibleAgents.some((a) => a.agentId === lastOpened)) return lastOpened;
+    const lastOpened = getLastOpenedAgentId();
+    if (lastOpened && visibleAgents.some((agent) => agent.agentId === lastOpened)) return lastOpened;
 
     return visibleAgents[0]?.agentId ?? null;
   }, [visibleAgents]);
 
   const activeAgentId =
-    (requestedAgentId && visibleAgents.some((a) => a.agentId === requestedAgentId) ? requestedAgentId : null) ??
-    defaultAgentId;
+    (requestedAgentId && visibleAgents.some((agent) => agent.agentId === requestedAgentId)
+      ? requestedAgentId
+      : null) ?? defaultAgentId;
+
+  const handleUseAgent = (agentId: string) => {
+    openAgentTab(agentId);
+    navigate(`/app?agent=${agentId}`);
+  };
+
+  if (hermes.status !== 'connected') {
+    return <ConnectHermesPage embedded />;
+  }
 
   if (!hasEnabled) {
     return (
       <HomeEmptyState
         quota={agentQuota}
-        onEnableGeo={() => navigate('/app/agents?enable=geo')}
-        onViewAll={() => navigate('/app/agents')}
+        onEnableAgent={(agentId) => {
+          const result = activateAgent(agentId);
+          if (result.ok) {
+            openAgentTab(agentId);
+            navigate(`/app?agent=${agentId}`);
+          } else {
+            navigate(`/app/agents?enable=${agentId}`);
+          }
+        }}
+        onViewMarket={() => navigate('/app/agents')}
+      />
+    );
+  }
+
+  if (showEnabledPanel) {
+    return (
+      <EnabledAgentsPanel
+        agents={enabledAgents}
+        slotsRemaining={agentQuota.slotsRemaining}
+        onUseAgent={handleUseAgent}
+        onViewTasks={(agentId) => navigate(`/app/tasks?agent=${agentId}`)}
+        onGoMarket={() => navigate('/app/agents')}
       />
     );
   }
 
   if (!activeAgentId) {
-    return <Navigate to="/app/agents" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   const state: AgentEntryState = { from: `/app?agent=${activeAgentId}`, agentId: activeAgentId };
-  localStorage.setItem(WORKBENCH_LAST_AGENT_KEY, activeAgentId);
   return <Navigate to={`/app/agents/${activeAgentId}`} replace state={state} />;
 }
 
 function HomeEmptyState({
   quota,
-  onEnableGeo,
-  onViewAll,
+  onEnableAgent,
+  onViewMarket,
 }: {
   quota: AgentQuotaSnapshot;
-  onEnableGeo: () => void;
-  onViewAll: () => void;
+  onEnableAgent: (agentId: string) => void;
+  onViewMarket: () => void;
 }) {
-  const onboarding = getOnboardingAgents();
+  const navigate = useNavigate();
+  useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
+  const cards = getOnboardingMarketCards();
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-8">
       <section className="text-center space-y-3 pt-8">
-        <h1 className="text-2xl font-bold font-display">我的工作台还没有智能体</h1>
-        <p className="text-sm text-black/50">先启用一个智能体，开始你的第一个任务。</p>
+        <h1 className="text-2xl font-bold font-display">还没有启用智能体</h1>
+        <p className="text-sm text-black/50">先去智能体市场启用一个智能体，开始你的第一个任务。</p>
       </section>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full text-center text-xs text-black/45">
@@ -106,58 +148,33 @@ function HomeEmptyState({
 
       <section className="space-y-3">
         <h2 className="text-xs font-bold uppercase tracking-wider text-black/45 text-center">推荐启用</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {onboarding.map((agent) => {
-            if (!agent) return null;
-            const isGeo = agent.id === 'geo';
-            return (
-              <div key={agent.id} className="border border-black/8 p-4 text-center space-y-3">
-                <AgentIcon src={agent.iconSrc} alt={agent.name} size="md" className="mx-auto" />
-                <p className="text-sm font-bold">{agent.name}</p>
-                <p className="text-[11px] text-black/45 line-clamp-2">{agent.desc}</p>
-                {isGeo ? (
-                  <button
-                    type="button"
-                    onClick={onEnableGeo}
-                    className="w-full py-2 text-xs font-bold bg-black text-white"
-                  >
-                    启用 GEO 智能体
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={!agent.available}
-                    onClick={onViewAll}
-                    className="w-full py-2 text-xs font-bold border border-black/15 disabled:opacity-40"
-                  >
-                    {agent.available ? '去市场启用' : '即将开放'}
-                  </button>
-                )}
-              </div>
-            );
-          })}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {cards.map((card) => (
+            <MarketCard
+              key={card.id}
+              card={card}
+              onEnable={() => onEnableAgent(card.id)}
+              onEnter={() =>
+                navigate(`/app/agents/${card.id}`, {
+                  state: { from: '/app', agentId: card.id } satisfies AgentEntryState,
+                })
+              }
+              onDeactivate={() => {}}
+              onUpgrade={() => navigate('/app/usage')}
+            />
+          ))}
         </div>
       </section>
 
-      <div className="flex justify-center gap-3">
-        <button type="button" onClick={onEnableGeo} className="px-5 py-3 text-xs font-bold bg-black text-white">
-          启用 GEO 智能体
-        </button>
-        <button type="button" onClick={onViewAll} className="px-5 py-3 text-xs font-bold border border-black/15">
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={onViewMarket}
+          className="px-5 py-3 text-xs font-bold border border-black/15 hover:bg-black/[0.02] rounded-lg"
+        >
           去智能体市场
         </button>
       </div>
     </div>
   );
-}
-
-function readStringArray(key: string): string[] {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as string[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }

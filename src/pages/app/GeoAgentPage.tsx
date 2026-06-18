@@ -48,7 +48,7 @@ export default function GeoAgentPage() {
   }, [isRunning]);
 
   return (
-    <div className="min-h-full bg-[#F0F2F5]">
+    <div className="min-h-full bg-white">
       <div className="p-4 sm:p-6 lg:p-8 w-full">
         <div className="relative grid gap-4 lg:grid-cols-[188px_minmax(0,1fr)]">
           <aside className="hidden lg:flex flex-col bg-[#EEF1F3] border border-black/8 rounded-2xl p-3">
@@ -212,7 +212,7 @@ export default function GeoAgentPage() {
             onOpenHermes={refreshHermesConnection}
             onGoPair={() => {
               setShowHermesModal(false);
-              navigate('/connect-hermes');
+              navigate('/app');
             }}
           />
         )}

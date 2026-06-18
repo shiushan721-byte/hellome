@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import MarketingPage from './pages/MarketingPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -7,13 +7,19 @@ import AppHomePage from './pages/app/AppHomePage';
 import AgentsPage from './pages/app/AgentsPage';
 import AgentsLegacyRedirect from './pages/app/AgentsLegacyRedirect';
 import GeoAgentPage from './pages/app/GeoAgentPage';
+import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
 import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
-import ConnectHermesPage from './pages/ConnectHermesPage';
+
+function ConnectHermesRedirect() {
+  const [searchParams] = useSearchParams();
+  const qs = searchParams.toString();
+  return <Navigate to={qs ? `/app?${qs}` : '/app'} replace />;
+}
 
 export default function App() {
   return (
@@ -24,7 +30,7 @@ export default function App() {
         path="/connect-hermes"
         element={
           <ProtectedRoute>
-            <ConnectHermesPage />
+            <ConnectHermesRedirect />
           </ProtectedRoute>
         }
       />
@@ -42,6 +48,8 @@ export default function App() {
         <Route path="agents/market" element={<Navigate to="/app/agents" replace />} />
         <Route path="agents/mine" element={<Navigate to="/app/agents" replace />} />
         <Route path="agents/geo" element={<GeoAgentPage />} />
+        <Route path="agents/media" element={<AgentComingSoonPage agentId="media" />} />
+        <Route path="agents/sales" element={<AgentComingSoonPage agentId="sales" />} />
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
         <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
         <Route path="tasks" element={<TasksPage />} />

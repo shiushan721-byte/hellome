@@ -95,7 +95,7 @@ export const AGENTS: AgentItem[] = [
     likes: '1.2k',
     iconSrc: AGENT_ICONS.media,
     available: true,
-    path: '/app/tasks',
+    path: '/app/agents/media',
   },
   {
     id: 'sales',
@@ -109,7 +109,7 @@ export const AGENTS: AgentItem[] = [
     likes: '980',
     iconSrc: AGENT_ICONS.sales,
     available: true,
-    path: '/app/tasks',
+    path: '/app/agents/sales',
   },
   {
     id: 'schema-optimizer',

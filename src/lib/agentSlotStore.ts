@@ -225,3 +225,7 @@ export function getAgentDisplayStatus(
   if (a?.status === 'active') return 'active';
   return 'inactive';
 }
+
+export function clearAllActivationsForDebug(): void {
+  saveActivations([]);
+}

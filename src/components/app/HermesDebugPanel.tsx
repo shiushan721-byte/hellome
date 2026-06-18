@@ -1,25 +1,50 @@
 import { useState, useSyncExternalStore } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bug, ChevronDown, ChevronUp } from 'lucide-react';
+import { clearAllActivationsForDebug } from '../../lib/agentSlotStore';
 import {
   applyHermesDebugPreset,
+  clearHermesPairing,
   getHermesConnection,
   subscribeHermesConnection,
   type HermesDebugPreset,
 } from '../../lib/hermesConnection';
 
-const OPTIONS: Array<{ id: HermesDebugPreset; label: string }> = [
+const OPTIONS: Array<{ id: HermesDebugPreset; label: string; desc?: string }> = [
+  {
+    id: 'first_run_empty',
+    label: '模拟首次进入',
+    desc: '未配对 + 清空已启用智能体',
+  },
   { id: 'not_installed', label: '未安装 Hz-Hermes' },
-  { id: 'not_paired', label: '未配对 Hz-Hermes' },
-  { id: 'paired', label: '已配对 Hz-Hermes' },
+  { id: 'not_paired', label: '等待配对' },
+  { id: 'account_mismatch', label: '账号不一致' },
+  { id: 'offline', label: '已配对但离线' },
+  { id: 'paired', label: '已配对已连接' },
 ];
 
 export default function HermesDebugPanel() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const snapshot = useSyncExternalStore(
     subscribeHermesConnection,
     getHermesConnection,
     getHermesConnection,
   );
+
+  const applyPreset = (preset: HermesDebugPreset) => {
+    if (preset === 'first_run_empty') {
+      clearHermesPairing();
+      clearAllActivationsForDebug();
+      applyHermesDebugPreset('not_paired');
+      navigate('/app');
+      return;
+    }
+    applyHermesDebugPreset(preset);
+    if (preset !== 'paired') {
+      navigate('/app');
+    }
+  };
 
   return (
     <div className="p-3 border-t border-black/8">
@@ -47,10 +72,13 @@ export default function HermesDebugPanel() {
               <button
                 key={option.id}
                 type="button"
-                onClick={() => applyHermesDebugPreset(option.id)}
+                onClick={() => applyPreset(option.id)}
                 className="px-2 py-1.5 rounded text-[10px] font-bold bg-[#F2F0ED] text-black/65 hover:bg-black/10 hover:text-black text-left"
               >
-                {option.label}
+                <span>{option.label}</span>
+                {option.desc ? (
+                  <span className="block font-normal text-black/40 mt-0.5">{option.desc}</span>
+                ) : null}
               </button>
             ))}
           </div>

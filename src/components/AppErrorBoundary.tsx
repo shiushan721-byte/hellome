@@ -50,7 +50,7 @@ export default class AppErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={() => {
-                window.location.href = '/connect-hermes';
+                window.location.href = '/app';
               }}
               className="px-4 h-10 rounded-lg border border-black/12 bg-white text-sm font-medium hover:bg-black/[0.02]"
             >

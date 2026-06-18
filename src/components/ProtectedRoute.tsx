@@ -20,7 +20,11 @@ export default function ProtectedRoute({
       const next =
         hermes.status === 'offline'
           ? '/connect-hermes?status=offline'
-          : '/connect-hermes';
+          : hermes.status === 'account_mismatch'
+            ? '/connect-hermes?status=account_mismatch'
+            : hermes.status === 'capability_missing'
+              ? '/connect-hermes?status=not_installed'
+              : '/connect-hermes';
       return <Navigate to={next} replace />;
     }
   }

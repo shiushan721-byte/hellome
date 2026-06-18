@@ -17,11 +17,14 @@ import {
 import { getPlanEntitlements } from './planEntitlements';
 import { getUsage, isLowBalance } from './usageStore';
 import { getTasks } from './taskStore';
+import { getAgentsPageData } from './agentsPageData';
+import type { AgentMarketCard } from '../types/agentsPage';
 
 const AGENT_KEYWORDS: Partial<Record<string, string[]>> = {
   geo: ['geo', '检测', '可见度', '品牌', 'ai', '搜索', '大模型', '优化', 'faq', '提及'],
   media: ['公众号', '小红书', '自媒体', '文章', '改写', '标题', '内容'],
   sales: ['销售', '客户', '私信', '邮件', '获客', '外联', '跟进', '话术'],
+  'faq-generator': ['faq', '问答', 'llms', '语料', '召回', '结构化', '批量'],
 };
 
 export const AGENT_TASK_TEMPLATES: Partial<
@@ -39,9 +42,13 @@ export const AGENT_TASK_TEMPLATES: Partial<
     { id: 'sales-analyze', title: '分析客户网站', prompt: '分析客户网站' },
     { id: 'sales-dm', title: '生成销售私信', prompt: '生成销售私信' },
   ],
+  'faq-generator': [
+    { id: 'faq-batch', title: '批量生成 FAQ', prompt: '基于品牌语料批量生成 FAQ' },
+    { id: 'faq-llms', title: '生成 LLMs.txt', prompt: '生成 LLMs.txt 提升 AI 召回' },
+  ],
 };
 
-const ONBOARDING_AGENT_IDS = ['geo', 'media', 'sales'] as const;
+const ONBOARDING_AGENT_IDS = ['geo', 'media', 'sales', 'faq-generator'] as const;
 
 function scoreAgent(prompt: string, agentId: string): number {
   const lower = prompt.toLowerCase();
@@ -252,6 +259,11 @@ export function getHomeDashboardData(): HomeDashboardData {
 
 export function getOnboardingAgents() {
   return ONBOARDING_AGENT_IDS.map((id) => getAgentById(id)).filter(Boolean);
+}
+
+export function getOnboardingMarketCards(): AgentMarketCard[] {
+  const ids = new Set<string>(ONBOARDING_AGENT_IDS);
+  return getAgentsPageData('market').marketAgents.filter((card) => ids.has(card.id));
 }
 
 export function statusLabel(status: TaskStatus): string {

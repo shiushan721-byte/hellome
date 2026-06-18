@@ -106,7 +106,7 @@ export default function Topbar() {
           }}
           onGoPair={() => {
             setShowHermesModal(false);
-            navigate('/connect-hermes');
+            navigate('/app');
           }}
         />
       )}

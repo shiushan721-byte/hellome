@@ -1,4 +1,5 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useSyncExternalStore } from 'react';
+import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 import {
   Home,
   ListTodo,
@@ -11,6 +12,17 @@ import Topbar from './Topbar';
 import PlanDebugPanel from './PlanDebugPanel';
 import HermesDebugPanel from './HermesDebugPanel';
 import WorkbenchTabsBar from './WorkbenchTabsBar';
+import { subscribeAgentSlots } from '../../lib/agentSlotStore';
+import {
+  isWorkbenchNavRestricted,
+  isWorkbenchPathBlocked,
+  isHermesConnected,
+  getNavDisabledReason,
+} from '../../lib/firstRunOnboarding';
+import {
+  getHermesConnection,
+  subscribeHermesConnection,
+} from '../../lib/hermesConnection';
 
 const navItems = [
   {
@@ -21,13 +33,45 @@ const navItems = [
   },
   { to: '/app/agents', label: '智能体市场', icon: Store, end: true as const },
   { to: '/app/tasks', label: '任务中心', icon: ListTodo },
-  { to: '/app/usage', label: '用量', icon: BarChart3 },
+  { to: '/app/usage', label: '智能体驾驶舱', icon: BarChart3 },
   { to: '/app/settings', label: '设置', icon: Settings },
 ];
 
+function useHermesConnected(): boolean {
+  return useSyncExternalStore(
+    subscribeHermesConnection,
+    isHermesConnected,
+    isHermesConnected,
+  );
+}
+
+function useNavRestricted(): boolean {
+  return useSyncExternalStore(
+    subscribeAgentSlots,
+    isWorkbenchNavRestricted,
+    isWorkbenchNavRestricted,
+  );
+}
+
+function WorkbenchOutlet() {
+  const location = useLocation();
+  const restricted = useNavRestricted();
+
+  if (restricted && isWorkbenchPathBlocked(location.pathname)) {
+    return <Navigate to="/app" replace />;
+  }
+
+  return <Outlet />;
+}
+
 export default function AppShell() {
   const location = useLocation();
-  const showWorkbenchTabs = location.pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(location.pathname);
+  const restricted = useNavRestricted();
+  const hermesConnected = useHermesConnected();
+  const showWorkbenchTabs =
+    hermesConnected &&
+    (location.pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(location.pathname));
+  const navDisabledReason = getNavDisabledReason();
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] flex">
@@ -45,23 +89,41 @@ export default function AppShell() {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
-          {navItems.map(({ to, label, icon: Icon, end, match }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors ${
-                  (match ? match(location.pathname) : isActive)
-                    ? 'bg-black text-white'
-                    : 'text-black/60 hover:bg-[#F2F0ED] hover:text-black'
-                }`
-              }
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {label}
-            </NavLink>
-          ))}
+          {navItems.map(({ to, label, icon: Icon, end, match }) => {
+            const disabled = restricted && to !== '/app';
+            const isActive = match ? match(location.pathname) : location.pathname === to;
+
+            if (disabled) {
+              return (
+                <span
+                  key={to}
+                  title={navDisabledReason}
+                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-black/25 cursor-not-allowed select-none"
+                >
+                  <Icon className="w-4 h-4 shrink-0 opacity-50" />
+                  {label}
+                </span>
+              );
+            }
+
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={() =>
+                  `flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-black text-white'
+                      : 'text-black/60 hover:bg-[#F2F0ED] hover:text-black'
+                  }`
+                }
+              >
+                <Icon className="w-4 h-4 shrink-0" />
+                {label}
+              </NavLink>
+            );
+          })}
         </nav>
         <div className="mt-auto">
           <HermesDebugPanel />
@@ -73,7 +135,7 @@ export default function AppShell() {
         <Topbar />
         {showWorkbenchTabs && <WorkbenchTabsBar />}
         <main className="flex-1 overflow-auto custom-scrollbar">
-          <Outlet />
+          <WorkbenchOutlet />
         </main>
       </div>
     </div>

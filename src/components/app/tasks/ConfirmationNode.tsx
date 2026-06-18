@@ -26,14 +26,14 @@ export default function ConfirmationNode({
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-2 text-xs font-bold border border-black/15 hover:bg-white transition-colors"
+          className="flex-1 py-2 text-xs font-bold border border-black/15 hover:bg-white transition-colors rounded-lg"
         >
           取消
         </button>
         <button
           type="button"
           onClick={onConfirm}
-          className="flex-1 py-2 text-xs font-bold bg-black text-white hover:bg-black/85 transition-colors"
+          className="flex-1 py-2 text-xs font-bold bg-black text-white hover:bg-black/85 transition-colors rounded-lg"
         >
           确认继续
         </button>
