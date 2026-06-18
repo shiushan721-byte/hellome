@@ -1,12 +1,11 @@
 import { X } from 'lucide-react';
 import AgentIcon from './agents/AgentIcon';
-import { isTabVisible } from '../../lib/workbenchTabs';
+import { isAgentTabOpen } from '../../lib/workbenchTabs';
 import type { EnabledAgentSummary } from '../../types/homeDashboard';
 
 interface WorkbenchOpenAgentModalProps {
   agents: EnabledAgentSummary[];
   onOpen: (agentId: string) => void;
-  onGoMarket: () => void;
   onClose: () => void;
 }
 
@@ -47,7 +46,6 @@ function OpenAgentPickerCard({
 export default function WorkbenchOpenAgentModal({
   agents,
   onOpen,
-  onGoMarket,
   onClose,
 }: WorkbenchOpenAgentModalProps) {
   return (
@@ -77,23 +75,12 @@ export default function WorkbenchOpenAgentModal({
                 <OpenAgentPickerCard
                   key={agent.agentId}
                   agent={agent}
-                  alreadyOpen={isTabVisible(agent.agentId)}
+                  alreadyOpen={isAgentTabOpen(agent.agentId)}
                   onOpen={() => onOpen(agent.agentId)}
                 />
               ))}
             </div>
           )}
-        </div>
-
-        <div className="px-4 py-3 border-t border-black/8 flex items-center justify-between gap-3">
-          <p className="text-xs text-black/45">可用智能体可以随时打开或关闭标签</p>
-          <button
-            type="button"
-            onClick={onGoMarket}
-            className="shrink-0 px-3 py-1.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
-          >
-            去市场查看更多智能体
-          </button>
         </div>
       </div>
     </div>

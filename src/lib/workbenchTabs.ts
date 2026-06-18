@@ -61,6 +61,11 @@ export function getPinnedTabIds(): string[] {
   return readStringArray(WORKBENCH_PINNED_TABS_KEY);
 }
 
+/** 智能体标签是否已在工作台标签栏中打开 */
+export function isAgentTabOpen(agentId: string): boolean {
+  return getVisibleRecentAgentIds().includes(agentId);
+}
+
 export function isTabVisible(agentId: string): boolean {
   return !getHiddenTabIds().includes(agentId);
 }

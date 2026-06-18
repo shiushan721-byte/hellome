@@ -317,10 +317,6 @@ export default function WorkbenchTabsBar() {
             openAgent(agentId);
             setOpenAgentModal(false);
           }}
-          onGoMarket={() => {
-            setOpenAgentModal(false);
-            navigate('/app/agents');
-          }}
           onClose={() => setOpenAgentModal(false)}
         />
       )}

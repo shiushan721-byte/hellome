@@ -148,22 +148,13 @@ export default function LoginModal({ intent = {}, onClose }: LoginModalProps) {
 
             {error && <p className="text-xs text-red-600">{error}</p>}
 
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-3 text-sm font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg transition-colors"
-              >
-                继续浏览
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-3 bg-black text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-black/85 rounded-lg transition-colors"
-              >
-                登录
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full py-3 bg-black text-white text-sm font-bold flex items-center justify-center gap-2 hover:bg-black/85 rounded-lg transition-colors"
+            >
+              登录
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </form>
         </div>
       </div>
