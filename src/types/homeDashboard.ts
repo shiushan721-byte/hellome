@@ -42,6 +42,9 @@ export type PromptMatchResult =
 export interface HomeDashboardData {
   usage: UsageSnapshot;
   agentQuota: AgentQuotaSnapshot;
+  /** 最近打开的智能体（工作台标签来源） */
+  recentAgents: EnabledAgentSummary[];
+  /** @deprecated 使用 recentAgents */
   enabledAgents: EnabledAgentSummary[];
   recentTasks: Task[];
   recommendedActions: RecommendedAction[];

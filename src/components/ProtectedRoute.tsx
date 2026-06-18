@@ -13,7 +13,7 @@ export default function ProtectedRoute({
   const location = useLocation();
   if (!isAuthenticated()) {
     const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
-    return <Navigate to={`/login?redirect=${redirect}`} replace />;
+    return <Navigate to={`/agents?login=1&redirect=${redirect}`} replace />;
   }
   if (requireHermes) {
     const hermes = getHermesConnection();

@@ -1,28 +1,11 @@
-import { AGENTS, getAgentById } from '../data/agentsCatalog';
+import { AGENTS } from '../data/agentsCatalog';
 import type {
   AgentMarketCard,
-  AgentMarketStatus,
   AgentQuotaSnapshot,
   AgentsPageData,
   AgentsTab,
-  MyAgentCard,
 } from '../types/agentsPage';
-import {
-  canDeactivateAgent,
-  getActivations,
-  getActiveAgents,
-  getAgentDisplayStatus,
-} from './agentSlotStore';
-import { getTasks } from './taskStore';
 import { getUsage } from './usageStore';
-
-const TASK_STATUS_LABEL: Record<string, string> = {
-  running: '进行中',
-  waiting_confirmation: '等待确认',
-  completed: '已完成',
-  failed: '失败',
-  cancelled: '已取消',
-};
 
 export function normalizeAgentsTab(tab: string | null): AgentsTab {
   return 'market';
@@ -46,34 +29,18 @@ function parseTokenRange(tokenRange: string): { min: number; max: number } {
   };
 }
 
-function currentMonthKey(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function resolveMarketStatus(agentId: string, planAvailable: boolean): AgentMarketStatus {
-  if (!planAvailable) return 'coming_soon';
-  if (getAgentDisplayStatus(agentId, true) === 'active') return 'active';
-  return 'inactive';
-}
-
 function buildQuotaSnapshot(): AgentQuotaSnapshot {
   const usage = getUsage();
 
   return {
-    enabledCount: getActiveAgents().length,
+    enabledCount: 0,
     tokenBalance: usage.tokenBalance,
   };
 }
 
-function buildMarketAgents(guestMode = false): AgentMarketCard[] {
+function buildMarketAgents(): AgentMarketCard[] {
   return AGENTS.map((agent) => {
     const { min, max } = parseTokenRange(agent.tokenRange);
-    const status: AgentMarketStatus = guestMode
-      ? agent.available
-        ? 'inactive'
-        : 'coming_soon'
-      : resolveMarketStatus(agent.id, agent.available);
     return {
       id: agent.id,
       name: agent.name,
@@ -87,61 +54,17 @@ function buildMarketAgents(guestMode = false): AgentMarketCard[] {
       heat: agent.heat,
       likes: agent.likes,
       iconSrc: agent.iconSrc,
-      status,
+      status: agent.available ? 'available' : 'coming_soon',
       badge: agent.badge,
     };
   });
-}
-
-function buildMyAgents(): MyAgentCard[] {
-  const month = currentMonthKey();
-  const tasks = getTasks();
-  const cards: MyAgentCard[] = [];
-
-  for (const activation of getActivations().filter((a) => a.status === 'active')) {
-    const agent = getAgentById(activation.agentId);
-    if (!agent) continue;
-
-    const agentTasks = tasks.filter(
-      (t) => t.agentType === activation.agentId && t.createdAt.startsWith(month),
-    );
-    const latest = [...tasks]
-      .filter((t) => t.agentType === activation.agentId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-
-    const deactivateCheck = canDeactivateAgent(activation.agentId);
-
-    cards.push({
-      id: agent.id,
-      name: agent.name,
-      description: agent.desc,
-      iconSrc: agent.iconSrc,
-      status: 'active',
-      monthlyTaskCount: agentTasks.length,
-      monthlyTokenUsed: activation.tokenUsed,
-      latestTask: latest
-        ? {
-            id: latest.id,
-            name: latest.name,
-            status: latest.status,
-            statusLabel: TASK_STATUS_LABEL[latest.status] ?? latest.status,
-            updatedAt: latest.completedAt ?? latest.createdAt,
-          }
-        : undefined,
-      canDeactivate: deactivateCheck.allowed,
-      deactivateReason: !deactivateCheck.allowed ? deactivateCheck.message : undefined,
-      hasRunningTasks: deactivateCheck.hasRunningTasks ?? false,
-    });
-  }
-
-  return cards;
 }
 
 export function getGuestAgentsPageData(): AgentsPageData {
   return {
     activeTab: 'market',
     quota: { enabledCount: 0, tokenBalance: 0 },
-    marketAgents: buildMarketAgents(true),
+    marketAgents: buildMarketAgents(),
     myAgents: [],
   };
 }
@@ -154,6 +77,6 @@ export function getAgentsPageData(tab: AgentsTab | string | null): AgentsPageDat
     activeTab,
     quota: buildQuotaSnapshot(),
     marketAgents: buildMarketAgents(),
-    myAgents: buildMyAgents(),
+    myAgents: [],
   };
 }

@@ -4,26 +4,30 @@ import AgentIcon from './AgentIcon';
 
 interface MarketCardProps {
   card: AgentMarketCard;
-  hermesConnected?: boolean;
+  lowBalance?: boolean;
   guestMode?: boolean;
-  onEnable: () => void;
   onEnter: () => void;
-  onDeactivate: () => void;
-  onPair?: () => void;
   onViewDetail?: () => void;
+}
+
+function primaryCtaLabel(card: AgentMarketCard, lowBalance: boolean): string {
+  if (card.status === 'coming_soon') return '即将开放';
+  if (card.badge === 'beta' || card.badge === '内测') return '申请内测';
+  if (lowBalance) return '充值算力';
+  return '使用智能体';
 }
 
 export default function MarketCard({
   card,
-  hermesConnected = true,
+  lowBalance = false,
   guestMode = false,
-  onEnable,
   onEnter,
-  onDeactivate,
-  onPair,
   onViewDetail,
 }: MarketCardProps) {
-  const needsPairing = !guestMode && !hermesConnected && card.status === 'inactive';
+  const isComingSoon = card.status === 'coming_soon';
+  const isBeta = card.badge === 'beta' || card.badge === '内测';
+  const ctaLabel = primaryCtaLabel(card, !guestMode && lowBalance);
+  const disabled = isComingSoon || isBeta;
 
   return (
     <div
@@ -32,11 +36,6 @@ export default function MarketCard({
     >
       <div className="flex items-start justify-between mb-4">
         <AgentIcon src={card.iconSrc} alt={card.name} size="lg" />
-        {!guestMode && card.status === 'active' && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-            已启用
-          </span>
-        )}
       </div>
 
       <h3 className="text-base font-bold text-[#1A1A1A] mb-2">{card.name}</h3>
@@ -63,66 +62,35 @@ export default function MarketCard({
       </div>
 
       <div className="mt-auto space-y-2">
-        {guestMode ? (
-          <>
-            {card.status === 'coming_soon' ? (
-              <button type="button" disabled className="w-full py-2 text-xs font-bold bg-black/10 text-black/40 rounded-lg">
-                即将开放
-              </button>
-            ) : (
-              <div className="flex gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={onEnable}
-                  className="flex-1 py-2 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
-                >
-                  登录后启用
-                </button>
-                <button
-                  type="button"
-                  onClick={onViewDetail ?? onEnter}
-                  className="flex-1 py-2 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
-                >
-                  查看详情
-                </button>
-              </div>
-            )}
-          </>
+        {disabled ? (
+          <button type="button" disabled className="w-full py-2 text-xs font-bold bg-black/10 text-black/40 rounded-lg">
+            {ctaLabel}
+          </button>
+        ) : guestMode ? (
+          <div className="flex gap-2 w-full">
+            <button
+              type="button"
+              onClick={onEnter}
+              className="flex-1 py-2 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
+            >
+              使用智能体
+            </button>
+            <button
+              type="button"
+              onClick={onViewDetail ?? onEnter}
+              className="flex-1 py-2 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
+            >
+              查看详情
+            </button>
+          </div>
         ) : (
-          <>
-            {card.status === 'active' && (
-              <div className="flex gap-2 w-full">
-                <button
-                  type="button"
-                  onClick={onDeactivate}
-                  className="flex-1 py-2 text-xs font-bold border border-amber-300/80 text-amber-900 bg-amber-50/50 hover:bg-amber-50 hover:border-amber-400 transition-colors rounded-lg"
-                >
-                  停用
-                </button>
-                <button
-                  type="button"
-                  onClick={onEnter}
-                  className="flex-1 py-2 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
-                >
-                  使用智能体
-                </button>
-              </div>
-            )}
-            {card.status === 'inactive' && (
-              <button
-                type="button"
-                onClick={needsPairing ? onPair : onEnable}
-                className="w-full py-2 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
-              >
-                {needsPairing ? '先配对 Hz-Hermes' : '启用智能体'}
-              </button>
-            )}
-            {card.status === 'coming_soon' && (
-              <button type="button" disabled className="w-full py-2 text-xs font-bold bg-black/10 text-black/40 rounded-lg">
-                即将开放
-              </button>
-            )}
-          </>
+          <button
+            type="button"
+            onClick={onEnter}
+            className="w-full py-2 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
+          >
+            {ctaLabel}
+          </button>
         )}
       </div>
     </div>

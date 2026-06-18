@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import MarketingPage from './pages/MarketingPage';
-import LoginPage from './pages/LoginPage';
+import { LoginModalProvider } from './context/LoginModalProvider';
+import HomeRedirect from './pages/HomeRedirect';
 import PublicAgentsPage from './pages/PublicAgentsPage';
 import PublicAgentDetailPage from './pages/PublicAgentDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,13 +16,15 @@ import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
 import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
+import ResultsPage from './pages/app/ResultsPage';
 import ConnectHermesPage from './pages/ConnectHermesPage';
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<MarketingPage />} />
-      <Route path="/login" element={<LoginPage />} />
+    <LoginModalProvider>
+      <Routes>
+      <Route path="/" element={<HomeRedirect />} />
+      <Route path="/login" element={null} />
       <Route path="/agents" element={<PublicAgentsPage />} />
       <Route path="/agents/:agentId" element={<PublicAgentDetailPage />} />
       <Route
@@ -53,13 +55,15 @@ export default function App() {
         <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
+        <Route path="results" element={<ResultsPage />} />
         <Route path="usage" element={<UsagePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/profile" element={<Navigate to="/app/settings" replace />} />
         <Route path="settings/auth" element={<SettingsAuthPage />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      <Route path="*" element={<HomeRedirect />} />
+      </Routes>
+    </LoginModalProvider>
   );
 }

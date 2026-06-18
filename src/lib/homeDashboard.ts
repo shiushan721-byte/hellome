@@ -6,14 +6,8 @@ import type {
   RecommendedAction,
 } from '../types/homeDashboard';
 import type { Task, TaskStatus } from '../types/workbench';
-import { SLOT_AGENT_IDS } from '../types/agentSlots';
-import { getAgentById } from '../data/agentsCatalog';
-import {
-  canEnableAgent,
-  getActiveAgents,
-  getOccupiedSlotCount,
-  isAgentActive,
-} from './agentSlotStore';
+import { getAgentById, AGENTS } from '../data/agentsCatalog';
+import { getTabOrder } from './workbenchTabs';
 import { getUsage, isLowBalance } from './usageStore';
 import { getTasks } from './taskStore';
 import { getAgentsPageData } from './agentsPageData';
@@ -63,65 +57,41 @@ export function matchPromptToAgent(prompt: string): PromptMatchResult {
   const trimmed = prompt.trim();
   if (!trimmed) return { type: 'no_match' };
 
-  const enabledIds = getActiveAgents().map((a) => a.agentId);
-
-  // 优先在已启用智能体中匹配
-  let bestEnabled: string | null = null;
-  let bestEnabledScore = 0;
-  for (const id of enabledIds) {
-    const s = scoreAgent(trimmed, id);
-    if (s > bestEnabledScore) {
-      bestEnabledScore = s;
-      bestEnabled = id;
-    }
-  }
-  if (bestEnabled && bestEnabledScore > 0) {
-    const agent = getAgentById(bestEnabled);
-    return { type: 'match', agentId: bestEnabled, agentName: agent?.name ?? bestEnabled };
-  }
-
-  // 未命中已启用时，判断最适合但未启用的智能体
   let best: string | null = null;
   let bestScore = 0;
-  for (const id of SLOT_AGENT_IDS) {
-    const s = scoreAgent(trimmed, id);
+  for (const agent of AGENTS) {
+    if (!agent.available) continue;
+    const s = scoreAgent(trimmed, agent.id);
     if (s > bestScore) {
       bestScore = s;
-      best = id;
+      best = agent.id;
     }
   }
 
   if (!best || bestScore === 0) return { type: 'no_match' };
 
   const agent = getAgentById(best);
-  const agentName = agent?.name ?? best;
-
-  const check = canEnableAgent(best, agent?.available ?? false);
-  if (!check.allowed && check.reason === 'unavailable') {
-    return { type: 'no_match' };
-  }
-
-  return { type: 'needs_enable', agentId: best, agentName };
+  return { type: 'match', agentId: best, agentName: agent?.name ?? best };
 }
 
 function taskUpdatedAt(task: Task): string {
   return task.completedAt ?? task.createdAt;
 }
 
-function buildEnabledSummaries(): EnabledAgentSummary[] {
+function buildRecentAgentSummaries(): EnabledAgentSummary[] {
   const tasks = getTasks();
   const result: EnabledAgentSummary[] = [];
+  const openedIds = getTabOrder();
 
-  for (const activation of getActiveAgents()) {
-    const agent = getAgentById(activation.agentId);
+  for (const agentId of openedIds) {
+    const agent = getAgentById(agentId);
     if (!agent) continue;
 
     const agentTasks = tasks
-      .filter((t) => t.agentType === activation.agentId)
+      .filter((t) => t.agentType === agentId)
       .sort((a, b) => new Date(taskUpdatedAt(b)).getTime() - new Date(taskUpdatedAt(a)).getTime());
 
     const latest = agentTasks[0];
-    const slotId = activation.agentId;
     const monthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const monthTasks = agentTasks.filter(
       (t) => t.createdAt.startsWith(monthKey) && (t.status === 'completed' || t.status === 'failed'),
@@ -129,14 +99,14 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
     const monthlyTokenFromTasks = monthTasks.reduce((sum, t) => sum + t.tokenUsed, 0);
 
     result.push({
-      agentId: activation.agentId,
+      agentId,
       name: agent.name,
       description: agent.desc,
       path: agent.path,
       iconSrc: agent.iconSrc,
-      monthlyTaskCount: monthTasks.length || activation.completedTaskCount,
-      monthlyTokenUsed: monthlyTokenFromTasks || activation.tokenUsed,
-      lastUsedAt: latest ? taskUpdatedAt(latest) : activation.activatedAt,
+      monthlyTaskCount: monthTasks.length,
+      monthlyTokenUsed: monthlyTokenFromTasks,
+      lastUsedAt: latest ? taskUpdatedAt(latest) : undefined,
       latestTask: latest
         ? {
             id: latest.id,
@@ -145,32 +115,29 @@ function buildEnabledSummaries(): EnabledAgentSummary[] {
             updatedAt: taskUpdatedAt(latest),
           }
         : undefined,
-      templates: AGENT_TASK_TEMPLATES[slotId] ?? [],
+      templates: AGENT_TASK_TEMPLATES[agentId] ?? [],
     });
   }
 
-  return result.sort((a, b) => {
-    const ta = a.lastUsedAt ? new Date(a.lastUsedAt).getTime() : 0;
-    const tb = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : 0;
-    return tb - ta;
-  });
+  return result;
 }
 
 function buildAgentQuota(): AgentQuotaSnapshot {
   const usage = getUsage();
 
   return {
-    enabledCount: getOccupiedSlotCount(),
+    enabledCount: getTabOrder().length,
     tokenBalance: usage.tokenBalance,
   };
 }
 
-function buildRecommendedActions(enabledIds: Set<string>): RecommendedAction[] {
+function buildRecommendedActions(): RecommendedAction[] {
   const actions: RecommendedAction[] = [];
   const tasks = getTasks();
+  const openedIds = new Set(getTabOrder());
 
   const lastGeo = tasks.find((t) => t.agentType === 'geo' && t.status === 'completed');
-  if (lastGeo && enabledIds.has('geo')) {
+  if (lastGeo) {
     actions.push({
       id: 'rec-geo-faq',
       title: '基于上次 GEO 报告，继续生成官网 FAQ',
@@ -182,31 +149,20 @@ function buildRecommendedActions(enabledIds: Set<string>): RecommendedAction[] {
     });
   }
 
-  if (!enabledIds.has('media')) {
+  const lastContent = tasks.find((t) => t.status === 'completed');
+  if (lastContent) {
     actions.push({
-      id: 'rec-media-hint',
-      title: '把文章改成公众号风格（需启用自媒体智能体）',
+      id: 'rec-media-xhs',
+      title: '基于上次内容，继续生成小红书改写版',
       agentId: 'media',
+      sourceTaskId: lastContent.id,
       estimatedTokenMin: 2000,
-      estimatedTokenMax: 12000,
-      requiresActivation: true,
+      estimatedTokenMax: 8000,
+      requiresActivation: false,
     });
-  } else {
-    const lastContent = tasks.find((t) => t.status === 'completed');
-    if (lastContent) {
-      actions.push({
-        id: 'rec-media-xhs',
-        title: '基于上次内容，继续生成小红书改写版',
-        agentId: 'media',
-        sourceTaskId: lastContent.id,
-        estimatedTokenMin: 2000,
-        estimatedTokenMax: 8000,
-        requiresActivation: false,
-      });
-    }
   }
 
-  if (enabledIds.has('sales')) {
+  if (openedIds.has('sales')) {
     actions.push({
       id: 'rec-sales-followup',
       title: '基于客户分析结果，继续生成跟进邮件',
@@ -221,33 +177,24 @@ function buildRecommendedActions(enabledIds: Set<string>): RecommendedAction[] {
 }
 
 function buildAddableAgentIds(): string[] {
-  return SLOT_AGENT_IDS.filter((id) => {
-    if (isAgentActive(id)) return false;
-    const agent = getAgentById(id);
-    if (!agent?.available) return false;
-    const check = canEnableAgent(id, true);
-    return check.allowed || check.reason === 'already_active';
-  });
+  return AGENTS.filter((agent) => agent.available).map((agent) => agent.id);
 }
 
-function buildRecentTasks(enabledIds: Set<string>): Task[] {
-  const tasks = getTasks();
-  const enabled = tasks.filter((t) => enabledIds.has(t.agentType));
-  const other = tasks.filter((t) => !enabledIds.has(t.agentType));
-  return [...enabled, ...other].slice(0, 8);
+function buildRecentTasks(): Task[] {
+  return getTasks().slice(0, 8);
 }
 
 export function getHomeDashboardData(): HomeDashboardData {
   const usage = getUsage();
-  const enabledAgents = buildEnabledSummaries();
-  const enabledIds = new Set(enabledAgents.map((a) => a.agentId));
+  const recentAgents = buildRecentAgentSummaries();
 
   return {
     usage,
     agentQuota: buildAgentQuota(),
-    enabledAgents,
-    recentTasks: buildRecentTasks(enabledIds),
-    recommendedActions: buildRecommendedActions(enabledIds),
+    recentAgents,
+    enabledAgents: recentAgents,
+    recentTasks: buildRecentTasks(),
+    recommendedActions: buildRecommendedActions(),
     addableAgentIds: buildAddableAgentIds(),
   };
 }

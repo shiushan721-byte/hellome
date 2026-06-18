@@ -9,8 +9,6 @@ import {
 } from '../../lib/usageStore';
 import { formatTime } from '../../components/app/tasks/TaskStatusBadge';
 import { formatToken, formatTokenRange } from '../../lib/tokenBilling';
-import { getActiveAgents, subscribeAgentSlots } from '../../lib/agentSlotStore';
-import { getAgentById } from '../../data/agentsCatalog';
 
 const STATUS_LABEL: Record<string, string> = {
   settled: '已完成',
@@ -20,16 +18,20 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function UsagePage() {
-  useSyncExternalStore(subscribeAgentSlots, getActiveAgents, () => []);
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
 
   const usage = getUsage();
   const stats = getComputeStats(usage);
   const ledger = getLedger();
   const low = isLowBalance(usage);
-  const activeAgents = getActiveAgents();
 
-  const agentRanking = [...activeAgents]
+  const agentRanking = Object.entries(
+    ledger.reduce<Record<string, number>>((acc, entry) => {
+      acc[entry.agent] = (acc[entry.agent] ?? 0) + entry.tokenUsed;
+      return acc;
+    }, {}),
+  )
+    .map(([agent, tokenUsed]) => ({ agent, tokenUsed }))
     .sort((a, b) => b.tokenUsed - a.tokenUsed)
     .slice(0, 5);
 
@@ -63,27 +65,11 @@ export default function UsagePage() {
 
       <section className="space-y-4 p-5 bg-[#F2F0ED]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">已启用智能体</h2>
-          <span className="font-mono font-bold text-sm">{activeAgents.length}</span>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">智能体使用说明</h2>
         </div>
         <p className="text-xs text-black/50 leading-relaxed">
-          智能体可随时启用和停用。启用不消耗 Token，只有执行任务时才会按实际用量消耗。
+          所有已开放智能体均可直接使用。任务执行前会展示预计 Token 消耗，完成后按实际用量结算。
         </p>
-        {activeAgents.length > 0 && (
-          <ul className="space-y-2">
-            {activeAgents.map((a) => {
-              const name = getAgentById(a.agentId)?.name ?? a.agentId;
-              return (
-                <li key={a.agentId} className="flex justify-between text-xs bg-white px-3 py-2">
-                  <span className="font-medium">{name}</span>
-                  <span className="text-black/45">
-                    任务 {a.completedTaskCount} · {formatToken(a.tokenUsed)} Token
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
         <Link to="/app/agents" className="inline-block text-xs font-bold underline text-black/60 hover:text-black">
           智能体市场 →
         </Link>
@@ -93,17 +79,14 @@ export default function UsagePage() {
         <section className="space-y-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-black/45">智能体消耗排行</h2>
           <ul className="space-y-2">
-            {agentRanking.map((a, index) => {
-              const name = getAgentById(a.agentId)?.name ?? a.agentId;
-              return (
-                <li key={a.agentId} className="flex justify-between text-xs bg-[#F2F0ED] px-3 py-2">
+            {agentRanking.map((a, index) => (
+                <li key={a.agent} className="flex justify-between text-xs bg-[#F2F0ED] px-3 py-2">
                   <span className="font-medium">
-                    {index + 1}. {name}
+                    {index + 1}. {a.agent}
                   </span>
                   <span className="font-mono font-bold">{formatToken(a.tokenUsed)}</span>
                 </li>
-              );
-            })}
+              ))}
           </ul>
         </section>
       )}

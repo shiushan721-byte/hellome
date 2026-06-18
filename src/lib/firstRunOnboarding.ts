@@ -56,18 +56,11 @@ export function isHermesConnected(): boolean {
 }
 
 export function isWorkbenchNavRestricted(): boolean {
-  return !isHermesConnected();
+  return false;
 }
 
-const UNPAIRED_BLOCKED_PATHS = [
-  /^\/app\/tasks(\/|$)/,
-  /^\/app\/usage$/,
-  /^\/app\/settings(\/|$)/,
-];
-
-export function isWorkbenchPathBlocked(pathname: string): boolean {
-  if (isHermesConnected()) return false;
-  return UNPAIRED_BLOCKED_PATHS.some((pattern) => pattern.test(pathname));
+export function isWorkbenchPathBlocked(_pathname: string): boolean {
+  return false;
 }
 
 export function getNavDisabledReason(): string {

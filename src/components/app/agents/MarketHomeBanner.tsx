@@ -8,58 +8,42 @@ import type { AgentMarketCard } from '../../../types/agentsPage';
 
 interface MarketHomeBannerProps {
   marketCards: AgentMarketCard[];
-  hermesConnected: boolean;
   lowBalance?: boolean;
   guestMode?: boolean;
   onHeroAction: () => void;
   onMediumAction: (banner: MarketMediumBannerConfig) => void;
 }
 
-function heroCtaLabel(
-  isActive: boolean,
-  hermesConnected: boolean,
-  lowBalance: boolean,
-  guestMode: boolean,
-): string {
-  if (guestMode) return '登录后启用';
-  if (!hermesConnected) return '先配对 Hz-Hermes';
+function heroCtaLabel(lowBalance: boolean, guestMode: boolean): string {
+  if (guestMode) return '使用智能体';
   if (lowBalance) return '充值算力';
-  return isActive ? '立即使用' : '启用智能体';
+  return '使用智能体';
 }
 
 function mediumCtaLabel(
   banner: MarketMediumBannerConfig,
-  isActive: boolean,
-  hermesConnected: boolean,
   lowBalance: boolean,
   guestMode: boolean,
 ): string {
-  if (guestMode && banner.displayStatus === 'open') return '登录后使用';
   if (banner.displayStatus === 'coming_soon') return '即将开放';
-  if (banner.displayStatus === 'beta') return '内测中';
-  if (!hermesConnected) return '先配对';
+  if (banner.displayStatus === 'beta') return '申请内测';
+  if (guestMode) return '使用智能体';
   if (lowBalance) return '充值算力';
-  return isActive ? '立即使用' : banner.cta;
+  return '使用智能体';
 }
 
 function isMediumDisabled(banner: MarketMediumBannerConfig): boolean {
   return banner.displayStatus === 'coming_soon' || banner.displayStatus === 'beta';
 }
 
-function isAgentActive(agentId: string, marketCards: AgentMarketCard[]): boolean {
-  return marketCards.find((c) => c.id === agentId)?.status === 'active';
-}
-
 export default function MarketHomeBanner({
   marketCards,
-  hermesConnected,
   lowBalance = false,
   guestMode = false,
   onHeroAction,
   onMediumAction,
 }: MarketHomeBannerProps) {
   const heroAgent = getAgentById(MARKET_HERO_BANNER.agentId);
-  const heroActive = isAgentActive(MARKET_HERO_BANNER.agentId, marketCards);
 
   return (
     <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-10 gap-2.5 lg:gap-3 w-full auto-rows-[minmax(180px,auto)] lg:auto-rows-[200px]">
@@ -79,7 +63,7 @@ export default function MarketHomeBanner({
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/20" />
-        <div className="relative z-10 h-full flex flex-col justify-between p-4 lg:p-5 text-white">
+        <div className="relative z-10 h-full flex flex-col justify-between px-4 pt-3 pb-4 lg:px-5 lg:pt-3.5 lg:pb-5 text-white">
           <div className="space-y-1.5 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/55">
               {MARKET_HERO_BANNER.eyebrow}
@@ -98,7 +82,7 @@ export default function MarketHomeBanner({
               }}
               className="px-3 py-1.5 text-[11px] font-bold bg-white text-black hover:bg-white/90 rounded-md"
             >
-              {heroCtaLabel(heroActive, hermesConnected, lowBalance, guestMode)}
+              {heroCtaLabel(lowBalance, guestMode)}
             </button>
           </div>
         </div>
@@ -106,7 +90,6 @@ export default function MarketHomeBanner({
 
       {MARKET_MEDIUM_BANNERS.map((banner) => {
         const agent = getAgentById(banner.agentId);
-        const active = isAgentActive(banner.agentId, marketCards);
         const disabled = isMediumDisabled(banner);
 
         return (
@@ -147,7 +130,7 @@ export default function MarketHomeBanner({
                     : 'bg-white/90 text-black hover:bg-white'
                 }`}
               >
-                {mediumCtaLabel(banner, active, hermesConnected, lowBalance, guestMode)}
+                {mediumCtaLabel(banner, lowBalance, guestMode)}
               </button>
             </div>
           </article>

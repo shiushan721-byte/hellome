@@ -1,7 +1,8 @@
-import { useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut } from 'lucide-react';
-import { logout } from '../../lib/auth';
+import { isAuthenticated, logout } from '../../lib/auth';
+import { useLoginModal } from '../../context/LoginModalProvider';
 import { getProfile, subscribeProfile } from '../../lib/profileStore';
 import UserAvatar from './UserAvatar';
 import { getUsage, isLowBalance, subscribeUsage } from '../../lib/usageStore';
@@ -11,11 +12,18 @@ import {
   refreshHermesConnection,
   subscribeHermesConnection,
 } from '../../lib/hermesConnection';
-import { useState } from 'react';
+import { isHermesConnected } from '../../lib/firstRunOnboarding';
 import HermesActionModal from './HermesActionModal';
 
-export default function Topbar() {
+type TopbarProps = {
+  variant?: 'app' | 'guest';
+};
+
+export default function Topbar({ variant = 'app' }: TopbarProps) {
   const navigate = useNavigate();
+  const { openLogin } = useLoginModal();
+  const isGuest = variant === 'guest' || !isAuthenticated();
+
   const profile = useSyncExternalStore(subscribeProfile, getProfile, getProfile);
   const usage = useSyncExternalStore(subscribeUsage, getUsage, getUsage);
   const hermes = useSyncExternalStore(
@@ -36,11 +44,25 @@ export default function Topbar() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/agents');
   };
 
+  if (isGuest) {
+    return (
+      <header className="h-16 border-b border-black/8 bg-[#FDFCFB]/95 backdrop-blur-md px-6 flex items-center justify-end shrink-0 z-30">
+        <button
+          type="button"
+          onClick={() => openLogin({ redirect: '/agents' })}
+          className="px-4 py-2 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg transition-colors"
+        >
+          登录
+        </button>
+      </header>
+    );
+  }
+
   return (
-    <header className="h-16 border-b border-black/8 bg-[#FDFCFB]/95 backdrop-blur-md px-6 flex items-center justify-end gap-4 shrink-0">
+    <header className="h-16 border-b border-black/8 bg-[#FDFCFB]/95 backdrop-blur-md px-6 flex items-center justify-end gap-4 shrink-0 z-30">
       <div className="flex items-center gap-4 shrink-0">
         <button type="button" className="text-black/45 hover:text-black transition-colors" aria-label="通知">
           <Bell className="w-4 h-4" />
@@ -109,15 +131,18 @@ export default function Topbar() {
       </div>
       {showHermesModal && (
         <HermesActionModal
+          variant="pairing"
           status={hermes.status}
           onClose={() => setShowHermesModal(false)}
           onOpenHermes={() => {
             refreshHermesConnection();
             setShowHermesModal(false);
           }}
-          onGoPair={() => {
-            setShowHermesModal(false);
-            navigate('/app');
+          onPairedComplete={() => {
+            if (isHermesConnected()) {
+              setShowHermesModal(false);
+              navigate('/app');
+            }
           }}
         />
       )}

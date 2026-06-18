@@ -1,14 +1,13 @@
-import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { isAuthenticated } from '../lib/auth';
 import { getAgentById } from '../data/agentsCatalog';
 import AgentIcon from '../components/app/agents/AgentIcon';
-import LoginPromptModal from '../components/LoginPromptModal';
+import { useLoginModal } from '../context/LoginModalProvider';
 import PublicMarketLayout from '../layouts/PublicMarketLayout';
 
 export default function PublicAgentDetailPage() {
   const { agentId } = useParams<{ agentId: string }>();
-  const [loginModal, setLoginModal] = useState<'enable' | 'use' | null>(null);
+  const { openLogin } = useLoginModal();
 
   if (isAuthenticated()) {
     return <Navigate to={agentId ? `/app/agents/${agentId}` : '/app/agents'} replace />;
@@ -49,22 +48,19 @@ export default function PublicAgentDetailPage() {
 
           <div className="flex flex-wrap gap-2 pt-2">
             {agent.available ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setLoginModal('enable')}
-                  className="px-4 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
-                >
-                  登录后启用
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginModal('use')}
-                  className="px-4 py-2.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
-                >
-                  登录后使用
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() =>
+                  openLogin({
+                    agentId: agent.id,
+                    action: 'use',
+                    redirect: `/agents/${agent.id}`,
+                  })
+                }
+                className="px-4 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
+              >
+                使用智能体
+              </button>
             ) : (
               <button
                 type="button"
@@ -77,15 +73,6 @@ export default function PublicAgentDetailPage() {
           </div>
         </div>
       </div>
-
-      {loginModal && (
-        <LoginPromptModal
-          agentId={agent.id}
-          action={loginModal}
-          redirect={`/agents/${agent.id}`}
-          onClose={() => setLoginModal(null)}
-        />
-      )}
     </PublicMarketLayout>
   );
 }

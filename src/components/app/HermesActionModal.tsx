@@ -1,31 +1,42 @@
-import { AlertTriangle, ExternalLink, Link2 } from 'lucide-react';
+import { AlertTriangle, Download, ExternalLink } from 'lucide-react';
 import type { HermesConnectionStatus } from '../../lib/hermesConnection';
+import { HERMES_DOWNLOAD_URL } from '../../lib/firstRunOnboarding';
 import { createPortal } from 'react-dom';
 
 export default function HermesActionModal({
   status,
   onClose,
   onOpenHermes,
-  onGoPair,
+  onPairedComplete,
+  variant = 'default',
 }: {
   status: HermesConnectionStatus;
   onClose: () => void;
   onOpenHermes: () => void;
-  onGoPair: () => void;
+  onGoPair?: () => void;
+  onPairedComplete?: () => void;
+  variant?: 'default' | 'pairing';
 }) {
   const isOffline = status === 'offline';
   const isNotPaired = status === 'not_paired' || status === 'account_mismatch';
   const isNotInstalled = status === 'capability_missing';
-  const title = isOffline
-    ? 'Hz-Hermes 当前离线'
-    : isNotInstalled
-      ? '请先安装 Hz-Hermes'
-      : '请先完成 Hz-Hermes 配对';
-  const desc = isOffline
-    ? '检测到 Hz-Hermes 未在线。启动 Hz-Hermes 后即可继续使用智能体功能。'
-    : isNotInstalled
-      ? 'HelloMe 智能体依赖 Hz-Hermes 执行。请先安装并打开 Hz-Hermes，再回到当前页面。'
-      : '未检测到配对关系。请打开 Hz-Hermes 并使用同账号完成一键配对后再继续。';
+  const pairingMode = variant === 'pairing' || isNotPaired;
+
+  const title = pairingMode
+    ? '连接你的个人智能引擎'
+    : isOffline
+      ? 'Hz-Hermes 当前离线'
+      : isNotInstalled
+        ? '请先安装 Hz-Hermes'
+        : '请先完成 Hz-Hermes 配对';
+
+  const desc = pairingMode
+    ? 'HelloMe 负责发起任务，Hz-Hermes 负责在你的电脑上执行任务。使用智能体前，请先下载 Hz-Hermes，并用当前 HelloMe 账号完成一键配对。'
+    : isOffline
+      ? '检测到 Hz-Hermes 未在线。启动 Hz-Hermes 后即可继续使用智能体功能。'
+      : isNotInstalled
+        ? 'HelloMe 智能体依赖 Hz-Hermes 执行。请先安装并打开 Hz-Hermes，再回到当前页面。'
+        : '未检测到配对关系。请打开 Hz-Hermes 并使用同账号完成一键配对后再继续。';
 
   const modal = (
     <div className="fixed inset-0 z-[70] bg-black/35 flex items-center justify-center p-4">
@@ -33,7 +44,7 @@ export default function HermesActionModal({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="text-sm text-black/55 mt-1">{desc}</p>
+            <p className="text-sm text-black/55 mt-1 leading-relaxed">{desc}</p>
           </div>
           <button
             type="button"
@@ -45,46 +56,46 @@ export default function HermesActionModal({
           </button>
         </div>
 
-        {isNotPaired && (
-          <section className="rounded-xl border border-black/10 bg-[#F7F9FB] p-4 space-y-3">
-            <p className="text-xs font-semibold text-black/70 inline-flex items-center gap-1.5">
-              <Link2 className="w-3.5 h-3.5" />
-              配对示意图
-            </p>
-            <div className="flex items-center gap-2 text-[11px]">
-              <div className="flex-1 rounded-lg border border-black/10 bg-white px-2 py-2 text-center">
-                HelloMe 登录
-              </div>
-              <span className="text-black/35">→</span>
-              <div className="flex-1 rounded-lg border border-black/10 bg-white px-2 py-2 text-center">
-                Hz-Hermes 同账号登录
-              </div>
-              <span className="text-black/35">→</span>
-              <div className="flex-1 rounded-lg border border-black/10 bg-white px-2 py-2 text-center">
-                一键配对成功
-              </div>
-            </div>
-          </section>
+        {pairingMode && (
+          <ol className="rounded-xl border border-black/10 bg-[#F7F9FB] p-4 space-y-2 text-sm text-black/65 list-decimal list-inside">
+            <li>下载 Hz-Hermes</li>
+            <li>使用同一个账号登录</li>
+            <li>一键配对</li>
+          </ol>
         )}
 
         <div className="flex flex-wrap gap-2">
-          {(isOffline || isNotInstalled) && (
+          {(pairingMode || isNotInstalled) && (
+            <a
+              href={HERMES_DOWNLOAD_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 h-10 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 inline-flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4" />
+              下载 Hz-Hermes
+            </a>
+          )}
+          {pairingMode && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenHermes();
+                onPairedComplete?.();
+              }}
+              className="px-4 h-10 rounded-lg border border-black/12 bg-white text-sm font-medium hover:bg-black/[0.02]"
+            >
+              我已完成配对
+            </button>
+          )}
+          {(isOffline || isNotInstalled || pairingMode) && (
             <button
               type="button"
               onClick={onOpenHermes}
-              className="px-4 h-10 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90 inline-flex items-center gap-1.5"
+              className="px-4 h-10 rounded-lg border border-black/12 bg-white text-sm font-medium hover:bg-black/[0.02] inline-flex items-center gap-1.5"
             >
               <ExternalLink className="w-4 h-4" />
-              启动 Hz-Hermes 应用
-            </button>
-          )}
-          {isNotPaired && (
-            <button
-              type="button"
-              onClick={onGoPair}
-              className="px-4 h-10 rounded-lg bg-black text-white text-sm font-medium hover:bg-black/90"
-            >
-              去 Hz-Hermes 配对页
+              打开 Hz-Hermes
             </button>
           )}
           <button
@@ -92,11 +103,11 @@ export default function HermesActionModal({
             onClick={onClose}
             className="px-4 h-10 rounded-lg border border-black/12 bg-white text-sm font-medium hover:bg-black/[0.02]"
           >
-            我知道了
+            稍后再说
           </button>
         </div>
 
-        {(isOffline || isNotInstalled) && (
+        {(isOffline || isNotInstalled) && !pairingMode && (
           <p className="text-xs text-amber-700 inline-flex items-center gap-1">
             <AlertTriangle className="w-3.5 h-3.5" />
             Hz-Hermes 恢复在线后即可继续使用智能体。

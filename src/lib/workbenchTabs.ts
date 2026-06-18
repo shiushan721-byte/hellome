@@ -1,5 +1,7 @@
 import type { EnabledAgentSummary } from '../types/homeDashboard';
 
+export const WORKBENCH_TABS_MIGRATION_KEY = 'hellome_workbench_tabs_v2';
+
 export const WORKBENCH_HIDDEN_TABS_KEY = 'hellome_workbench_hidden_tabs';
 export const WORKBENCH_TAB_ORDER_KEY = 'hellome_workbench_tab_order';
 export const WORKBENCH_LAST_AGENT_KEY = 'hellome_workbench_last_agent';
@@ -17,7 +19,21 @@ export function subscribeWorkbenchTabs(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+function migrateWorkbenchTabsIfNeeded(): void {
+  if (typeof window === 'undefined') return;
+  if (window.localStorage.getItem(WORKBENCH_TABS_MIGRATION_KEY) === '1') return;
+
+  // 旧版会把全部可用智能体展示为标签；重置为仅用户主动打开后才出现标签
+  window.localStorage.removeItem(WORKBENCH_TAB_ORDER_KEY);
+  window.localStorage.removeItem(WORKBENCH_HIDDEN_TABS_KEY);
+  window.localStorage.removeItem(WORKBENCH_PINNED_TABS_KEY);
+  window.localStorage.removeItem(WORKBENCH_LAST_AGENT_KEY);
+  window.localStorage.setItem(WORKBENCH_TABS_MIGRATION_KEY, '1');
+  notify();
+}
+
 function readStringArray(key: string): string[] {
+  migrateWorkbenchTabsIfNeeded();
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return [];
@@ -69,20 +85,27 @@ export function setTabOrder(order: string[]): void {
 
 export function setLastOpenedAgentId(agentId: string): void {
   localStorage.setItem(WORKBENCH_LAST_AGENT_KEY, agentId);
+  notify();
 }
 
 export function getLastOpenedAgentId(): string | null {
   return localStorage.getItem(WORKBENCH_LAST_AGENT_KEY);
 }
 
-export function sortVisibleEnabledAgents(agents: EnabledAgentSummary[]): EnabledAgentSummary[] {
+/** 最近打开且未关闭的智能体标签 ID */
+export function getVisibleRecentAgentIds(): string[] {
+  const hidden = new Set(getHiddenTabIds());
+  return getTabOrder().filter((id) => !hidden.has(id));
+}
+
+export function sortRecentAgentSummaries(agents: EnabledAgentSummary[]): EnabledAgentSummary[] {
   const hidden = getHiddenTabIds();
   const order = getTabOrder();
   const pinned = new Set(getPinnedTabIds());
   const orderMap = new Map(order.map((id, idx) => [id, idx]));
 
   return agents
-    .filter((agent) => !hidden.includes(agent.agentId))
+    .filter((agent) => order.includes(agent.agentId) && !hidden.includes(agent.agentId))
     .sort((a, b) => {
       const pinDiff = Number(pinned.has(b.agentId)) - Number(pinned.has(a.agentId));
       if (pinDiff !== 0) return pinDiff;
@@ -92,19 +115,16 @@ export function sortVisibleEnabledAgents(agents: EnabledAgentSummary[]): Enabled
     });
 }
 
+/** @deprecated 使用 sortRecentAgentSummaries */
 export function getVisibleEnabledAgents(agents: EnabledAgentSummary[]): EnabledAgentSummary[] {
-  return sortVisibleEnabledAgents(agents);
-}
-
-export function shouldShowEnabledAgentsPanel(enabledAgents: EnabledAgentSummary[]): boolean {
-  return enabledAgents.length > 0 && getVisibleEnabledAgents(enabledAgents).length === 0;
+  return sortRecentAgentSummaries(agents);
 }
 
 export function findAdjacentVisibleTabId(
   closingAgentId: string,
-  enabledAgentIds: string[],
+  openedAgentIds: string[],
 ): string | null {
-  const visibleIds = enabledAgentIds.filter((id) => isTabVisible(id));
+  const visibleIds = openedAgentIds.filter((id) => isTabVisible(id));
   const idx = visibleIds.indexOf(closingAgentId);
   if (idx < 0) return visibleIds[0] ?? null;
   return visibleIds[idx + 1] ?? visibleIds[idx - 1] ?? null;
@@ -112,12 +132,16 @@ export function findAdjacentVisibleTabId(
 
 export function openAgentTab(agentId: string): void {
   showAgentTab(agentId);
+  const order = getTabOrder();
+  if (!order.includes(agentId)) {
+    setTabOrder([...order, agentId]);
+  }
   setLastOpenedAgentId(agentId);
 }
 
-export function pruneWorkbenchTabs(enabledAgentIds: Set<string>): void {
-  const hidden = getHiddenTabIds().filter((id) => enabledAgentIds.has(id));
-  const order = getTabOrder().filter((id) => enabledAgentIds.has(id));
+export function pruneWorkbenchTabs(validAgentIds: Set<string>): void {
+  const hidden = getHiddenTabIds().filter((id) => validAgentIds.has(id));
+  const order = getTabOrder().filter((id) => validAgentIds.has(id));
   if (hidden.length !== getHiddenTabIds().length) {
     writeStringArray(WORKBENCH_HIDDEN_TABS_KEY, hidden);
   }

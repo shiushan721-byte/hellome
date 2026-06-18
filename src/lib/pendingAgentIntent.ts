@@ -1,9 +1,8 @@
-import { activateAgent } from './agentSlotStore';
-import { isHermesConnected } from './firstRunOnboarding';
 import { isAuthenticated } from './auth';
-import { openAgentTab } from './workbenchTabs';
+import { isHermesConnected } from './firstRunOnboarding';
+import { openAgentWorkspace, getAgentWorkspacePath } from './openAgentWorkspace';
 
-export type AgentIntentAction = 'enable' | 'use' | 'view' | 'enter';
+export type AgentIntentAction = 'use' | 'view' | 'enter';
 
 export interface PendingAgentIntent {
   redirect?: string;
@@ -52,11 +51,12 @@ export function mergeIntent(base: PendingAgentIntent, extra: PendingAgentIntent)
 
 export function buildLoginUrl(intent: PendingAgentIntent): string {
   const params = new URLSearchParams();
+  params.set('login', '1');
   if (intent.redirect) params.set('redirect', intent.redirect);
   if (intent.agentId) params.set('agent', intent.agentId);
   if (intent.action) params.set('action', intent.action);
-  const qs = params.toString();
-  return qs ? `/login?${qs}` : '/login';
+  const base = intent.redirect?.startsWith('/agents') ? intent.redirect.split('?')[0] : '/agents';
+  return `${base}?${params.toString()}`;
 }
 
 export function buildConnectHermesUrl(intent: PendingAgentIntent): string {
@@ -73,22 +73,56 @@ export function stashIntent(intent: PendingAgentIntent): void {
   savePendingIntent(existing ? mergeIntent(existing, intent) : intent);
 }
 
+function toAppRedirect(path: string): string {
+  if (path === '/agents' || path.startsWith('/agents?')) {
+    return path.replace(/^\/agents/, '/app/agents');
+  }
+  if (path.startsWith('/agents/')) {
+    return path.replace(/^\/agents\//, '/app/agents/');
+  }
+  return path;
+}
+
+/** 登录成功后回到原上下文，不强制跳转配对页 */
+export function resolvePostLoginPath(intent: PendingAgentIntent): string {
+  stashIntent(intent);
+
+  if (intent.agentId && (intent.action === 'use' || intent.action === 'enter')) {
+    return getAgentWorkspacePath(intent.agentId);
+  }
+
+  if (intent.redirect) {
+    return toAppRedirect(intent.redirect);
+  }
+
+  if (intent.agentId && intent.action === 'view') {
+    return `/app/agents/${intent.agentId}`;
+  }
+
+  if (intent.agentId) {
+    return `/app/agents/${intent.agentId}`;
+  }
+
+  return '/app/agents';
+}
+
 /** 配对或登录完成后回放用户意图，返回目标路径 */
 export function replayPendingIntent(): string {
   const intent = getPendingIntent();
   clearPendingIntent();
 
-  if (!intent) return '/app';
+  if (!intent) return '/app/agents';
 
   const { agentId, action, redirect } = intent;
 
-  if (agentId && (action === 'enable' || action === 'use' || action === 'enter')) {
-    activateAgent(agentId);
-    openAgentTab(agentId);
-    return `/app?agent=${agentId}`;
+  if (agentId && (action === 'use' || action === 'enter')) {
+    if (isHermesConnected()) {
+      openAgentWorkspace(agentId);
+    }
+    return getAgentWorkspacePath(agentId);
   }
 
-  if (redirect) return redirect;
+  if (redirect) return toAppRedirect(redirect);
 
   if (agentId && action === 'view') {
     return `/app/agents/${agentId}`;
@@ -96,21 +130,12 @@ export function replayPendingIntent(): string {
 
   if (agentId) return `/app/agents/${agentId}`;
 
-  return '/app';
+  return '/app/agents';
 }
-
-export function resolvePostLoginPath(intent: PendingAgentIntent): string {
-  stashIntent(intent);
-  if (!isHermesConnected()) {
-    return buildConnectHermesUrl(intent);
-  }
-  return replayPendingIntent();
-}
-
-export type UserAccessLevel = 'visitor' | 'logged_in_unpaired' | 'logged_in_paired';
 
 export function getUserAccessLevel(): UserAccessLevel {
   if (!isAuthenticated()) return 'visitor';
   if (!isHermesConnected()) return 'logged_in_unpaired';
   return 'logged_in_paired';
 }
+

@@ -70,7 +70,7 @@ export default function WorkbenchOpenAgentModal({
 
         <div className="p-4 max-h-[60vh] overflow-auto">
           {agents.length === 0 ? (
-            <p className="py-8 text-center text-xs text-black/45">暂无已启用智能体</p>
+            <p className="py-8 text-center text-xs text-black/45">暂无可用智能体</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {agents.map((agent) => (
@@ -86,13 +86,13 @@ export default function WorkbenchOpenAgentModal({
         </div>
 
         <div className="px-4 py-3 border-t border-black/8 flex items-center justify-between gap-3">
-          <p className="text-xs text-black/45">已启用的智能体可随时打开或关闭标签</p>
+          <p className="text-xs text-black/45">可用智能体可以随时打开或关闭标签</p>
           <button
             type="button"
             onClick={onGoMarket}
             className="shrink-0 px-3 py-1.5 text-xs font-bold border border-black/15 hover:bg-[#F2F0ED] rounded-lg"
           >
-            去市场启用更多智能体
+            去市场查看更多智能体
           </button>
         </div>
       </div>

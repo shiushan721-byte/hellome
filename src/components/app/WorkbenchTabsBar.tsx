@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, X } from 'lucide-react';
 import { getHomeDashboardData } from '../../lib/homeDashboard';
-import { getOccupiedSlotCount, subscribeAgentSlots } from '../../lib/agentSlotStore';
 import { getTasks, subscribeTasks } from '../../lib/taskStore';
 import { useSyncExternalStore } from 'react';
 import {
@@ -14,16 +13,23 @@ import {
   findAdjacentVisibleTabId,
   getHiddenTabIds,
   getTabOrder,
-  getVisibleEnabledAgents,
+  getVisibleRecentAgentIds,
   hideAgentTab,
   openAgentTab,
   pruneWorkbenchTabs,
   setTabOrder,
+  sortRecentAgentSummaries,
   subscribeWorkbenchTabs,
 } from '../../lib/workbenchTabs';
 import type { EnabledAgentSummary } from '../../types/homeDashboard';
 import HermesActionModal from './HermesActionModal';
 import WorkbenchOpenAgentModal from './WorkbenchOpenAgentModal';
+import { AGENTS } from '../../data/agentsCatalog';
+import { isHermesConnected } from '../../lib/firstRunOnboarding';
+import { replayPendingIntent } from '../../lib/pendingAgentIntent';
+import { getAgentWorkspacePath } from '../../lib/openAgentWorkspace';
+import { tryUseAgent } from '../../lib/useAgentAccess';
+import { isLowBalance, getUsage, subscribeUsage } from '../../lib/usageStore';
 
 const TAB_ACTIVE_BG = '#FDFCFB';
 const PREVIEW_DELAY_MS = 600;
@@ -44,8 +50,8 @@ export default function WorkbenchTabsBar() {
   const [previewTab, setPreviewTab] = useState<TabPreview | null>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useSyncExternalStore(subscribeAgentSlots, () => getOccupiedSlotCount(), () => 0);
   useSyncExternalStore(subscribeTasks, getTasks, getTasks);
+  useSyncExternalStore(subscribeUsage, getUsage, getUsage);
   useSyncExternalStore(
     subscribeWorkbenchTabs,
     () => `${getHiddenTabIds().join(',')}|${getTabOrder().join(',')}`,
@@ -56,6 +62,7 @@ export default function WorkbenchTabsBar() {
     getHermesConnection,
     getHermesConnection,
   );
+  const lowBalance = isLowBalance(getUsage());
 
   const activeAgentId = useMemo(() => {
     if (location.pathname === '/app') {
@@ -65,12 +72,45 @@ export default function WorkbenchTabsBar() {
     return match?.[1] ?? null;
   }, [location.pathname, location.search]);
 
-  const enabledAgents = getHomeDashboardData().enabledAgents;
-  const enabledIds = useMemo(() => new Set(enabledAgents.map((agent) => agent.agentId)), [enabledAgents]);
+  const tabRevision = useSyncExternalStore(
+    subscribeWorkbenchTabs,
+    () => getTabOrder().join(','),
+    () => '',
+  );
+
+  const recentAgents = useMemo(
+    () => sortRecentAgentSummaries(getHomeDashboardData().recentAgents),
+    [tabRevision],
+  );
+
+  const availableAgents = useMemo<EnabledAgentSummary[]>(
+    () =>
+      AGENTS.filter((agent) => agent.available).map((agent) => {
+        const existing = recentAgents.find((item) => item.agentId === agent.id);
+        return (
+          existing ?? {
+            agentId: agent.id,
+            name: agent.name,
+            description: agent.desc,
+            path: agent.path,
+            iconSrc: agent.iconSrc,
+            monthlyTaskCount: 0,
+            monthlyTokenUsed: 0,
+            templates: [],
+          }
+        );
+      }),
+    [recentAgents],
+  );
+
+  const availableIds = useMemo(
+    () => new Set(AGENTS.filter((a) => a.available).map((a) => a.id)),
+    [],
+  );
 
   useEffect(() => {
-    pruneWorkbenchTabs(enabledIds);
-  }, [enabledIds]);
+    pruneWorkbenchTabs(availableIds);
+  }, [availableIds]);
 
   useEffect(() => {
     return () => {
@@ -78,10 +118,7 @@ export default function WorkbenchTabsBar() {
     };
   }, []);
 
-  const visibleAgents = useMemo(
-    () => getVisibleEnabledAgents(enabledAgents),
-    [enabledAgents],
-  );
+  const visibleAgents = recentAgents;
 
   const clearHoverState = () => {
     setHoveredTabId(null);
@@ -90,20 +127,24 @@ export default function WorkbenchTabsBar() {
   };
 
   const openAgent = (agentId: string) => {
-    if (hermes.status !== 'connected') {
+    const result = tryUseAgent(agentId, { lowBalance });
+    if (result.reason === 'hermes') {
       setShowHermesModal(true);
       return;
     }
-    openAgentTab(agentId);
-    navigate(`/app?agent=${agentId}`);
+    if (result.reason === 'recharge') {
+      navigate('/app/usage');
+      return;
+    }
+    if (result.ok) {
+      navigate(getAgentWorkspacePath(agentId));
+    }
   };
 
   const closeTab = (e: MouseEvent, agentId: string) => {
     e.stopPropagation();
-    const nextTabId = findAdjacentVisibleTabId(
-      agentId,
-      enabledAgents.map((agent) => agent.agentId),
-    );
+    const openedIds = getTabOrder();
+    const nextTabId = findAdjacentVisibleTabId(agentId, openedIds);
     hideAgentTab(agentId);
     clearHoverState();
 
@@ -111,7 +152,7 @@ export default function WorkbenchTabsBar() {
 
     if (nextTabId) {
       openAgentTab(nextTabId);
-      navigate(`/app?agent=${nextTabId}`);
+      navigate(getAgentWorkspacePath(nextTabId));
       return;
     }
 
@@ -137,13 +178,11 @@ export default function WorkbenchTabsBar() {
     const nextVisible = [...visibleIds];
     nextVisible.splice(sourceIndex, 1);
     nextVisible.splice(targetIndex, 0, draggingTabId);
-    const leftovers = enabledAgents
-      .map((agent) => agent.agentId)
-      .filter((id) => !nextVisible.includes(id));
+    const leftovers = getTabOrder().filter((id) => !nextVisible.includes(id));
     setTabOrder([...nextVisible, ...leftovers]);
   };
 
-  if (enabledAgents.length === 0 || visibleAgents.length === 0) {
+  if (visibleAgents.length === 0) {
     return null;
   }
 
@@ -238,7 +277,7 @@ export default function WorkbenchTabsBar() {
             <button
               type="button"
               onClick={() => {
-                if (hermes.status !== 'connected') setShowHermesModal(true);
+                if (!isHermesConnected()) setShowHermesModal(true);
                 else setOpenAgentModal(true);
               }}
               title="打开智能体"
@@ -273,7 +312,7 @@ export default function WorkbenchTabsBar() {
 
       {openAgentModal && (
         <WorkbenchOpenAgentModal
-          agents={enabledAgents}
+          agents={availableAgents}
           onOpen={(agentId) => {
             openAgent(agentId);
             setOpenAgentModal(false);
@@ -288,12 +327,15 @@ export default function WorkbenchTabsBar() {
 
       {showHermesModal && (
         <HermesActionModal
+          variant="pairing"
           status={hermes.status}
           onClose={() => setShowHermesModal(false)}
-          onOpenHermes={refreshHermesConnection}
-          onGoPair={() => {
-            setShowHermesModal(false);
-            navigate('/app');
+          onOpenHermes={() => refreshHermesConnection()}
+          onPairedComplete={() => {
+            if (isHermesConnected()) {
+              setShowHermesModal(false);
+              navigate(replayPendingIntent());
+            }
           }}
         />
       )}

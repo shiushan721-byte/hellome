@@ -14,10 +14,9 @@ interface MarketProductSpotsProps {
 
 const MAX_VISIBLE_SPOTS = 6;
 
-type ResolvedSpotStatus = 'active' | MarketSpotDisplayStatus;
+type ResolvedSpotStatus = MarketSpotDisplayStatus;
 
 const STATUS_STYLE: Record<ResolvedSpotStatus, { border: string; bg: string }> = {
-  active: { border: 'border-emerald-200', bg: 'bg-emerald-50/40' },
   open: { border: 'border-sky-200', bg: 'bg-white' },
   recommended: { border: 'border-sky-200', bg: 'bg-white' },
   coming_soon: { border: 'border-black/10', bg: 'bg-white' },
@@ -26,7 +25,7 @@ const STATUS_STYLE: Record<ResolvedSpotStatus, { border: string; bg: string }> =
 
 function resolveSpotStatus(spot: MarketProductSpot, cards: AgentMarketCard[]): ResolvedSpotStatus {
   const card = cards.find((c) => c.id === spot.agentId);
-  if (card?.status === 'active') return 'active';
+  if (card?.status === 'coming_soon') return 'coming_soon';
   return spot.displayStatus;
 }
 
@@ -34,7 +33,7 @@ function isSpotClickable(status: ResolvedSpotStatus, guestMode: boolean): boolea
   if (guestMode) {
     return status === 'open' || status === 'recommended';
   }
-  return status === 'active' || status === 'open' || status === 'recommended';
+  return status === 'open' || status === 'recommended';
 }
 
 export default function MarketProductSpots({

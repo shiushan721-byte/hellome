@@ -1,6 +1,6 @@
 export type AgentsTab = 'market' | 'mine';
 
-export type AgentMarketStatus = 'inactive' | 'active' | 'coming_soon';
+export type AgentMarketStatus = 'available' | 'coming_soon';
 
 export type MyAgentStatus = 'active';
 
