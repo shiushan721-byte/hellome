@@ -1,0 +1,13 @@
+{
+  "servers": [
+    {
+      "id": "local",
+      "name": "M5 Max Local",
+      "url": "http://127.0.0.1:8188",
+      "auth": "",
+      "enabled": true,
+      "output_dir": "./outputs"
+    }
+  ],
+  "default_server": "local"
+}

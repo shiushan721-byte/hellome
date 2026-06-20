@@ -1,0 +1,179 @@
+{
+  "67": {
+    "inputs": {
+      "model": [
+        "12",
+        0
+      ],
+      "shift": 3.1
+    },
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "65",
+        0
+      ],
+      "vae": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAEDecode"
+    }
+  },
+  "9": {
+    "inputs": {
+      "images": [
+        "8",
+        0
+      ],
+      "filename_prefix": "ComfyUI"
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "SaveImage"
+    }
+  },
+  "61": {
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "CLIPLoader"
+    }
+  },
+  "66": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "69": {
+    "inputs": {
+      "clip": [
+        "61",
+        0
+      ],
+      "vae": [
+        "10",
+        0
+      ],
+      "image1": [
+        "41",
+        0
+      ],
+      "prompt": ""
+    },
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {
+      "title": "TextEncodeQwenImageEditPlus"
+    }
+  },
+  "10": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "VAELoader"
+    }
+  },
+  "41": {
+    "inputs": {
+      "image": "fennec_girl_sing.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "LoadImage"
+    }
+  },
+  "68": {
+    "inputs": {
+      "clip": [
+        "61",
+        0
+      ],
+      "vae": [
+        "10",
+        0
+      ],
+      "image1": [
+        "41",
+        0
+      ],
+      "prompt": "the anime girl with massive fennec ears is wearing cargo pants while sitting on a log in the woods biting into a sandwich beside a beautiful alpine lake"
+    },
+    "class_type": "TextEncodeQwenImageEditPlus",
+    "_meta": {
+      "title": "TextEncodeQwenImageEditPlus (Positive)"
+    }
+  },
+  "65": {
+    "inputs": {
+      "model": [
+        "64",
+        0
+      ],
+      "positive": [
+        "68",
+        0
+      ],
+      "negative": [
+        "69",
+        0
+      ],
+      "latent_image": [
+        "66",
+        0
+      ],
+      "seed": 643571810992611,
+      "steps": 20,
+      "cfg": 4,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "12": {
+    "inputs": {
+      "unet_name": "qwen_image_edit_2511_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "UNETLoader"
+    }
+  },
+  "64": {
+    "inputs": {
+      "model": [
+        "67",
+        0
+      ],
+      "strength": 1
+    },
+    "class_type": "CFGNorm",
+    "_meta": {
+      "title": "CFGNorm"
+    }
+  }
+}

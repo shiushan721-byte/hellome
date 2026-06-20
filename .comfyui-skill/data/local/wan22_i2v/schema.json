@@ -1,0 +1,104 @@
+{
+  "description": "",
+  "enabled": true,
+  "parameters": {
+    "prompt_clip_text_encode_negative_prompt": {
+      "node_id": "7",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "seed": {
+      "node_id": "3",
+      "field": "seed",
+      "required": false,
+      "type": "int",
+      "description": "Random seed"
+    },
+    "steps": {
+      "node_id": "3",
+      "field": "steps",
+      "required": false,
+      "type": "int",
+      "description": "Generation steps"
+    },
+    "cfg": {
+      "node_id": "3",
+      "field": "cfg",
+      "required": false,
+      "type": "int",
+      "description": "Classifier-free guidance scale"
+    },
+    "filename_prefix_saveanimatedwebp": {
+      "node_id": "28",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    },
+    "fps_saveanimatedwebp": {
+      "node_id": "28",
+      "field": "fps",
+      "required": false,
+      "type": "float",
+      "description": "Frames per second"
+    },
+    "filename_prefix_savewebm": {
+      "node_id": "47",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    },
+    "codec": {
+      "node_id": "47",
+      "field": "codec",
+      "required": false,
+      "type": "string",
+      "description": "Video codec"
+    },
+    "fps_savewebm": {
+      "node_id": "47",
+      "field": "fps",
+      "required": false,
+      "type": "int",
+      "description": "Frames per second"
+    },
+    "image": {
+      "node_id": "57",
+      "field": "image",
+      "required": true,
+      "type": "image",
+      "description": "Upload an image"
+    },
+    "width": {
+      "node_id": "55",
+      "field": "width",
+      "required": false,
+      "type": "int",
+      "description": "Image width"
+    },
+    "height": {
+      "node_id": "55",
+      "field": "height",
+      "required": false,
+      "type": "int",
+      "description": "Image height"
+    },
+    "batch_size": {
+      "node_id": "55",
+      "field": "batch_size",
+      "required": false,
+      "type": "int",
+      "description": "Batch size"
+    },
+    "prompt_clip_text_encode_positive_prompt": {
+      "node_id": "6",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    }
+  }
+}

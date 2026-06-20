@@ -1,0 +1,69 @@
+{
+  "description": "",
+  "enabled": true,
+  "parameters": {
+    "filename_prefix": {
+      "node_id": "9",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    },
+    "width": {
+      "node_id": "66",
+      "field": "width",
+      "required": false,
+      "type": "int",
+      "description": "Image width"
+    },
+    "height": {
+      "node_id": "66",
+      "field": "height",
+      "required": false,
+      "type": "int",
+      "description": "Image height"
+    },
+    "batch_size": {
+      "node_id": "66",
+      "field": "batch_size",
+      "required": false,
+      "type": "int",
+      "description": "Batch size"
+    },
+    "prompt_textencodeqwenimageeditplus": {
+      "node_id": "69",
+      "field": "prompt",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "image": {
+      "node_id": "41",
+      "field": "image",
+      "required": true,
+      "type": "image",
+      "description": "Upload an image"
+    },
+    "prompt_textencodeqwenimageeditplus_positive": {
+      "node_id": "68",
+      "field": "prompt",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "seed": {
+      "node_id": "65",
+      "field": "seed",
+      "required": false,
+      "type": "int",
+      "description": "Random seed"
+    },
+    "steps": {
+      "node_id": "65",
+      "field": "steps",
+      "required": false,
+      "type": "int",
+      "description": "Generation steps"
+    }
+  }
+}

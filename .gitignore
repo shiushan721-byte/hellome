@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Generated media (from modelAdapter / comfyui-skill)
+public/media/

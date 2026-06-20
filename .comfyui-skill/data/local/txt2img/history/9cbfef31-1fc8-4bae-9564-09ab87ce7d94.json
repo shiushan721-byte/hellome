@@ -1,0 +1,24 @@
+{
+  "run_id": "9cbfef31-1fc8-4bae-9564-09ab87ce7d94",
+  "job_id": "",
+  "prompt_id": "9cbfef31-1fc8-4bae-9564-09ab87ce7d94",
+  "server_id": "local",
+  "workflow_id": "txt2img",
+  "status": "success",
+  "timestamp": "2026-06-20T16:35:48.995449+00:00",
+  "duration_ms": 30258,
+  "args": {
+    "prompt_clip_text_encode_positive_prompt": "a serene japanese teahouse at sunset, watercolor style",
+    "prompt_clip_text_encode_negative_prompt": "blurry ugly bad",
+    "steps": 9
+  },
+  "outputs": [
+    {
+      "filename": "ComfyUI_00017_.png",
+      "subfolder": "",
+      "type": "output",
+      "media_type": "image",
+      "local_path": "/Users/feihong/Documents/hellome/.comfyui-skill/outputs/ComfyUI_00017_.png"
+    }
+  ]
+}

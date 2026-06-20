@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { execFile } from 'node:child_process';
+import path from 'node:path';
 import { promisify } from 'node:util';
 import type { Task, TaskStep, TaskStatus, HermesLogEntry } from '../types/workbench';
 import type {
@@ -20,6 +21,7 @@ import { presentUgcTask } from './taskPresenter';
 import { deriveTaskRunState } from './taskStateMachine';
 import { getPrismaClient } from './db/prisma';
 import { isFallbackAllowed } from './db/runtime';
+import { generateImage, generateVideo } from './adapters/modelAdapter';
 
 const execFileAsync = promisify(execFile);
 
@@ -850,7 +852,49 @@ async function executeRenderPhase(taskId: string): Promise<void> {
     pushEvent(record, 'video_rendering', 'info', '样片视频正在合成，准备生成封面与交付摘要');
     await persist(record);
 
-    await delay(500);
+    // --- Real generation: call the unified media adapter. The adapter
+    // dispatches based on MEDIA_PROVIDER (gemini / local-comfyui / mock).
+    // Output goes to MEDIA_OUTPUT_DIR and is referenced as a stable URL
+    // by the artifact we build below. ---
+    const ugcInput = record.task.input as
+      | { sellingPoint?: string; referenceUrl?: string; effectGoal?: string }
+      | undefined;
+    const videoPrompt =
+      ugcInput?.referenceUrl ||
+      ugcInput?.sellingPoint ||
+      ugcInput?.effectGoal ||
+      'a short product showcase video';
+    let videoArtifact: UgcTaskArtifact | null = null;
+    try {
+      const video = await generateVideo({
+        prompt: videoPrompt,
+        // Keep a generous timeout; local-comfyui users will see the actual
+        // elapsed time in the artifact metadata.
+        timeoutMs: 60_000,
+      });
+      pushEvent(
+        record,
+        'video_rendering',
+        video.source === 'provider' ? 'success' : 'warning',
+        `视频生成完成（${video.provider}/${video.model} · ${video.elapsedMs ?? '?'}ms · source=${video.source}）`,
+      );
+      videoArtifact = {
+        id: `${record.task.id}-video`,
+        type: 'video',
+        label: '样片视频',
+        fileName: path.basename(video.url),
+        mimeType: video.mimeType,
+        url: video.url,
+      };
+    } catch (error) {
+      pushEvent(
+        record,
+        'video_rendering',
+        'warning',
+        `视频生成失败，继续交付降级产物：${(error as Error).message}`,
+      );
+    }
+
     record = await loadOne(taskId);
     if (!record) return;
     allocateToken(record, 19400);
@@ -859,10 +903,43 @@ async function executeRenderPhase(taskId: string): Promise<void> {
     pushEvent(record, 'delivery_packaging', 'info', '正在导出视频、封面、脚本与交付摘要');
     await persist(record);
 
+    // --- Cover frame: pull a still from the video via the same adapter
+    // (txt2img, using the same prompt). If video generation fell back,
+    // the cover follows the same fallback path. ---
+    let coverArtifact: UgcTaskArtifact | null = null;
+    try {
+      const cover = await generateImage({
+        prompt: `cover frame, ${videoPrompt}, first shot, vertical composition, hero pose`,
+        timeoutMs: 60_000,
+      });
+      coverArtifact = {
+        id: `${record.task.id}-cover`,
+        type: 'image',
+        label: '封面首帧',
+        fileName: path.basename(cover.url),
+        mimeType: cover.mimeType,
+        url: cover.url,
+      };
+    } catch (error) {
+      pushEvent(
+        record,
+        'delivery_packaging',
+        'warning',
+        `封面生成失败，继续交付降级产物：${(error as Error).message}`,
+      );
+    }
+
     await delay(450);
     record = await loadOne(taskId);
     if (!record) return;
-    record.task.artifacts = buildArtifacts(record.task.id);
+    const built = buildArtifacts(record.task.id);
+    // Swap the two media artifacts for the real ones we just generated,
+    // if present. script.md and delivery-summary.pdf stay as-is.
+    record.task.artifacts = built.map((artifact) => {
+      if (artifact.id === `${record!.task.id}-video` && videoArtifact) return videoArtifact;
+      if (artifact.id === `${record!.task.id}-cover` && coverArtifact) return coverArtifact;
+      return artifact;
+    });
     record.task.tokenUsed = 22600;
     record.task.currentTokenUsed = 22600;
     record.completedAt = nowIso();

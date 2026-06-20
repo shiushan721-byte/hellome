@@ -1,0 +1,29 @@
+{
+  "run_id": "70e857c8-c67b-4189-a197-d55d22a52033",
+  "job_id": "",
+  "prompt_id": "70e857c8-c67b-4189-a197-d55d22a52033",
+  "server_id": "local",
+  "workflow_id": "txt2video",
+  "status": "success",
+  "timestamp": "2026-06-20T16:39:41.626812+00:00",
+  "duration_ms": 116284,
+  "args": {
+    "prompt_clip_text_encode_positive_prompt": "a drone shot of a calm lake at sunrise"
+  },
+  "outputs": [
+    {
+      "filename": "ComfyUI_00019_.webm",
+      "subfolder": "",
+      "type": "output",
+      "media_type": "video",
+      "local_path": "/Users/feihong/Documents/hellome/.comfyui-skill/outputs/ComfyUI_00019_.webm"
+    },
+    {
+      "filename": "ComfyUI_00020_.webp",
+      "subfolder": "",
+      "type": "output",
+      "media_type": "image",
+      "local_path": "/Users/feihong/Documents/hellome/.comfyui-skill/outputs/ComfyUI_00020_.webp"
+    }
+  ]
+}

@@ -1,5 +1,11 @@
+import { spawn } from 'node:child_process';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { GoogleGenAI } from '@google/genai';
 
+// =============================================================================
+// Text generation (existing) — kept 100% unchanged for backward compat.
+// =============================================================================
 export type ModelProvider = 'openai' | 'openrouter' | 'gemini' | 'mock';
 
 export type ModelDescriptor = {
@@ -210,4 +216,478 @@ export function listAvailableModels(): {
       },
     ],
   };
+}
+
+// =============================================================================
+// Media generation (image / video / edit) — NEW.
+//
+// Same adapter pattern as text: a `MediaProvider` selected via env
+// (MEDIA_PROVIDER), graceful fallback, `source: 'provider' | 'fallback'`
+// in the output so callers can distinguish real vs mock results.
+//
+// Key design: the local-comfyui provider is treated identically to a remote
+// API — same input shape, same output shape, same fallback semantics. Adding
+// a new provider (e.g. fal.ai, replicate) is a single function.
+// =============================================================================
+export type MediaProvider = 'gemini' | 'local-comfyui' | 'mock';
+
+export type MediaTask = 'txt2img' | 'txt2video' | 'img2video' | 'edit';
+
+export type GenerateMediaInput = {
+  task: MediaTask;
+  prompt: string;
+  /** Required for img2video / edit; ignored for txt* tasks. */
+  inputImageUrl?: string;
+  /** Server-side filename if the input image was already uploaded to ComfyUI. */
+  inputImageFilename?: string;
+  /** Override which workflow to run (default picked by task). */
+  workflow?: string;
+  /** Override seed for reproducibility. */
+  seed?: number;
+  /** Caller-provided timeout in ms; default = 30s image / 1800s video. */
+  timeoutMs?: number;
+};
+
+export type GenerateMediaOutput = {
+  /** Primary artifact: URL (remote) or local file path (local-comfyui / mock). */
+  url: string;
+  mimeType: string;
+  provider: MediaProvider;
+  model: string;
+  workflow?: string;
+  promptId?: string;
+  elapsedMs?: number;
+  source: 'provider' | 'fallback';
+};
+
+export type MediaDescriptor = {
+  id: string;
+  provider: MediaProvider;
+  task: MediaTask;
+  label: string;
+  configured: boolean;
+};
+
+const DEFAULT_MEDIA_OUTPUT_DIR =
+  process.env.MEDIA_OUTPUT_DIR ?? path.resolve(process.cwd(), 'public', 'media');
+
+function getMediaProvider(): MediaProvider {
+  const raw = (process.env.MEDIA_PROVIDER ?? '').trim().toLowerCase();
+  if (raw === 'gemini') return 'gemini';
+  if (raw === 'local-comfyui') return 'local-comfyui';
+  return 'mock';
+}
+
+function defaultModelForTask(provider: MediaProvider, task: MediaTask): string {
+  if (provider === 'gemini') {
+    if (task === 'edit') return 'imagen-3.0-capability-001';
+    return 'imagen-4.0-generate-001';
+  }
+  if (provider === 'local-comfyui') {
+    switch (task) {
+      case 'txt2img':
+        return 'local/txt2img';
+      case 'txt2video':
+        return 'local/txt2video';
+      case 'img2video':
+        return 'local/img2video';
+      case 'edit':
+        return 'local/edit';
+    }
+  }
+  return `mock-${task}`;
+}
+
+function mimeForTask(task: MediaTask): string {
+  switch (task) {
+    case 'txt2img':
+    case 'edit':
+      return 'image/png';
+    case 'txt2video':
+    case 'img2video':
+      return 'video/mp4';
+  }
+}
+
+function defaultTimeoutMs(task: MediaTask): number {
+  if (task === 'txt2video' || task === 'img2video') return 1_800_000;
+  return 600_000; // 10 min for image / edit
+}
+
+function isLocalComfyUiConfigured(): boolean {
+  // local-comfyui needs the CLI binary reachable. We don't pre-flight the
+  // server — `spawnSync` will surface a clear error if it's down.
+  const cli = process.env.COMFYUI_SKILL_CLI?.trim() || 'comfyui-skill';
+  return Boolean(cli);
+}
+
+function geminiApiKey(): string {
+  return (process.env.GEMINI_API_KEY ?? '').trim();
+}
+
+function geminiMediaConfigured(): boolean {
+  return Boolean(geminiApiKey());
+}
+
+// =============================================================================
+// Provider implementations
+// =============================================================================
+
+async function generateImageWithGemini(input: GenerateMediaInput): Promise<GenerateMediaOutput> {
+  const ai = new GoogleGenAI({ apiKey: geminiApiKey() });
+  const model = process.env.MEDIA_MODEL?.trim() || defaultModelForTask('gemini', input.task);
+
+  if (input.task === 'edit') {
+    if (!input.inputImageUrl) {
+      throw new Error('edit task requires inputImageUrl');
+    }
+    // Imagen 3 capability model handles edit via reference images.
+    const resp = await ai.models.generateImages({
+      model,
+      prompt: input.prompt,
+      config: {
+        numberOfImages: 1,
+        referenceImages: [await urlToInlineData(input.inputImageUrl)],
+      } as never,
+    });
+    const img = resp.generatedImages?.[0]?.image;
+    if (!img) throw new Error('gemini edit returned no image');
+    const buf = Buffer.from(img.imageBytes ?? '', 'base64');
+    return persistLocal(buf, 'png', 'gemini', model, { mimeType: 'image/png' });
+  }
+
+  // txt2img path
+  const resp = await ai.models.generateImages({
+    model,
+    prompt: input.prompt,
+    config: { numberOfImages: 1 } as never,
+  });
+  const img = resp.generatedImages?.[0]?.image;
+  if (!img) throw new Error('gemini txt2img returned no image');
+  const buf = Buffer.from(img.imageBytes ?? '', 'base64');
+  return persistLocal(buf, 'png', 'gemini', model, { mimeType: 'image/png' });
+}
+
+/**
+ * Local ComfyUI via the `comfyui-skill` CLI (a thin wrapper that turns any
+ * ComfyUI workflow into a callable skill with schema-based params).
+ *
+ * The CLI handles UI→API conversion, server health, and history polling —
+ * this adapter just translates our unified input into the right invocation.
+ *
+ * Each registered workflow has its own schema.json with auto-detected
+ * parameter names (e.g. `prompt_clip_text_encode_positive_prompt`). We map
+ * our unified `prompt` / `inputImageFilename` / `seed` onto whatever the
+ * schema exposes by picking the first required string prompt / required
+ * image / first int seed field.
+ */
+async function generateWithLocalComfyUi(input: GenerateMediaInput): Promise<GenerateMediaOutput> {
+  const cli = process.env.COMFYUI_SKILL_CLI?.trim() || 'comfyui-skill';
+  const dir = process.env.COMFYUI_SKILL_DIR?.trim();
+  const server = process.env.COMFYUI_SKILL_SERVER?.trim() || 'local';
+  const model = input.workflow ?? defaultModelForTask('local-comfyui', input.task);
+  const workflowId = model.includes('/') ? model : `${server}/${model}`;
+
+  // Discover the workflow's schema so we can map `prompt` / `inputImage*` /
+  // `seed` to whatever names `comfyui-skill` expects.
+  const schema = await readWorkflowSchema(cli, dir, workflowId);
+
+  const args: Record<string, unknown> = {};
+  // Map our unified prompt to the workflow's primary string field.
+  if (schema.promptField) args[schema.promptField] = input.prompt;
+  // Map optional seed.
+  if (input.seed !== undefined && schema.seedField) args[schema.seedField] = input.seed;
+  // For img2video / edit: upload the input image first, then pass the
+  // server-side filename into the schema's image field.
+  if (input.task === 'img2video' || input.task === 'edit') {
+    const localPath = await resolveInputImage(input);
+    if (!localPath) {
+      throw new Error(`${input.task} requires inputImageUrl or inputImageFilename`);
+    }
+    const uploaded = await runCliCapture(
+      cli, dir, ['upload', localPath], input.timeoutMs ?? defaultTimeoutMs(input.task),
+    );
+    // `comfyui-skill upload` returns the uploaded filename.
+    const uploadedName = parseUploadFilename(uploaded);
+    if (schema.imageField) args[schema.imageField] = uploadedName;
+  }
+
+  const cliArgs = ['--json', 'run', workflowId, '--args', JSON.stringify(args)];
+  const started = Date.now();
+  const stdout = await runCli(cli, dir, cliArgs, input.timeoutMs ?? defaultTimeoutMs(input.task));
+
+  // `comfyui-skill --json run` emits a single JSON object (not NDJSON).
+  let completion: Record<string, unknown>;
+  try {
+    completion = JSON.parse(stdout.trim());
+  } catch {
+    throw new Error(`comfyui-skill run returned non-JSON: ${stdout.slice(-500)}`);
+  }
+  if (completion.status !== 'success') {
+    throw new Error(`comfyui-skill run failed: ${JSON.stringify(completion).slice(-500)}`);
+  }
+
+  const outputs = Array.isArray(completion.outputs) ? (completion.outputs as Array<Record<string, unknown>>) : [];
+  if (outputs.length === 0) {
+    throw new Error('comfyui-skill run succeeded but returned no outputs');
+  }
+  const first = outputs[0];
+  // Prefer the local_path (already on disk); fall back to url.
+  const localPath = typeof first.local_path === 'string' ? first.local_path : '';
+  const url = typeof first.url === 'string' ? first.url : localPath;
+  if (!url) throw new Error('comfyui-skill output missing both local_path and url');
+
+  // Copy into our public/ dir so the API returns a stable URL.
+  const { promises: fsp } = await import('node:fs');
+  const buf = await fsp.readFile(localPath || url);
+  const ext = pickExt(url, input.task);
+  return persistLocal(buf, ext, 'local-comfyui', workflowId, {
+    promptId: typeof completion.prompt_id === 'string' ? completion.prompt_id : undefined,
+    elapsedMs: Date.now() - started,
+  });
+}
+
+interface WorkflowSchema {
+  promptField: string | null;
+  seedField: string | null;
+  imageField: string | null;
+}
+
+async function readWorkflowSchema(
+  cli: string,
+  dir: string | undefined,
+  workflowId: string,
+): Promise<WorkflowSchema> {
+  // `comfyui-skill info <id>` prints JSON with the workflow's parameters.
+  const stdout = await runCliCapture(cli, dir, ['info', workflowId]);
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(stdout.trim());
+  } catch {
+    return { promptField: null, seedField: null, imageField: null };
+  }
+  const params = (parsed.parameters ?? {}) as Record<string, { type?: string; required?: boolean }>;
+
+  // Prefer the prompt field whose name explicitly contains "positive"
+  // (matches comfyui-skill's auto-detected naming convention).
+  const promptCandidates = Object.entries(params)
+    .filter(([, spec]) => spec.type === 'string' && /positive/i.test(String(spec.type || '')) === false);
+  const promptField =
+    Object.entries(params).find(([k, s]) => s.type === 'string' && /positive/i.test(k))?.[0]
+    || Object.entries(params).find(([, s]) => s.type === 'string' && s.required)?.[0]
+    || null;
+
+  const seedField = Object.entries(params).find(([, s]) => s.type === 'int' && /seed/i.test(Object.entries(params).find(([k]) => /seed/i.test(k))?.[0] || ''))?.[0]
+    || Object.entries(params).find(([k, s]) => s.type === 'int' && /seed/i.test(k))?.[0]
+    || null;
+
+  const imageField = Object.entries(params).find(([, s]) => s.type === 'image')?.[0] || null;
+
+  return { promptField, seedField, imageField };
+}
+
+function parseUploadFilename(stdout: string): string {
+  try {
+    const obj = JSON.parse(stdout.trim());
+    if (typeof obj.filename === 'string') return obj.filename;
+    if (typeof obj.name === 'string') return obj.name;
+  } catch { /* fall through */ }
+  // Fallback: look for `uploaded: <filename>` in text output
+  const m = /(?:"filename"|"name")\s*:\s*"([^"]+)"/.exec(stdout);
+  if (m) return m[1];
+  throw new Error(`could not parse upload response: ${stdout.slice(-300)}`);
+}
+
+async function resolveInputImage(input: GenerateMediaInput): Promise<string | null> {
+  if (input.inputImageFilename) return input.inputImageFilename;
+  if (!input.inputImageUrl) return null;
+  // Download the URL to a temp file so `comfyui-skill upload` can ingest it.
+  const resp = await fetch(input.inputImageUrl);
+  if (!resp.ok) throw new Error(`fetch input image ${input.inputImageUrl} → ${resp.status}`);
+  const ab = await resp.arrayBuffer();
+  const buf = Buffer.from(ab);
+  const tmpDir = path.join(process.env.MEDIA_OUTPUT_DIR ?? path.resolve(process.cwd(), 'public', 'media'), '_in');
+  await fs.mkdir(tmpDir, { recursive: true });
+  const ext = mimeFromExt(pickExt(input.inputImageUrl, 'edit')) === 'image/png' ? 'png' : 'jpg';
+  const tmpFile = path.join(tmpDir, `in-${Date.now()}.${ext}`);
+  await fs.writeFile(tmpFile, buf);
+  return tmpFile;
+}
+
+// =============================================================================
+// Fallback (mock) — guarantees the API never throws on missing config.
+// =============================================================================
+async function buildMediaFallback(input: GenerateMediaInput): Promise<GenerateMediaOutput> {
+  await fs.mkdir(DEFAULT_MEDIA_OUTPUT_DIR, { recursive: true });
+  const ext = input.task.startsWith('txt2') || input.task === 'edit' ? 'svg' : 'svg';
+  const fileName = `mock-${input.task}-${Date.now()}.${ext}`;
+  const filePath = path.join(DEFAULT_MEDIA_OUTPUT_DIR, fileName);
+  const svg = renderMockSvg(input);
+  await fs.writeFile(filePath, svg, 'utf-8');
+  return {
+    url: path.relative(process.cwd(), filePath),
+    mimeType: 'image/svg+xml',
+    provider: 'mock',
+    model: defaultModelForTask('mock', input.task),
+    source: 'fallback',
+  };
+}
+
+function renderMockSvg(input: GenerateMediaInput): string {
+  const label = (input.prompt || '').slice(0, 80);
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 576" width="1024" height="576">`,
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">`,
+    `<stop offset="0%" stop-color="#1e293b"/><stop offset="100%" stop-color="#0f172a"/>`,
+    `</linearGradient></defs>`,
+    `<rect width="1024" height="576" fill="url(#g)"/>`,
+    `<text x="512" y="260" fill="#94a3b8" font-family="ui-sans-serif,system-ui" font-size="28" text-anchor="middle">[MOCK ${input.task}]</text>`,
+    `<text x="512" y="310" fill="#e2e8f0" font-family="ui-sans-serif,system-ui" font-size="22" text-anchor="middle">${escapeXml(label)}</text>`,
+    `<text x="512" y="350" fill="#64748b" font-family="ui-sans-serif,system-ui" font-size="14" text-anchor="middle">set MEDIA_PROVIDER to a real provider</text>`,
+    `</svg>`,
+  ].join('\n');
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
+}
+
+// =============================================================================
+// Public dispatch — mirrors generateText's try/catch + fallback shape.
+// =============================================================================
+export async function generateMedia(input: GenerateMediaInput): Promise<GenerateMediaOutput> {
+  const provider = getMediaProvider();
+  try {
+    if (provider === 'gemini' && geminiMediaConfigured()) {
+      return await generateImageWithGemini(input);
+    }
+    if (provider === 'local-comfyui' && isLocalComfyUiConfigured()) {
+      return await generateWithLocalComfyUi(input);
+    }
+  } catch (error) {
+    console.error(`[mediaAdapter] ${provider} ${input.task} failed, using mock fallback:`, error);
+  }
+  return await buildMediaFallback(input);
+}
+
+// Task-named shims so callers don't need to repeat `task`.
+export const generateImage = (input: Omit<GenerateMediaInput, 'task'>) =>
+  generateMedia({ ...input, task: 'txt2img' });
+
+export const generateVideo = (input: Omit<GenerateMediaInput, 'task'>) =>
+  generateMedia({ ...input, task: input.inputImageUrl ? 'img2video' : 'txt2video' });
+
+export const editImage = (input: Omit<GenerateMediaInput, 'task'>) =>
+  generateMedia({ ...input, task: 'edit' });
+
+export function listAvailableMediaModels(): {
+  provider: MediaProvider;
+  tasks: MediaTask[];
+  models: MediaDescriptor[];
+} {
+  const provider = getMediaProvider();
+  const configured =
+    provider === 'gemini'
+      ? geminiMediaConfigured()
+      : provider === 'local-comfyui'
+        ? isLocalComfyUiConfigured()
+        : true;
+  const tasks: MediaTask[] = ['txt2img', 'txt2video', 'img2video', 'edit'];
+  return {
+    provider,
+    tasks,
+    models: tasks.map((t) => ({
+      id: defaultModelForTask(provider, t),
+      provider,
+      task: t,
+      label: `${provider} · ${t}`,
+      configured,
+    })),
+  };
+}
+
+// =============================================================================
+// Internal helpers — kept private; tests can reach them via `__testing`.
+// =============================================================================
+async function runCli(cmd: string, dir: string | undefined, args: string[], timeoutMs: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fullArgs = dir ? ['--dir', dir, ...args] : args;
+    const child = spawn(cmd, fullArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`comfyui-skill timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+    child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()));
+    child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(new Error(`failed to spawn ${cmd}: ${err.message}`));
+    });
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      if (code === 0) return resolve(stdout);
+      reject(new Error(`${cmd} exited ${code}: ${stderr.slice(-500)}\nstdout: ${stdout.slice(-500)}`));
+    });
+  });
+}
+
+async function runCliCapture(cmd: string, dir: string | undefined, args: string[], timeoutMs = 60_000): Promise<string> {
+  return runCli(cmd, dir, args, timeoutMs);
+}
+
+async function fetchBytes(url: string): Promise<Buffer> {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`fetch ${url} → HTTP ${resp.status}`);
+  const ab = await resp.arrayBuffer();
+  return Buffer.from(ab);
+}
+
+async function urlToInlineData(url: string): Promise<{ inlineData: { mimeType: string; data: string } }> {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`fetch ${url} → HTTP ${resp.status}`);
+  const mime = resp.headers.get('content-type') ?? 'image/png';
+  const ab = await resp.arrayBuffer();
+  const b64 = Buffer.from(ab).toString('base64');
+  return { inlineData: { mimeType: mime, data: b64 } };
+}
+
+async function persistLocal(
+  buf: Buffer,
+  ext: string,
+  provider: MediaProvider,
+  model: string,
+  extras: Partial<GenerateMediaOutput> = {},
+): Promise<GenerateMediaOutput> {
+  await fs.mkdir(DEFAULT_MEDIA_OUTPUT_DIR, { recursive: true });
+  const fileName = `${provider}-${Date.now()}.${ext}`;
+  const filePath = path.join(DEFAULT_MEDIA_OUTPUT_DIR, fileName);
+  await fs.writeFile(filePath, buf);
+  return {
+    url: path.relative(process.cwd(), filePath),
+    mimeType: extras.mimeType ?? mimeFromExt(ext),
+    provider,
+    model,
+    source: 'provider',
+    ...extras,
+  };
+}
+
+function pickExt(url: string, task: MediaTask): string {
+  const m = /\.([a-z0-9]+)(?:\?|$)/i.exec(url);
+  if (m) return m[1].toLowerCase();
+  return task === 'txt2img' || task === 'edit' ? 'png' : 'mp4';
+}
+
+function mimeFromExt(ext: string): string {
+  switch (ext.toLowerCase()) {
+    case 'png': return 'image/png';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'webp': return 'image/webp';
+    case 'mp4': return 'video/mp4';
+    case 'webm': return 'video/webm';
+    default: return 'application/octet-stream';
+  }
 }

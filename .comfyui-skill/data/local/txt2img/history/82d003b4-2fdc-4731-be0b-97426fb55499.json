@@ -1,0 +1,22 @@
+{
+  "run_id": "82d003b4-2fdc-4731-be0b-97426fb55499",
+  "job_id": "",
+  "prompt_id": "82d003b4-2fdc-4731-be0b-97426fb55499",
+  "server_id": "local",
+  "workflow_id": "txt2img",
+  "status": "success",
+  "timestamp": "2026-06-20T16:37:45.130516+00:00",
+  "duration_ms": 14809,
+  "args": {
+    "prompt_clip_text_encode_positive_prompt": "a small red fox under sakura tree, watercolor"
+  },
+  "outputs": [
+    {
+      "filename": "ComfyUI_00018_.png",
+      "subfolder": "",
+      "type": "output",
+      "media_type": "image",
+      "local_path": "/Users/feihong/Documents/hellome/.comfyui-skill/outputs/ComfyUI_00018_.png"
+    }
+  ]
+}
