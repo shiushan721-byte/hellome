@@ -43,6 +43,8 @@ import {
   revokeHermesPairing,
 } from './src/server/hermesPairingService';
 import { createAuthKit } from './复用组件库/auth-login-kit/server-auth-kit';
+import { registerDbHealthRoute } from './src/server/bootstrap/dbHealth';
+import { assertDatabaseReady, isFallbackAllowed } from './src/server/db/runtime';
 
 dotenv.config();
 
@@ -87,6 +89,7 @@ if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
   console.log('No valid GEMINI_API_KEY found. Using high-fidelity local simulator fallback.');
 }
 authKit.registerRoutes(app);
+registerDbHealthRoute(app);
 
 app.get('/api/billing/usage', async (req, res) => {
   try {
@@ -701,6 +704,18 @@ Return complete data matching the required schema. Ensure values are realistic (
 });
 
 async function startServer() {
+  await assertDatabaseReady()
+    .then(() => {
+      console.log('[persistence] mode=database');
+    })
+    .catch((error) => {
+      if (!isFallbackAllowed()) throw error;
+      console.warn(
+        '[persistence] mode=fallback reason=%s',
+        error instanceof Error ? error.message : 'unknown',
+      );
+    });
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

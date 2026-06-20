@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { Task, TaskStep, TaskStatus, HermesLogEntry } from '../types/workbench';
@@ -17,6 +17,8 @@ import { normalizeHermesRunPayload, type HermesStructuredRun } from './hermesCon
 import { getSkillExperienceConfig, resolveSkillRoutePlan } from './skillStudioService';
 import { presentUgcTask } from './taskPresenter';
 import { deriveTaskRunState } from './taskStateMachine';
+import { getPrismaClient } from './db/prisma';
+import { isFallbackAllowed } from './db/runtime';
 
 const execFileAsync = promisify(execFile);
 
@@ -82,18 +84,8 @@ const terminalStatuses = new Set<TaskStatus>(['completed', 'failed', 'cancelled'
 const activeRuns = new Set<string>();
 const memoryStore = new Map<string, TaskAggregate>();
 
-let prismaClient: PrismaClient | null | undefined;
-
-function hasDatabaseUrl(): boolean {
-  return Boolean(process.env.DATABASE_URL);
-}
-
-function getPrismaClient(): PrismaClient | null {
-  if (!hasDatabaseUrl()) return null;
-  if (prismaClient === undefined) {
-    prismaClient = new PrismaClient();
-  }
-  return prismaClient ?? null;
+function requirePersistenceFallback(): boolean {
+  return !getPrismaClient() && isFallbackAllowed();
 }
 
 function nowIso(): string {
@@ -347,10 +339,16 @@ async function delay(ms: number): Promise<void> {
 }
 
 async function persist(record: TaskAggregate): Promise<void> {
-  memoryStore.set(record.task.id, cloneAggregate(record));
-
   const prisma = getPrismaClient();
-  if (!prisma) return;
+  if (!prisma && !isFallbackAllowed()) {
+    throw new Error('数据库不可用，且未启用内存回退。');
+  }
+  if (!prisma) {
+    memoryStore.set(record.task.id, cloneAggregate(record));
+    return;
+  }
+
+  memoryStore.set(record.task.id, cloneAggregate(record));
 
   const understandingPayload = toStoredRecoverySnapshot(record.task);
   const payloadJson = understandingPayload as unknown as Prisma.InputJsonValue;
@@ -549,6 +547,9 @@ async function persist(record: TaskAggregate): Promise<void> {
 async function loadAllFromPrisma(): Promise<TaskAggregate[]> {
   const prisma = getPrismaClient();
   if (!prisma) {
+    if (!requirePersistenceFallback()) {
+      throw new Error('数据库不可用，且未启用内存回退。');
+    }
     return Array.from(memoryStore.values()).map(cloneAggregate);
   }
 
@@ -966,7 +967,12 @@ export async function cancelUgcTask(id: string): Promise<Task | null> {
 export async function deleteUgcTask(id: string): Promise<boolean> {
   memoryStore.delete(id);
   const prisma = getPrismaClient();
-  if (!prisma) return true;
+  if (!prisma) {
+    if (!isFallbackAllowed()) {
+      throw new Error('数据库不可用，且未启用内存回退。');
+    }
+    return true;
+  }
   await prisma.task.deleteMany({
     where: { id, agentType: 'media' },
   });

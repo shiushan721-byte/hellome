@@ -1,5 +1,7 @@
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { type Prisma } from '@prisma/client';
 import { generateText } from './adapters/modelAdapter';
+import { getPrismaClient } from './db/prisma';
+import { isFallbackAllowed } from './db/runtime';
 import type {
   SkillArtifactTemplate,
   SkillBusinessFrame,
@@ -16,7 +18,6 @@ import type {
 import type { UgcTaskInput, UgcRoutePlan } from '../types/ugc';
 
 const DEFAULT_SKILL_ID = 'media-ugc';
-let prismaClient: PrismaClient | null | undefined;
 
 const PUBLIC_SKILL_VARIANTS: Record<
   string,
@@ -68,14 +69,6 @@ type SkillAggregate = {
 };
 
 const memoryStore = new Map<string, SkillAggregate>();
-
-function getPrismaClient(): PrismaClient | null {
-  if (!process.env.DATABASE_URL) return null;
-  if (prismaClient === undefined) {
-    prismaClient = new PrismaClient();
-  }
-  return prismaClient ?? null;
-}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -282,6 +275,9 @@ function getPublishedOrLatestVersion(aggregate: SkillAggregate): SkillVersionRec
 
 async function persistToPrisma(ownerExternalId: string, aggregate: SkillAggregate): Promise<void> {
   const prisma = getPrismaClient();
+  if (!prisma && !isFallbackAllowed()) {
+    throw new Error('Skill Studio 持久化已启用，但数据库不可用。');
+  }
   if (!prisma) {
     memoryStore.set(aggregate.skill.id, cloneAggregate(aggregate));
     return;
@@ -349,7 +345,12 @@ async function persistToPrisma(ownerExternalId: string, aggregate: SkillAggregat
 
 async function loadFromPrisma(skillId: string): Promise<SkillAggregate | null> {
   const prisma = getPrismaClient();
-  if (!prisma) return null;
+  if (!prisma) {
+    if (!isFallbackAllowed()) {
+      throw new Error('Skill Studio 持久化已启用，但数据库不可用。');
+    }
+    return null;
+  }
   const prismaDb = prisma as any;
 
   const row = await prismaDb.skill.findFirst({

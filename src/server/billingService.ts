@@ -1,25 +1,15 @@
-import { PrismaClient } from '@prisma/client';
+import { getPrismaClient } from './db/prisma';
 import type { UsageLedgerEntry, UsageSnapshot } from '../types/workbench';
 
 const DEFAULT_PLAN_NAME = process.env.DEMO_PLAN_NAME?.trim() || '体验版';
 const DEFAULT_MONTHLY_LIMIT = Number(process.env.DEMO_MONTHLY_TOKEN_LIMIT ?? 20_000);
 const DEFAULT_LOW_BALANCE_THRESHOLD = Number(process.env.DEMO_LOW_BALANCE_THRESHOLD ?? 0.1);
 
-let prismaClient: PrismaClient | null | undefined;
-
 function nextMonthResetAt(): string {
   const d = new Date();
   d.setMonth(d.getMonth() + 1, 1);
   d.setHours(0, 0, 0, 0);
   return d.toISOString();
-}
-
-function getPrismaClient(): PrismaClient | null {
-  if (!process.env.DATABASE_URL) return null;
-  if (prismaClient === undefined) {
-    prismaClient = new PrismaClient();
-  }
-  return prismaClient ?? null;
 }
 
 function defaultUsage(): UsageSnapshot {

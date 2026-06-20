@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Bug, Play, TerminalSquare, Wand2 } from 'lucide-react';
 import { runStudioSkillDebug } from '../../lib/skillStudioApi';
+import { createRemoteUgcTask } from '../../lib/taskApi';
 import type { SkillDebugInput, SkillDebugResult } from '../../types/skills';
 import SkillStudioNav from '../../components/app/studio/SkillStudioNav';
 
 export default function CreatorSkillDebugPage() {
   const { skillId = 'media-ugc' } = useParams();
+  const navigate = useNavigate();
   const [input, setInput] = useState<SkillDebugInput>({
     sellingPoint: '补水不黏腻，夏天通勤 10 秒上脸就能出门。',
     platform: '抖音',
@@ -15,6 +17,7 @@ export default function CreatorSkillDebugPage() {
     referenceDirection: '真实试用、首秒抓人、轻转化',
   });
   const [running, setRunning] = useState(false);
+  const [creatingTask, setCreatingTask] = useState(false);
   const [result, setResult] = useState<SkillDebugResult | null>(null);
   const [error, setError] = useState('');
 
@@ -28,6 +31,25 @@ export default function CreatorSkillDebugPage() {
       setError(runError instanceof Error ? runError.message : 'Skill 调试失败');
     } finally {
       setRunning(false);
+    }
+  };
+
+  const handleCreateRealTask = async () => {
+    setCreatingTask(true);
+    setError('');
+    try {
+      const task = await createRemoteUgcTask({
+        skillId,
+        sellingPoint: input.sellingPoint,
+        platform: input.platform,
+        effectGoal: input.effectGoal,
+        referenceUrl: input.referenceDirection,
+      });
+      navigate(`/app/tasks/${task.id}`);
+    } catch (taskError) {
+      setError(taskError instanceof Error ? taskError.message : '真实视频任务创建失败');
+    } finally {
+      setCreatingTask(false);
     }
   };
 
@@ -69,6 +91,27 @@ export default function CreatorSkillDebugPage() {
           >
             {running ? '调试中...' : '运行调试'}
           </button>
+          <div className="rounded-2xl border border-black/10 bg-[#FCFCFD] px-4 py-4 space-y-3">
+            <p className="text-sm font-medium">真实视频任务验证</p>
+            <p className="text-sm leading-relaxed text-black/55">
+              调试通过后，可直接用当前 skill 和这组输入创建真实视频任务，进入任务页验证执行链路。
+            </p>
+            <div className="grid grid-cols-1 gap-2 text-sm text-black/58">
+              <MiniMeta label="当前 Skill" value={skillId} />
+              <MiniMeta label="任务平台" value={input.platform} />
+              <MiniMeta label="结果风格" value={input.effectGoal} />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                void handleCreateRealTask();
+              }}
+              disabled={creatingTask}
+              className="w-full h-11 rounded-xl border border-black/10 bg-white text-sm font-semibold text-black/72 disabled:opacity-70"
+            >
+              {creatingTask ? '任务创建中...' : '发起真实视频任务验证'}
+            </button>
+          </div>
         </Panel>
 
         <Panel title="系统理解与中间结果" icon={Wand2}>
@@ -180,4 +223,13 @@ function LogRow({ level, text }: { level: 'success' | 'info' | 'warning' | 'erro
           : 'text-black/65 bg-[#F5F6F8]';
 
   return <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${tone}`}>{text}</div>;
+}
+
+function MiniMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-black/8 bg-white px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.14em] text-black/35">{label}</p>
+      <p className="mt-1 text-sm text-black/68">{value}</p>
+    </div>
+  );
 }

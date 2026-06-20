@@ -238,6 +238,60 @@
 
 - 明确了早期 web 端不承担 AI 层能力时，右侧仍然可以稳定成立的展示方案。
 - 统一了老板关心的“核心展示卡”与产品逻辑之间的关系，避免后面回退成解释型右栏。
+
+## 2026-06-20 HelloMe × Hermes 账户与 Skill 执行协议草案
+
+### 本轮完成
+
+- 新增协议草案文档：
+  - [docs/superpowers/specs/2026-06-20-hellome-hermes-account-skill-execution-protocol.md](/Users/feihong/Documents/hellome/docs/superpowers/specs/2026-06-20-hellome-hermes-account-skill-execution-protocol.md)
+- 这份文档把当前最关键的真实环境问题统一收敛成一套可执行约束：
+  - HelloMe Web 是账号、词元、任务、发布版 skill 的真相源
+  - Hermes 是模型调用、本地权限和运行时执行层
+  - 创作者调试、普通用户正式运行、Hermes 自学习三者必须分层
+- 明确写死了生产环境的版本约束：
+  - 正式任务只能运行 `已发布 skill 快照`
+  - Hermes 的学习结果只能回传为 `patch proposal`
+  - 不能直接改写线上 skill
+- 明确整理了后续要对齐给研发的协议重点：
+  - 账户 / 词元 / 短期执行授权
+  - skill 安装与 checksum 校验
+  - task / usage / artifact / error 回传
+  - 高成本确认与可恢复中断
+  - 需要补充的数据库对象
+
+### 当前收益
+
+- 后续再接真实视频 skill、模型 provider 和 API key 时，不会再把 Hermes 当成“既执行又偷偷改生产”的黑盒。
+- 现在已经把“如何避免 skill 漂移”和“如何让前台、工坊、Hermes 三端对齐”提前钉住了。
+- 这份协议可以直接作为后面继续设计接口、数据库和 Hermes 集成策略的上游约束文档。
+
+## 2026-06-20 HelloMe × Hermes 工程合同补齐
+
+### 本轮完成
+
+- 新增工程合同文档：
+  - [docs/superpowers/specs/2026-06-20-hellome-hermes-api-event-database-contract.md](/Users/feihong/Documents/hellome/docs/superpowers/specs/2026-06-20-hellome-hermes-api-event-database-contract.md)
+- 这份文档不是泛泛而谈，而是直接基于当前代码里的真实对象继续往下压实：
+  - `src/server/ugcTaskService.ts`
+  - `src/server/hermesContract.ts`
+  - `src/server/hermesPairingService.ts`
+  - `src/server/billingService.ts`
+  - `prisma/schema.prisma`
+- 文档内明确补齐了后续研发最需要的 4 类内容：
+  - Web 与 Hermes 的 API 分组
+  - Hermes 事件回传 envelope 与事件类型
+  - 数据库新增表与字段建议
+  - 第一阶段最小可跑实现顺序
+
+### 当前收益
+
+- 现在不只是有“原则”，也有了可直接拆接口、拆表、拆服务的工程合同。
+- 后续接真实视频 provider、Execution Grant、Usage 回传和 Skill Patch 审核时，研发不会再各写各的理解。
+- 这份文档和上一份协议草案配合起来，已经形成了：
+  - 上层业务约束
+  - 中层运行协议
+  - 下层接口与数据合同
 - 为后续前端实现、动效实现和营销录屏素材制作提供了统一状态脚本。
 
 ## 2026-06-20 智能体工坊 Spec 增补：任务停顿、确认与恢复系统
@@ -1256,3 +1310,57 @@
 
 - 当前 `businessFrame` 先接在 `SkillVersion` 上，而不是单独拆新表，目的是让 demo 阶段改动更轻、上线链路更短。
 - 后续如果要把“业务目标 -> Hermes 编辑指令 -> skill 结构改写 -> 展示案例沉淀”做成真正工作流，可以继续沿这套版本结构往上长，不需要推翻这次的数据定义。
+
+## 2026-06-20 智能体工坊业务导向页面重构与真实验证入口补全
+
+### 本轮完成
+
+- 把 Creator 侧 `可视化编辑` 首屏从“配置台”重构成业务导向工作台：
+  - `mode=create` 时显示 `新建业务智能体`
+  - `mode=edit` 时显示 `优化已有智能体`
+- 页面骨架统一收敛为：
+  - 左侧：平台级导航
+  - 中间：业务输入 / 修改与确认区
+  - 右侧：前台呈现 / 引擎工作流区
+- 新建业务智能体页已落成真实前端结构：
+  - 顶部改成只读动态标题，不再出现重复输入器
+  - 只保留 `行业 / 客户类型`、`使用场景` 两组卡片
+  - 底部改成 sticky 主按钮，不再使用大面积“发送前确认”底板
+  - 右侧支持 `前台 UI 预览 / 引擎工作流` 双视角
+- 优化已有智能体页已落成真实前端结构：
+  - 顶部改成当前业务定位句
+  - 优化方向改成卡片式选择
+  - “本次修改输入预览”回到中间业务区
+  - 修改目标改成真实 textarea，不再是假表格
+  - 右侧只负责显示真实前台页和案例，不再承担复杂编辑栏职责
+- Creator Studio 首页新增 `新建业务智能体` 入口卡，并将原 `编辑 Skill` 改名为 `优化智能体`
+- 调试页补上 `发起真实视频任务验证` 入口：
+  - 保留原有系统理解预演
+  - 新增基于当前 skillId 和测试输入直接创建真实 UGC 任务
+  - 创建后跳转 `/app/tasks/:id`
+
+### 当前收益
+
+- 智能体工坊终于从“参数配置后台”转向了“业务表达 -> Hermes 执行 -> 前台呈现”的正确链路。
+- 业务方现在可以：
+  - 看懂视频智能体创建逻辑
+  - 理解修改到底在改什么业务目标
+  - 在调试页直接进入真实视频任务验证，而不是只停留在脚本草案阶段
+- 这使 demo 更接近真实要验证的核心：
+  - 业务能理解
+  - 业务能发起真实验证
+  - 智能体能继续沉淀成可复用交付物
+
+### 验证结果
+
+- `npm run lint`
+  已通过
+- `npm run build`
+  已通过
+- `node --import tsx --test tests/ui/creatorStudioModel.test.ts tests/ui/taskShowcaseStage.test.ts`
+  已通过
+
+### 备注
+
+- 旧的 `tests/server/skillStudioService.test.ts` 在当前环境下会因为数据库持久化开关与本地数据库不可用而失败，这不是本轮前端改动引入的问题。
+- 当前 Creator 调试页新增的“真实视频任务验证”已能打通到任务系统，但视频最终生成质量仍取决于后续真实 provider / Hermes 执行链的继续联调。

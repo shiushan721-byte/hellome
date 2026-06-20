@@ -58,6 +58,16 @@ export default function CreatorStudioPage() {
         <StudioLink to="/app/studio/design-spec" icon={Columns3} label="查看规范页面" />
       </section>
 
+      <section className="bg-white border border-black/8 rounded-[24px] p-5 sm:p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-xl font-semibold">新建业务智能体</h2>
+          <p className="text-sm text-black/55 leading-relaxed">
+            不从空白对话框开始，而是先选择行业 / 客户类型和使用场景，再生成视频智能体草稿。
+          </p>
+        </div>
+        <StudioLink to="/app/studio/skills/media-ugc?mode=create" icon={Sparkles} label="开始创建" />
+      </section>
+
       <section className="grid grid-cols-1 gap-4">
         {skills.map((skill) => (
           <div
@@ -82,7 +92,7 @@ export default function CreatorStudioPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2 lg:justify-end">
-              <StudioLink to={`/app/studio/skills/${skill.id}`} icon={FileSliders} label="编辑 Skill" />
+              <StudioLink to={`/app/studio/skills/${skill.id}?mode=edit`} icon={FileSliders} label="优化智能体" />
               <StudioLink to={`/app/studio/skills/${skill.id}/debug`} icon={Bug} label="调试 Skill" />
               <StudioLink to={`/app/studio/skills/${skill.id}/versions`} icon={Rocket} label="版本管理" />
             </div>

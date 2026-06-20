@@ -1,7 +1,8 @@
 import crypto from 'node:crypto';
 import type express from 'express';
-import { PrismaClient } from '@prisma/client';
 import type { DemoSession, UserProfile, UserRole, VerificationCodeRecord } from './auth-types';
+import { getPrismaClient } from '../../src/server/db/prisma';
+import { normalizeWorkspaceSlug } from '../../src/server/bootstrap/demoSeedHelpers';
 
 const SESSION_COOKIE = 'hellome_demo_session';
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -10,27 +11,6 @@ const VERIFICATION_RESEND_MS = 60 * 1000;
 
 const demoSessions = new Map<string, DemoSession>();
 const verificationCodes = new Map<string, VerificationCodeRecord>();
-
-let prismaClient: PrismaClient | null | undefined;
-
-function getPrismaClient(): PrismaClient | null {
-  if (!process.env.DATABASE_URL) {
-    prismaClient = null;
-    return prismaClient;
-  }
-  if (prismaClient !== undefined) {
-    return prismaClient;
-  }
-
-  try {
-    prismaClient = new PrismaClient();
-  } catch (error) {
-    console.warn('Auth Prisma client unavailable, fallback to in-memory auth only.', error);
-    prismaClient = null;
-  }
-
-  return prismaClient;
-}
 
 type DemoAccountRecord = {
   phone: string;
@@ -214,7 +194,7 @@ async function ensureUserRecord(user: UserProfile): Promise<UserProfile> {
     await prismaDb.workspace.create({
       data: {
         name: user.workspace,
-        slug: `workspace-${user.phone.slice(-6)}`,
+        slug: normalizeWorkspaceSlug(user.role, user.phone),
         ownerId: persistedUser.id,
       },
     });
