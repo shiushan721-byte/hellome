@@ -104,3 +104,58 @@ export function normalizeHermesRunPayload(payload: unknown): HermesStructuredRun
     },
   };
 }
+
+export interface HermesTaskEventEnvelope {
+  taskId: string;
+  executionId: string;
+  eventId: string;
+  eventType: string;
+  createdAt: string;
+  payload: Record<string, unknown>;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
+
+export function normalizeHermesTaskEventEnvelope(
+  payload: unknown,
+  fallbackTaskId?: string,
+): HermesTaskEventEnvelope {
+  if (!isRecord(payload)) {
+    return {
+      taskId: fallbackTaskId ?? 'unknown',
+      executionId: 'unknown',
+      eventId: `evt_${Date.now().toString(36)}`,
+      eventType: 'task_failed',
+      createdAt: nowIso(),
+      payload: { message: 'Hermes 事件格式无效' },
+    };
+  }
+
+  const nested = isRecord(payload.envelope) ? payload.envelope : payload;
+
+  return {
+    taskId:
+      typeof nested.taskId === 'string' && nested.taskId.trim().length > 0
+        ? nested.taskId
+        : fallbackTaskId ?? 'unknown',
+    executionId:
+      typeof nested.executionId === 'string' && nested.executionId.trim().length > 0
+        ? nested.executionId
+        : 'unknown',
+    eventId:
+      typeof nested.eventId === 'string' && nested.eventId.trim().length > 0
+        ? nested.eventId
+        : `evt_${Date.now().toString(36)}`,
+    eventType:
+      typeof nested.eventType === 'string' && nested.eventType.trim().length > 0
+        ? nested.eventType
+        : 'task_failed',
+    createdAt:
+      typeof nested.createdAt === 'string' && nested.createdAt.trim().length > 0
+        ? nested.createdAt
+        : nowIso(),
+    payload: isRecord(nested.payload) ? nested.payload : {},
+  };
+}

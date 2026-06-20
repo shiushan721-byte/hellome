@@ -14,7 +14,8 @@ import type {
   UgcTaskInput,
 } from '../types/ugc';
 import { normalizeHermesRunPayload, type HermesStructuredRun } from './hermesContract';
-import { getSkillExperienceConfig, resolveSkillRoutePlan } from './skillStudioService';
+import { createExecutionGrant, revokeActiveGrantsForTask } from './executionGrantService';
+import { getSkillExperienceConfig, resolvePublishedSkillBinding, resolveSkillRoutePlan } from './skillStudioService';
 import { presentUgcTask } from './taskPresenter';
 import { deriveTaskRunState } from './taskStateMachine';
 import { getPrismaClient } from './db/prisma';
@@ -36,6 +37,10 @@ type TaskAggregate = {
   input: UgcTaskInput;
   userExternalId: string;
   workspaceSlug: string;
+  skillId?: string;
+  skillVersionId?: string;
+  skillChecksum?: string;
+  executionGrantId?: string;
   events: UgcTaskEvent[];
   attempt: number;
   startedAt?: string;
@@ -44,6 +49,7 @@ type TaskAggregate = {
     id: string;
     mode: TaskExecutionMode;
     recipe: string;
+    requestId?: string;
     command?: string;
     stdout?: string;
     stderr?: string;
@@ -320,13 +326,20 @@ function updateStep(task: Task, index: number, status: TaskStep['status'], token
   });
 }
 
-function pushEvent(record: TaskAggregate, type: string, level: UgcTaskEvent['level'], message: string): void {
+function pushEvent(
+  record: TaskAggregate,
+  type: string,
+  level: UgcTaskEvent['level'],
+  message: string,
+  metadata?: Record<string, unknown>,
+): void {
   record.events.push({
     id: `${record.task.id}-event-${record.events.length + 1}`,
     type,
     level,
     message,
     createdAt: nowIso(),
+    metadata,
   });
 }
 
@@ -399,6 +412,9 @@ async function persist(record: TaskAggregate): Promise<void> {
       artifactsPreserved: (taskRecoveryState?.artifactsPreserved ?? null) as Prisma.InputJsonValue,
       willChargeAgain: taskRecoveryState?.willChargeAgain ?? null,
       showcaseStage: payloadJson,
+      skillId: record.skillId ?? null,
+      skillVersionId: record.skillVersionId ?? null,
+      executionGrantId: record.executionGrantId ?? null,
       userId: user.id,
       workspaceId: workspace.id,
     },
@@ -423,6 +439,9 @@ async function persist(record: TaskAggregate): Promise<void> {
       artifactsPreserved: (taskRecoveryState?.artifactsPreserved ?? null) as Prisma.InputJsonValue,
       willChargeAgain: taskRecoveryState?.willChargeAgain ?? null,
       showcaseStage: payloadJson,
+      skillId: record.skillId ?? null,
+      skillVersionId: record.skillVersionId ?? null,
+      executionGrantId: record.executionGrantId ?? null,
       userId: user.id,
       workspaceId: workspace.id,
     },
@@ -438,7 +457,10 @@ async function persist(record: TaskAggregate): Promise<void> {
       platform: record.input.platform,
       effectGoal: record.input.effectGoal,
       referenceUrl: record.input.referenceUrl ?? null,
-      payload: payloadJson,
+      payload: {
+        ...((payloadJson as Record<string, unknown>) ?? {}),
+        skillId: record.input.skillId ?? null,
+      } as Prisma.InputJsonValue,
     },
     create: {
       taskId: record.task.id,
@@ -449,7 +471,9 @@ async function persist(record: TaskAggregate): Promise<void> {
       platform: record.input.platform,
       effectGoal: record.input.effectGoal,
       referenceUrl: record.input.referenceUrl ?? null,
-      payload: payloadJson,
+      payload: {
+        skillId: record.input.skillId ?? null,
+      } as Prisma.InputJsonValue,
     },
   });
 
@@ -503,6 +527,7 @@ async function persist(record: TaskAggregate): Promise<void> {
         type: event.type,
         level: event.level,
         message: event.message,
+        metadata: (event.metadata ?? null) as Prisma.InputJsonValue,
         createdAt: new Date(event.createdAt),
       })),
     });
@@ -526,6 +551,10 @@ async function persist(record: TaskAggregate): Promise<void> {
         recoverable: execution.recoverable ?? false,
         artifactsPreserved: (execution.artifactsPreserved ?? null) as Prisma.InputJsonValue,
         willChargeAgain: execution.willChargeAgain ?? null,
+        skillId: record.skillId ?? null,
+        skillVersionId: record.skillVersionId ?? null,
+        skillChecksum: record.skillChecksum ?? null,
+        grantId: record.executionGrantId ?? null,
         metadata: (execution.metadata ?? null) as Prisma.InputJsonValue,
         createdAt: new Date(execution.createdAt),
       })),
@@ -599,6 +628,7 @@ async function loadAllFromPrisma(): Promise<TaskAggregate[]> {
         : undefined);
 
     const input: UgcTaskInput = {
+      skillId: row.skillId ?? ((row.input?.payload as { skillId?: string } | null)?.skillId ?? undefined),
       productImageUrl: row.input?.productImage ?? undefined,
       productImageName: row.input?.productName ?? undefined,
       talentImageUrl: row.input?.talentImage ?? undefined,
@@ -646,12 +676,17 @@ async function loadAllFromPrisma(): Promise<TaskAggregate[]> {
       input,
       userExternalId: row.user.externalId,
       workspaceSlug: row.workspace?.slug ?? 'workspace',
+      skillId: row.skillId ?? undefined,
+      skillVersionId: row.skillVersionId ?? undefined,
+      skillChecksum: row.executions[0]?.skillChecksum ?? undefined,
+      executionGrantId: row.executionGrantId ?? undefined,
       events: row.events.map((event) => ({
         id: event.id,
         type: event.type,
         level: event.level as UgcTaskEvent['level'],
         message: event.message,
         createdAt: event.createdAt.toISOString(),
+        metadata: event.metadata as Record<string, unknown> | undefined,
       })),
       attempt: row.runs[0]?.attempt ?? 1,
       startedAt: row.runs[0]?.startedAt.toISOString(),
@@ -860,10 +895,57 @@ async function executeRenderPhase(taskId: string): Promise<void> {
 }
 
 export async function createUgcTask(payload: CreateTaskPayload): Promise<Task> {
+  const skillBinding = await resolvePublishedSkillBinding(payload.input.skillId ?? 'media-ugc');
   const record = buildAggregate(payload);
-  record.task.routePlan = await resolveSkillRoutePlan(payload.input.skillId ?? 'media-ugc', payload.input);
+  record.skillId = skillBinding.skillId;
+  record.skillVersionId = skillBinding.skillVersionId;
+  record.skillChecksum = skillBinding.checksum;
+  record.input.skillId = payload.input.skillId ?? 'media-ugc';
+  record.task.routePlan = await resolveSkillRoutePlan(record.input.skillId, payload.input);
   record.task.costEstimate = `${record.task.routePlan.label} · ${record.task.routePlan.providerHint}`;
+  record.executions[0] = {
+    ...record.executions[0],
+    recipe: `${skillBinding.skillSlug}@${skillBinding.versionLabel}`,
+    metadata: {
+      skillId: skillBinding.skillId,
+      skillVersionId: skillBinding.skillVersionId,
+      skillChecksum: skillBinding.checksum,
+      versionNumber: skillBinding.versionNumber,
+    },
+  };
+  pushEvent(
+    record,
+    'skill_bound',
+    'info',
+    `正式任务已绑定已发布 Skill ${skillBinding.versionLabel} (${skillBinding.checksum})`,
+    {
+      skillId: skillBinding.skillId,
+      skillVersionId: skillBinding.skillVersionId,
+      checksum: skillBinding.checksum,
+    },
+  );
   await persist(record);
+
+  const grant = await createExecutionGrant({
+    taskId: record.task.id,
+    skillId: skillBinding.skillId,
+    skillVersionId: skillBinding.skillVersionId,
+    tokenBudgetMax: record.task.estimatedTokenMax,
+  });
+  record.executionGrantId = grant.grantId;
+  record.executions[0] = {
+    ...record.executions[0],
+    metadata: {
+      ...(record.executions[0].metadata ?? {}),
+      executionGrantId: grant.grantId,
+    },
+  };
+  pushEvent(record, 'execution_grant_issued', 'info', '已为本次任务签发短期 execution grant', {
+    grantId: grant.grantId,
+    expiresAt: grant.expiresAt,
+  });
+  await persist(record);
+
   void executeUnderstandingPhase(record.task.id);
   return toFrontendTask(record);
 }
@@ -959,6 +1041,7 @@ export async function cancelUgcTask(id: string): Promise<Task | null> {
   record.task.status = 'cancelled';
   record.task.pendingConfirmation = undefined;
   record.task.recoveryState = undefined;
+  await revokeActiveGrantsForTask(id);
   pushEvent(record, 'task_cancelled', 'warning', '任务已取消，未进入高成本视频生成阶段');
   await persist(record);
   return toFrontendTask(record);
@@ -1056,3 +1139,13 @@ export async function getHermesRuntimeStatus(): Promise<{
 }
 
 export { isMediaTaskId };
+
+export type UgcTaskAggregateRecord = TaskAggregate;
+
+export async function loadUgcTaskAggregate(id: string): Promise<TaskAggregate | null> {
+  return loadOne(id);
+}
+
+export async function persistUgcTaskAggregate(record: TaskAggregate): Promise<void> {
+  await persist(record);
+}

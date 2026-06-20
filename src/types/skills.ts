@@ -76,6 +76,7 @@ export interface SkillVersionRecord {
   artifactConfig: SkillArtifactTemplate[];
   createdAt: string;
   publishedAt?: string;
+  checksum?: string;
 }
 
 export interface SkillRecord {

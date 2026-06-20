@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { requirePrismaClient } from '../src/server/db/prisma';
+import { computeSkillVersionChecksum } from '../src/server/skillChecksum';
+import type { SkillVersionRecord } from '../src/types/skills';
 import {
   buildDemoLedgerSeeds,
   buildDemoSkillSeed,
@@ -58,6 +60,7 @@ async function seedUsers() {
 async function seedTasks(
   userIdByExternalId: Map<string, string>,
   workspaceIdBySlug: Map<string, string>,
+  skillBinding: { skillId: string; skillVersionId: string },
 ) {
   for (const taskSeed of buildDemoTaskSeeds()) {
     const userId = userIdByExternalId.get(taskSeed.userExternalId);
@@ -81,6 +84,8 @@ async function seedTasks(
         currentTokenUsed: taskSeed.tokenUsed,
         costEstimate: '预计 1 次样片生成 + 1 次视频合成',
         requiresConfirm: taskSeed.status === 'waiting_confirmation',
+        skillId: skillBinding.skillId,
+        skillVersionId: skillBinding.skillVersionId,
         userId,
         workspaceId,
         completedAt,
@@ -100,6 +105,8 @@ async function seedTasks(
         currentTokenUsed: taskSeed.tokenUsed,
         costEstimate: '预计 1 次样片生成 + 1 次视频合成',
         requiresConfirm: taskSeed.status === 'waiting_confirmation',
+        skillId: skillBinding.skillId,
+        skillVersionId: skillBinding.skillVersionId,
         userId,
         workspaceId,
       },
@@ -182,8 +189,10 @@ async function seedTasks(
         id: `${taskSeed.id}-exec-1`,
         taskId: taskSeed.id,
         mode: 'backend_silent',
-        recipe: 'Generative-Media-Skills/UGC Video Factory',
+        recipe: 'media-ugc@v0.1.0',
         status: taskSeed.status === 'completed' ? 'completed' : 'waiting_confirmation',
+        skillId: skillBinding.skillId,
+        skillVersionId: skillBinding.skillVersionId,
         createdAt,
       },
     });
@@ -193,9 +202,26 @@ async function seedTasks(
 async function seedSkill(userIdByExternalId: Map<string, string>) {
   const skillSeed = buildDemoSkillSeed();
   const ownerId = userIdByExternalId.get(skillSeed.ownerExternalId);
-  if (!ownerId) return;
+  if (!ownerId) return null;
 
   const prismaDb = prisma as any;
+  const publishedAt = new Date('2026-06-18T09:00:00.000Z');
+  const versionRecord: SkillVersionRecord = {
+    id: skillSeed.version.id,
+    versionNumber: skillSeed.version.versionNumber,
+    versionLabel: skillSeed.version.versionLabel,
+    status: 'published',
+    title: skillSeed.version.title,
+    summary: skillSeed.version.summary,
+    inputConfig: skillSeed.version.inputConfig as unknown as SkillVersionRecord['inputConfig'],
+    understandingConfig: skillSeed.version.understandingConfig as unknown as SkillVersionRecord['understandingConfig'],
+    executionConfig: skillSeed.version.executionConfig as unknown as SkillVersionRecord['executionConfig'],
+    businessFrame: skillSeed.version.businessFrame as unknown as SkillVersionRecord['businessFrame'],
+    artifactConfig: skillSeed.version.artifactConfig as unknown as SkillVersionRecord['artifactConfig'],
+    createdAt: publishedAt.toISOString(),
+    publishedAt: publishedAt.toISOString(),
+  };
+  const checksum = computeSkillVersionChecksum(versionRecord);
 
   await prismaDb.skill.upsert({
     where: { slug: skillSeed.slug },
@@ -203,8 +229,9 @@ async function seedSkill(userIdByExternalId: Map<string, string>) {
       name: skillSeed.name,
       description: skillSeed.description,
       category: 'ugc_video',
-      status: 'draft',
+      status: 'published',
       currentVersion: skillSeed.version.versionNumber,
+      publishedAt,
       ownerId,
     },
     create: {
@@ -213,8 +240,9 @@ async function seedSkill(userIdByExternalId: Map<string, string>) {
       name: skillSeed.name,
       description: skillSeed.description,
       category: 'ugc_video',
-      status: 'draft',
+      status: 'published',
       currentVersion: skillSeed.version.versionNumber,
+      publishedAt,
       ownerId,
     },
   });
@@ -228,30 +256,40 @@ async function seedSkill(userIdByExternalId: Map<string, string>) {
     },
     update: {
       versionLabel: skillSeed.version.versionLabel,
-      status: 'draft',
+      status: 'published',
       title: skillSeed.version.title,
       summary: skillSeed.version.summary,
+      checksum,
       inputConfig: skillSeed.version.inputConfig,
       understandingConfig: skillSeed.version.understandingConfig,
       executionConfig: skillSeed.version.executionConfig,
       businessFrame: skillSeed.version.businessFrame,
       artifactConfig: skillSeed.version.artifactConfig,
+      publishedAt,
     },
     create: {
       id: skillSeed.version.id,
       skillId: skillSeed.id,
       versionNumber: skillSeed.version.versionNumber,
       versionLabel: skillSeed.version.versionLabel,
-      status: 'draft',
+      status: 'published',
       title: skillSeed.version.title,
       summary: skillSeed.version.summary,
+      checksum,
       inputConfig: skillSeed.version.inputConfig,
       understandingConfig: skillSeed.version.understandingConfig,
       executionConfig: skillSeed.version.executionConfig,
       businessFrame: skillSeed.version.businessFrame,
       artifactConfig: skillSeed.version.artifactConfig,
+      publishedAt,
     },
   });
+
+  return {
+    skillId: skillSeed.id,
+    skillVersionId: skillSeed.version.id,
+    checksum,
+  };
 }
 
 async function seedLedger(userIdByExternalId: Map<string, string>) {
@@ -297,8 +335,12 @@ async function seedLedger(userIdByExternalId: Map<string, string>) {
 
 export async function seedDatabase(): Promise<void> {
   const { userIdByExternalId, workspaceIdBySlug } = await seedUsers();
-  await seedTasks(userIdByExternalId, workspaceIdBySlug);
-  await seedSkill(userIdByExternalId);
+  const skillBinding =
+    (await seedSkill(userIdByExternalId)) ?? {
+      skillId: 'media-ugc',
+      skillVersionId: 'media-ugc-v1',
+    };
+  await seedTasks(userIdByExternalId, workspaceIdBySlug, skillBinding);
   await seedLedger(userIdByExternalId);
 }
 

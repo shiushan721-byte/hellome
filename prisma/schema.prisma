@@ -80,6 +80,9 @@ model Task {
   artifactsPreserved Json?
   willChargeAgain   Boolean?
   showcaseStage     Json?
+  skillId           String?
+  skillVersionId    String?
+  executionGrantId  String?           @unique
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   startedAt         DateTime?
@@ -99,8 +102,12 @@ model Task {
   events            TaskEvent[]
   executions        HermesExecution[]
   ledgers           UsageLedger[]
+  executionGrants   ExecutionGrant[]
   user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace         Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  skill             Skill?            @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  skillVersion      SkillVersion?     @relation(fields: [skillVersionId], references: [id], onDelete: SetNull)
+  executionGrant    ExecutionGrant?   @relation("TaskActiveGrant", fields: [executionGrantId], references: [id], onDelete: SetNull)
 }
 
 model TaskInput {
@@ -193,10 +200,38 @@ model HermesExecution {
   recoverable   Boolean           @default(false)
   artifactsPreserved Json?
   willChargeAgain Boolean?
+  skillId       String?
+  skillVersionId String?
+  skillChecksum String?
+  deviceId      String?
+  grantId       String?
   metadata      Json?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   task          Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ExecutionGrant {
+  id               String    @id @default(cuid())
+  taskId           String
+  skillId          String
+  skillVersionId   String
+  deviceId         String?
+  grantTokenHash   String
+  allowedProviders Json?
+  allowedModels    Json?
+  tokenBudgetMax   Int       @default(30000)
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  task             Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  activeForTask    Task?     @relation("TaskActiveGrant")
+  skill            Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillVersion     SkillVersion @relation(fields: [skillVersionId], references: [id], onDelete: Cascade)
+  device           HermesDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@index([grantTokenHash])
 }
 
 model UsageLedger {
@@ -224,6 +259,7 @@ model HermesDevice {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  executionGrants ExecutionGrant[]
 }
 
 model Skill {
@@ -241,6 +277,8 @@ model Skill {
   owner          User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   versions       SkillVersion[]
   debugRuns      SkillDebugRun[]
+  tasks          Task[]
+  executionGrants ExecutionGrant[]
 }
 
 model SkillVersion {
@@ -251,6 +289,9 @@ model SkillVersion {
   status               SkillStatus @default(draft)
   title                String
   summary              String?
+  checksum             String      @default("")
+  sourceType           String?
+  baseVersionId        String?
   inputConfig          Json?
   understandingConfig  Json?
   executionConfig      Json?
@@ -261,6 +302,8 @@ model SkillVersion {
   publishedAt          DateTime?
   skill                Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
   debugRuns            SkillDebugRun[]
+  tasks                Task[]
+  executionGrants      ExecutionGrant[]
 
   @@unique([skillId, versionNumber])
 }

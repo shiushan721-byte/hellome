@@ -38,6 +38,16 @@ import {
   confirmUgcTask,
 } from './src/server/ugcTaskService';
 import {
+  createExecutionGrant,
+  revokeExecutionGrant,
+  ExecutionGrantError,
+} from './src/server/executionGrantService';
+import { ingestHermesTaskEvent, HermesEventIngestError } from './src/server/hermesEventIngestService';
+import {
+  getPublishedSkillRuntimeSnapshot,
+  PublishedSkillVersionRequiredError,
+} from './src/server/skillStudioService';
+import {
   getHermesPairingStatus,
   pairHermesLocally,
   revokeHermesPairing,
@@ -241,6 +251,10 @@ app.get('/api/skills/:skillId/runtime', async (req, res) => {
     const data = await getSkillRuntimeConfig(req.params.skillId);
     res.json({ success: true, data });
   } catch (error) {
+    if (error instanceof PublishedSkillVersionRequiredError) {
+      res.status(409).json({ success: false, error: error.message });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : '读取 Skill 执行配置失败',
@@ -253,9 +267,104 @@ app.get('/api/skills/:skillId/experience', async (req, res) => {
     const data = await getSkillExperienceConfig(req.params.skillId);
     res.json({ success: true, data });
   } catch (error) {
+    if (error instanceof PublishedSkillVersionRequiredError) {
+      res.status(409).json({ success: false, error: error.message });
+      return;
+    }
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : '读取 Skill 前台配置失败',
+    });
+  }
+});
+
+app.get('/api/skills/:skillId/published-runtime', async (req, res) => {
+  try {
+    const data = await getPublishedSkillRuntimeSnapshot(req.params.skillId);
+    res.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof PublishedSkillVersionRequiredError) {
+      res.status(409).json({ success: false, error: error.message });
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : '读取已发布 Skill 快照失败',
+    });
+  }
+});
+
+app.post('/api/execution-grants', async (req, res) => {
+  try {
+    const taskId = String(req.body?.taskId ?? '').trim();
+    const skillId = String(req.body?.skillId ?? '').trim();
+    const skillVersionId = String(req.body?.skillVersionId ?? '').trim();
+    const deviceId = String(req.body?.deviceId ?? '').trim() || undefined;
+
+    if (!taskId || !skillId || !skillVersionId) {
+      res.status(400).json({ success: false, error: 'taskId、skillId、skillVersionId 不能为空' });
+      return;
+    }
+
+    const grant = await createExecutionGrant({ taskId, skillId, skillVersionId, deviceId });
+    res.status(201).json({
+      success: true,
+      data: {
+        grantId: grant.grantId,
+        token: grant.token,
+        expiresAt: grant.expiresAt,
+        allowedProviders: grant.allowedProviders,
+        allowedModels: grant.allowedModels,
+        tokenBudgetMax: grant.tokenBudgetMax,
+      },
+    });
+  } catch (error) {
+    if (error instanceof ExecutionGrantError) {
+      res.status(error.code === 'UNAVAILABLE' ? 503 : 400).json({ success: false, error: error.message });
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : '创建 execution grant 失败',
+    });
+  }
+});
+
+app.post('/api/execution-grants/:id/revoke', async (req, res) => {
+  try {
+    const data = await revokeExecutionGrant(req.params.id);
+    res.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof ExecutionGrantError) {
+      res.status(error.code === 'NOT_FOUND' ? 404 : 400).json({ success: false, error: error.message });
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : '撤销 execution grant 失败',
+    });
+  }
+});
+
+app.post('/api/tasks/:id/events', async (req, res) => {
+  try {
+    const grantToken = String(req.body?.grantToken ?? req.headers['x-execution-grant'] ?? '').trim() || undefined;
+    const envelope = req.body?.envelope ?? req.body;
+    const data = await ingestHermesTaskEvent({
+      taskId: req.params.id,
+      envelope,
+      grantToken,
+    });
+    res.status(202).json({ success: true, data });
+  } catch (error) {
+    if (error instanceof HermesEventIngestError) {
+      const status = error.code === 'NOT_FOUND' ? 404 : error.code === 'GRANT' ? 401 : 400;
+      res.status(status).json({ success: false, error: error.message });
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Hermes 事件回传失败',
     });
   }
 });
@@ -401,6 +510,10 @@ app.post('/api/tasks/ugc', async (req, res) => {
 
     res.status(201).json({ success: true, data: task });
   } catch (error) {
+    if (error instanceof PublishedSkillVersionRequiredError) {
+      res.status(409).json({ success: false, error: error.message });
+      return;
+    }
     console.error('Failed to create UGC task:', error);
     res.status(500).json({
       success: false,

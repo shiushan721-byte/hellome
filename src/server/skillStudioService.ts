@@ -2,6 +2,7 @@ import { type Prisma } from '@prisma/client';
 import { generateText } from './adapters/modelAdapter';
 import { getPrismaClient } from './db/prisma';
 import { isFallbackAllowed } from './db/runtime';
+import { computeSkillVersionChecksum, withSkillVersionChecksum } from './skillChecksum';
 import type {
   SkillArtifactTemplate,
   SkillBusinessFrame,
@@ -163,11 +164,11 @@ export function buildDefaultBusinessFrame(): SkillBusinessFrame {
 
 function createDefaultAggregate(): SkillAggregate {
   const createdAt = nowIso();
-  const latestVersion: SkillVersionRecord = {
+  const latestVersion = withSkillVersionChecksum({
     id: `${DEFAULT_SKILL_ID}-v1`,
     versionNumber: 1,
     versionLabel: 'v0.1.0',
-    status: 'draft',
+    status: 'published',
     title: '短视频客户交付 Agent',
     summary: '帮助视频服务商更快完成短视频客户提案与交付。',
     inputConfig: defaultInputConfig(),
@@ -176,7 +177,8 @@ function createDefaultAggregate(): SkillAggregate {
     businessFrame: buildDefaultBusinessFrame(),
     artifactConfig: defaultArtifactConfig(),
     createdAt,
-  };
+    publishedAt: createdAt,
+  });
 
   return {
     skill: {
@@ -185,9 +187,10 @@ function createDefaultAggregate(): SkillAggregate {
       name: '短视频客户交付 Agent',
       description: '固定结果导向页面范式下的 UGC 交付 Skill。',
       category: 'ugc_video',
-      status: 'draft',
+      status: 'published',
       currentVersion: 1,
       updatedAt: createdAt,
+      publishedAt: createdAt,
       latestVersion,
     },
     versions: [latestVersion],
@@ -257,20 +260,41 @@ function normalizeVersionPayload(payload: Partial<SkillVersionRecord>): SkillVer
     artifactConfig: payload.artifactConfig ?? defaultArtifactConfig(),
     createdAt: payload.createdAt || nowIso(),
     publishedAt: payload.publishedAt,
+    checksum: payload.checksum,
   };
 }
+
+export class PublishedSkillVersionRequiredError extends Error {
+  constructor(readonly skillId: string) {
+    super(`Skill ${skillId} 尚未发布可用版本，正式任务无法执行。`);
+    this.name = 'PublishedSkillVersionRequiredError';
+  }
+}
+
+export type PublishedSkillBinding = {
+  skillId: string;
+  skillSlug: string;
+  skillVersionId: string;
+  versionNumber: number;
+  versionLabel: string;
+  checksum: string;
+  version: SkillVersionRecord;
+  skill: SkillRecord;
+  variant: (typeof PUBLIC_SKILL_VARIANTS)[string];
+};
 
 function resolvePublicSkillVariant(skillId: string) {
   return PUBLIC_SKILL_VARIANTS[skillId] ?? PUBLIC_SKILL_VARIANTS[DEFAULT_SKILL_ID];
 }
 
-function getPublishedOrLatestVersion(aggregate: SkillAggregate): SkillVersionRecord {
-  return (
-    aggregate.versions.find((version) => version.status === 'published') ??
-    aggregate.skill.latestVersion ??
-    aggregate.versions[0] ??
-    normalizeVersionPayload({})
-  );
+function getPublishedVersion(aggregate: SkillAggregate): SkillVersionRecord | null {
+  return aggregate.versions.find((version) => version.status === 'published') ?? null;
+}
+
+function resolveVersionChecksum(version: SkillVersionRecord): string {
+  return version.checksum && version.checksum.length > 0
+    ? version.checksum
+    : computeSkillVersionChecksum(version);
 }
 
 async function persistToPrisma(ownerExternalId: string, aggregate: SkillAggregate): Promise<void> {
@@ -334,6 +358,7 @@ async function persistToPrisma(ownerExternalId: string, aggregate: SkillAggregat
         executionConfig: version.executionConfig as unknown as Prisma.InputJsonValue,
         businessFrame: version.businessFrame as unknown as Prisma.InputJsonValue,
         artifactConfig: version.artifactConfig as unknown as Prisma.InputJsonValue,
+        checksum: resolveVersionChecksum(version),
         createdAt: new Date(version.createdAt),
         publishedAt: version.publishedAt ? new Date(version.publishedAt) : null,
       })),
@@ -377,6 +402,7 @@ async function loadFromPrisma(skillId: string): Promise<SkillAggregate | null> {
       artifactConfig: (version.artifactConfig ?? undefined) as SkillVersionRecord['artifactConfig'],
       createdAt: version.createdAt.toISOString(),
       publishedAt: version.publishedAt?.toISOString(),
+      checksum: version.checksum ?? undefined,
     }),
   );
 
@@ -463,9 +489,12 @@ export async function updateSkill(
 
 export async function publishSkill(ownerExternalId: string, skillId: string): Promise<SkillRecord> {
   const aggregate = ensureMemoryAggregate(skillId);
-  const latest = aggregate.skill.latestVersion;
-  latest.status = 'published';
-  latest.publishedAt = nowIso();
+  const latest = withSkillVersionChecksum({
+    ...aggregate.skill.latestVersion,
+    status: 'published',
+    publishedAt: nowIso(),
+  });
+  latest.checksum = computeSkillVersionChecksum(latest);
   aggregate.skill.status = 'published';
   aggregate.skill.publishedAt = latest.publishedAt;
   aggregate.skill.updatedAt = nowIso();
@@ -546,37 +575,79 @@ export async function runSkillDebug(
 }
 
 export async function getSkillRuntimeConfig(skillId: string): Promise<SkillExecutionConfig> {
-  const variant = resolvePublicSkillVariant(skillId);
-  const aggregate = await loadFromPrisma(variant.sourceSkillId);
-  const resolved = aggregate ?? ensureMemoryAggregate(variant.sourceSkillId);
-  const version = getPublishedOrLatestVersion(resolved);
-
+  const binding = await resolvePublishedSkillBinding(skillId);
   return {
-    ...version.executionConfig,
-    defaultPlanId: variant.preferredPlanId ?? version.executionConfig.defaultPlanId,
+    ...binding.version.executionConfig,
+    defaultPlanId: binding.variant.preferredPlanId ?? binding.version.executionConfig.defaultPlanId,
   };
 }
 
 export async function getSkillExperienceConfig(skillId: string): Promise<SkillExperienceConfig> {
+  const binding = await resolvePublishedSkillBinding(skillId);
+  return {
+    id: skillId,
+    name: binding.variant.name,
+    description: binding.skill.description,
+    title: binding.variant.title,
+    summary: binding.variant.summary || binding.version.summary,
+    inputConfig: binding.version.inputConfig,
+    understandingConfig: binding.version.understandingConfig,
+    executionConfig: {
+      ...binding.version.executionConfig,
+      defaultPlanId: binding.variant.preferredPlanId ?? binding.version.executionConfig.defaultPlanId,
+    },
+    businessFrame: binding.version.businessFrame,
+    artifactConfig: binding.version.artifactConfig,
+  };
+}
+
+export async function resolvePublishedSkillBinding(skillId: string): Promise<PublishedSkillBinding> {
   const variant = resolvePublicSkillVariant(skillId);
   const aggregate = await loadFromPrisma(variant.sourceSkillId);
   const resolved = aggregate ?? ensureMemoryAggregate(variant.sourceSkillId);
-  const version = getPublishedOrLatestVersion(resolved);
+  const version = getPublishedVersion(resolved);
+  if (!version) {
+    throw new PublishedSkillVersionRequiredError(skillId);
+  }
 
   return {
-    id: skillId,
-    name: variant.name,
-    description: resolved.skill.description,
-    title: variant.title,
-    summary: variant.summary || version.summary,
-    inputConfig: version.inputConfig,
-    understandingConfig: version.understandingConfig,
-    executionConfig: {
-      ...version.executionConfig,
-      defaultPlanId: variant.preferredPlanId ?? version.executionConfig.defaultPlanId,
+    skillId: resolved.skill.id,
+    skillSlug: resolved.skill.slug,
+    skillVersionId: version.id,
+    versionNumber: version.versionNumber,
+    versionLabel: version.versionLabel,
+    checksum: resolveVersionChecksum(version),
+    version,
+    skill: resolved.skill,
+    variant,
+  };
+}
+
+export async function getPublishedSkillRuntimeSnapshot(skillId: string) {
+  const binding = await resolvePublishedSkillBinding(skillId);
+  return {
+    skillId: binding.skillId,
+    slug: binding.skillSlug,
+    versionNumber: binding.versionNumber,
+    versionLabel: binding.versionLabel,
+    checksum: binding.checksum,
+    executionManifest: {
+      title: binding.version.title,
+      summary: binding.version.summary,
+      inputConfig: binding.version.inputConfig,
+      understandingConfig: binding.version.understandingConfig,
+      executionConfig: {
+        ...binding.version.executionConfig,
+        defaultPlanId: binding.variant.preferredPlanId ?? binding.version.executionConfig.defaultPlanId,
+      },
+      businessFrame: binding.version.businessFrame,
+      artifactConfig: binding.version.artifactConfig,
     },
-    businessFrame: version.businessFrame,
-    artifactConfig: version.artifactConfig,
+    modelPolicy: {
+      videoProvider: binding.version.executionConfig.videoProvider,
+      availablePlans: binding.version.executionConfig.availablePlans,
+    },
+    publishedAt: binding.version.publishedAt ?? binding.skill.publishedAt,
   };
 }
 
@@ -584,13 +655,10 @@ export async function resolveSkillRoutePlan(
   skillId: string,
   input: UgcTaskInput,
 ): Promise<UgcRoutePlan> {
-  const variant = resolvePublicSkillVariant(skillId);
-  const aggregate = await loadFromPrisma(variant.sourceSkillId);
-  const resolved = aggregate ?? ensureMemoryAggregate(variant.sourceSkillId);
-  const version = getPublishedOrLatestVersion(resolved);
+  const binding = await resolvePublishedSkillBinding(skillId);
   const execution = {
-    ...version.executionConfig,
-    defaultPlanId: variant.preferredPlanId ?? version.executionConfig.defaultPlanId,
+    ...binding.version.executionConfig,
+    defaultPlanId: binding.variant.preferredPlanId ?? binding.version.executionConfig.defaultPlanId,
   };
   const plans = execution.availablePlans;
   const defaultPlan =

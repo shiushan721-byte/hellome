@@ -76,4 +76,5 @@ export interface UgcTaskEvent {
   level: 'info' | 'success' | 'warning' | 'error';
   message: string;
   createdAt: string;
+  metadata?: Record<string, unknown>;
 }

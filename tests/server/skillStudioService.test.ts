@@ -6,6 +6,8 @@ import {
   updateSkill,
 } from '../../src/server/skillStudioService';
 
+process.env.ALLOW_INMEMORY_FALLBACK = 'true';
+
 test('getSkill returns normalized business frame by default', async () => {
   const skill = await getSkill('media-ugc');
 
