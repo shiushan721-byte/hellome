@@ -229,7 +229,7 @@ export function listAvailableModels(): {
 // API — same input shape, same output shape, same fallback semantics. Adding
 // a new provider (e.g. fal.ai, replicate) is a single function.
 // =============================================================================
-export type MediaProvider = 'gemini' | 'local-comfyui' | 'mock';
+export type MediaProvider = 'gemini' | 'grsai' | 'local-comfyui' | 'mock';
 
 export type MediaTask = 'txt2img' | 'txt2video' | 'img2video' | 'edit';
 
@@ -274,6 +274,7 @@ const DEFAULT_MEDIA_OUTPUT_DIR =
 function getMediaProvider(): MediaProvider {
   const raw = (process.env.MEDIA_PROVIDER ?? '').trim().toLowerCase();
   if (raw === 'gemini') return 'gemini';
+  if (raw === 'grsai') return 'grsai';
   if (raw === 'local-comfyui') return 'local-comfyui';
   return 'mock';
 }
@@ -282,6 +283,9 @@ function defaultModelForTask(provider: MediaProvider, task: MediaTask): string {
   if (provider === 'gemini') {
     if (task === 'edit') return 'imagen-3.0-capability-001';
     return 'imagen-4.0-generate-001';
+  }
+  if (provider === 'grsai') {
+    return process.env.GRSAI_MODEL?.trim() || 'gpt-image-2';
   }
   if (provider === 'local-comfyui') {
     switch (task) {
@@ -329,6 +333,18 @@ function geminiMediaConfigured(): boolean {
   return Boolean(geminiApiKey());
 }
 
+function grsaiApiKey(): string {
+  return (process.env.GRSAI_API_KEY ?? '').trim();
+}
+
+function grsaiBaseUrl(): string {
+  return (process.env.GRSAI_BASE_URL ?? 'https://grsai.dakka.com.cn').replace(/\/$/, '');
+}
+
+function grsaiMediaConfigured(): boolean {
+  return Boolean(grsaiApiKey());
+}
+
 // =============================================================================
 // Provider implementations
 // =============================================================================
@@ -366,6 +382,86 @@ async function generateImageWithGemini(input: GenerateMediaInput): Promise<Gener
   if (!img) throw new Error('gemini txt2img returned no image');
   const buf = Buffer.from(img.imageBytes ?? '', 'base64');
   return persistLocal(buf, 'png', 'gemini', model, { mimeType: 'image/png' });
+}
+
+/**
+ * Grsai gpt-image-2 — third-party Chinese API that wraps OpenAI's image
+ * model. Reuses the same vendor SDK surface as the standalone skill at
+ * `.cursor/skills/grsai-gpt-image-2/`, so the prompt conventions and
+ * model variants stay consistent across the project.
+ *
+ * Capabilities:
+ *   - txt2img (with optional reference images)
+ *   - edit (passing input_image as a reference)
+ *
+ * Note: Grsai does not currently expose a video model, so video tasks
+ * fall back to mock even when MEDIA_PROVIDER=grsai.
+ */
+async function generateImageWithGrsai(input: GenerateMediaInput): Promise<GenerateMediaOutput> {
+  if (input.task === 'txt2video' || input.task === 'img2video') {
+    throw new Error(`grsai provider does not support ${input.task}; switch MEDIA_PROVIDER or use a different model`);
+  }
+
+  const aspect = process.env.GRSAI_ASPECT?.trim() || '1:1';
+  const model = defaultModelForTask('grsai', input.task);
+  const images: string[] = [];
+  if (input.inputImageUrl) images.push(input.inputImageUrl);
+  if (input.task === 'edit' && !input.inputImageUrl) {
+    throw new Error('grsai edit requires inputImageUrl');
+  }
+
+  const body = {
+    model,
+    prompt: input.prompt,
+    images,
+    aspectRatio: aspect,
+    replyType: 'json',
+  };
+
+  const started = Date.now();
+  const resp = await fetch(`${grsaiBaseUrl()}/v1/api/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${grsaiApiKey()}`,
+    },
+    body: JSON.stringify(body),
+  });
+  let data: Record<string, unknown> = {};
+  try {
+    data = await resp.json() as Record<string, unknown>;
+  } catch {
+    /* not JSON — fall through to error */
+  }
+  if (!resp.ok) {
+    throw new Error(`grsai HTTP ${resp.status}: ${JSON.stringify(data).slice(-300)}`);
+  }
+
+  // Handle violation / failure / running status.
+  if (data.status === 'violation' || data.status === 'failed') {
+    throw new Error(`grsai refused: ${JSON.stringify(data.error ?? data.status)}`);
+  }
+  if (data.status === 'running') {
+    throw new Error(`grsai still running (no replyType=async support yet) — task id=${data.id}`);
+  }
+
+  const url = pickGrsaiImageUrl(data);
+  if (!url) throw new Error(`grsai response missing results[0].url: ${JSON.stringify(data).slice(-300)}`);
+
+  const buf = await fetchBytes(url);
+  return persistLocal(buf, 'png', 'grsai', model, {
+    mimeType: 'image/png',
+    elapsedMs: Date.now() - started,
+  });
+}
+
+function pickGrsaiImageUrl(data: Record<string, unknown>): string | null {
+  const results = Array.isArray(data.results) ? (data.results as Array<Record<string, unknown>>) : [];
+  for (const r of results) {
+    const u = r.url ?? r.image_url ?? r.imageUrl;
+    if (typeof u === 'string' && u.length > 0) return u;
+  }
+  return null;
 }
 
 /**
@@ -561,6 +657,9 @@ export async function generateMedia(input: GenerateMediaInput): Promise<Generate
     if (provider === 'gemini' && geminiMediaConfigured()) {
       return await generateImageWithGemini(input);
     }
+    if (provider === 'grsai' && grsaiMediaConfigured()) {
+      return await generateImageWithGrsai(input);
+    }
     if (provider === 'local-comfyui' && isLocalComfyUiConfigured()) {
       return await generateWithLocalComfyUi(input);
     }
@@ -589,10 +688,15 @@ export function listAvailableMediaModels(): {
   const configured =
     provider === 'gemini'
       ? geminiMediaConfigured()
-      : provider === 'local-comfyui'
-        ? isLocalComfyUiConfigured()
-        : true;
-  const tasks: MediaTask[] = ['txt2img', 'txt2video', 'img2video', 'edit'];
+      : provider === 'grsai'
+        ? grsaiMediaConfigured()
+        : provider === 'local-comfyui'
+          ? isLocalComfyUiConfigured()
+          : true;
+  // Grsai is image-only; video tasks fall back to mock even when configured.
+  const tasks: MediaTask[] = provider === 'grsai'
+    ? ['txt2img', 'edit']
+    : ['txt2img', 'txt2video', 'img2video', 'edit'];
   return {
     provider,
     tasks,

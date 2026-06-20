@@ -160,34 +160,47 @@ async function ensureUserRecord(user: UserProfile): Promise<UserProfile> {
   if (!prisma) return user;
 
   const prismaDb = prisma as any;
-  const existingByPhone =
-    (await prismaDb.user.findFirst({
-      where: {
-        OR: [{ externalId: user.phone }, { phone: user.phone }, { email: user.email }],
-      },
+  const canonicalExternalId = user.phone;
+
+  const ownerByExternalId =
+    (await prismaDb.user.findUnique({
+      where: { externalId: canonicalExternalId },
       include: { workspaces: true },
     })) ?? null;
 
-  const persistedUser = existingByPhone
+  const ownerByPhone =
+    ownerByExternalId ??
+    (await prismaDb.user.findFirst({
+      where: { phone: user.phone },
+      include: { workspaces: true },
+    })) ??
+    null;
+
+  const profilePatch = {
+    displayName: user.name,
+    email: user.email,
+    phone: user.phone,
+  };
+
+  const persistedUser = ownerByExternalId
     ? await prismaDb.user.update({
-        where: { id: existingByPhone.id },
-        data: {
-          externalId: user.phone,
-          displayName: user.name,
-          email: user.email,
-          phone: user.phone,
-        },
+        where: { id: ownerByExternalId.id },
+        data: profilePatch,
         include: { workspaces: true },
       })
-    : await prismaDb.user.create({
-        data: {
-          externalId: user.phone,
-          displayName: user.name,
-          email: user.email,
-          phone: user.phone,
-        },
-        include: { workspaces: true },
-      });
+    : ownerByPhone
+      ? await prismaDb.user.update({
+          where: { id: ownerByPhone.id },
+          data: profilePatch,
+          include: { workspaces: true },
+        })
+      : await prismaDb.user.create({
+          data: {
+            externalId: canonicalExternalId,
+            ...profilePatch,
+          },
+          include: { workspaces: true },
+        });
 
   const existingWorkspace = persistedUser.workspaces?.[0];
   if (!existingWorkspace) {

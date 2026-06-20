@@ -8,6 +8,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import {
   generateText,
   listAvailableModels,
+  listAvailableMediaModels,
   type GenerateTextInput,
 } from './src/server/adapters/modelAdapter';
 import {
@@ -24,6 +25,7 @@ import {
   runSkillDebug,
   updateSkill,
 } from './src/server/skillStudioService';
+import { listAllSkills } from './src/server/adminSkillService';
 import {
   cancelUgcTask,
   createUgcTask,
@@ -244,6 +246,53 @@ app.post('/api/studio/skills/:skillId/debug', async (req, res) => {
 
 app.get('/api/models', (_req, res) => {
   res.json({ success: true, data: listAvailableModels() });
+});
+
+/**
+ * GET /api/admin/skills
+ *   Aggregate inventory of every skill this project exposes across all
+ *   three layers (engineering / business / generation). Introspection-only
+ *   endpoint — no DB writes, no auth required. Powering ops/dev tooling
+ *   and a future admin dashboard.
+ *
+ * Query params:
+ *   layer  filter to one of: engineering | business | generation
+ *   q      substring match against id / name / description
+ */
+app.get('/api/admin/skills', async (req, res) => {
+  try {
+    const data = await listAllSkills();
+    let skills = data.skills;
+    const layer = String(req.query.layer ?? '').trim();
+    if (layer && ['engineering', 'business', 'generation'].includes(layer)) {
+      skills = skills.filter((s) => s.layer === layer);
+    }
+    const q = String(req.query.q ?? '').trim().toLowerCase();
+    if (q) {
+      skills = skills.filter((s) =>
+        s.id.toLowerCase().includes(q)
+        || s.name.toLowerCase().includes(q)
+        || s.description.toLowerCase().includes(q),
+      );
+    }
+    res.json({
+      success: true,
+      data: {
+        total: skills.length,
+        byLayer: {
+          engineering: skills.filter((s) => s.layer === 'engineering').length,
+          business: skills.filter((s) => s.layer === 'business').length,
+          generation: skills.filter((s) => s.layer === 'generation').length,
+        },
+        skills,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'skill inventory failed',
+    });
+  }
 });
 
 app.get('/api/skills/:skillId/runtime', async (req, res) => {

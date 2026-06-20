@@ -462,6 +462,7 @@ async function persist(record: TaskAggregate): Promise<void> {
       payload: {
         ...((payloadJson as Record<string, unknown>) ?? {}),
         skillId: record.input.skillId ?? null,
+        talentImageName: record.input.talentImageName ?? null,
       } as Prisma.InputJsonValue,
     },
     create: {
@@ -475,6 +476,7 @@ async function persist(record: TaskAggregate): Promise<void> {
       referenceUrl: record.input.referenceUrl ?? null,
       payload: {
         skillId: record.input.skillId ?? null,
+        talentImageName: record.input.talentImageName ?? null,
       } as Prisma.InputJsonValue,
     },
   });
@@ -634,7 +636,8 @@ async function loadAllFromPrisma(): Promise<TaskAggregate[]> {
       productImageUrl: row.input?.productImage ?? undefined,
       productImageName: row.input?.productName ?? undefined,
       talentImageUrl: row.input?.talentImage ?? undefined,
-      talentImageName: row.input?.talentImage ?? undefined,
+      talentImageName:
+        ((row.input?.payload as { talentImageName?: string } | null)?.talentImageName ?? undefined),
       sellingPoint: row.input?.sellingPoint ?? '',
       platform: row.input?.platform ?? '抖音',
       effectGoal: row.input?.effectGoal ?? '更像真人种草',
