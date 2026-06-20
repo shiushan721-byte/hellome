@@ -31,6 +31,7 @@ import {
   type GuestNavId,
   type SidebarMode,
 } from '../../lib/sidebarNav';
+import { canAccessAdmin, canAccessStudio } from '../../lib/auth';
 import {
   getSidebarCollapsed,
   setSidebarCollapsed,
@@ -248,6 +249,13 @@ function SidebarInner({
   const moreButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleNavigate = () => onMobileClose?.();
+  const canSeeStudio = mode === 'app' ? canAccessStudio() : false;
+  const canSeeAdmin = mode === 'app' ? canAccessAdmin() : false;
+  const secondaryNavItems = APP_NAV_SECONDARY.filter((item) => {
+    if (item.id === 'studio' && !canSeeStudio) return false;
+    if (item.id === 'admin' && !canSeeAdmin) return false;
+    return true;
+  });
 
   const handleHermes = () => {
     if (hermes.status === 'connected') {
@@ -279,10 +287,10 @@ function SidebarInner({
       {!collapsed && <div className="my-3 border-t border-[#f0f0f0]" />}
       {collapsed && <div className="my-2 border-t border-[#f0f0f0] mx-2" />}
 
-      {APP_NAV_SECONDARY.map((item) => (
-        <SimpleNavLink
-          key={item.id}
-          to={item.to}
+            {secondaryNavItems.map((item) => (
+              <SimpleNavLink
+                key={item.id}
+                to={item.to}
           label={item.label}
           icon={item.icon}
           active={isAppNavActive(item.id, location.pathname)}

@@ -13,14 +13,14 @@ const levelColor: Record<HermesLogEntry['level'], string> = {
 
 export default function HermesLogPanel({ logs }: HermesLogPanelProps) {
   return (
-    <div className="bg-[#F2F0ED]/60 border border-black/8">
-      <div className="px-3 py-2 border-b border-black/8 flex items-center justify-between">
+    <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#FCFCFD]">
+      <div className="flex items-center justify-between border-b border-black/[0.06] px-4 py-3">
         <span className="text-[10px] font-bold uppercase tracking-widest text-black/50">
           Hz-Hermes 操作日志
         </span>
         <span className="text-[10px] font-mono text-black/35">{logs.length} 条</span>
       </div>
-      <div className="max-h-48 overflow-y-auto custom-scrollbar p-3 space-y-1.5 font-mono text-[11px]">
+      <div className="max-h-64 space-y-1.5 overflow-y-auto p-4 font-mono text-[11px] custom-scrollbar">
         {logs.length === 0 ? (
           <p className="text-black/35">等待任务启动…</p>
         ) : (

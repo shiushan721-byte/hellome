@@ -15,7 +15,10 @@ import type { AgentMarketCard } from '../types/agentsPage';
 
 const AGENT_KEYWORDS: Partial<Record<string, string[]>> = {
   geo: ['geo', '检测', '可见度', '品牌', 'ai', '搜索', '大模型', '优化', 'faq', '提及'],
-  media: ['公众号', '小红书', '自媒体', '文章', '改写', '标题', '内容'],
+  media: ['视频', '样片', 'ugc', '口播', '带货', '广告', '产品图', '模特图'],
+  'media-seeding': ['视频', '样片', 'ugc', '种草', '口播', '广告', '产品图', '模特图'],
+  'media-review': ['视频', '样片', 'ugc', '测评', '讲解', '开箱', '产品图', '模特图'],
+  'media-conversion': ['视频', '样片', 'ugc', '带货', '转化', '成交', '下单', '口播'],
   sales: ['销售', '客户', '私信', '邮件', '获客', '外联', '跟进', '话术'],
   'faq-generator': ['faq', '问答', 'llms', '语料', '召回', '结构化', '批量'],
 };
@@ -28,8 +31,20 @@ export const AGENT_TASK_TEMPLATES: Partial<
     { id: 'geo-suggest', title: '生成 GEO 优化建议', prompt: '生成 GEO 优化建议' },
   ],
   media: [
-    { id: 'media-article', title: '写公众号文章', prompt: '写一篇公众号文章' },
-    { id: 'media-xhs', title: '小红书改写', prompt: '把内容改成小红书风格' },
+    { id: 'media-ugc', title: '生成 UGC 样片', prompt: '生成一条 UGC 样片视频' },
+    { id: 'media-cover', title: '生成首帧脚本', prompt: '先生成样片脚本与首帧' },
+  ],
+  'media-seeding': [
+    { id: 'media-seeding-ugc', title: '生成真人种草样片', prompt: '生成一条真人种草 UGC 样片视频' },
+    { id: 'media-seeding-script', title: '生成种草脚本', prompt: '先生成种草样片脚本与首帧' },
+  ],
+  'media-review': [
+    { id: 'media-review-ugc', title: '生成测评讲解样片', prompt: '生成一条测评讲解 UGC 样片视频' },
+    { id: 'media-review-script', title: '生成测评脚本', prompt: '先生成测评讲解脚本与首帧' },
+  ],
+  'media-conversion': [
+    { id: 'media-conversion-ugc', title: '生成带货转化样片', prompt: '生成一条带货转化 UGC 样片视频' },
+    { id: 'media-conversion-script', title: '生成转化脚本', prompt: '先生成带货转化脚本与首帧' },
   ],
   sales: [
     { id: 'sales-analyze', title: '分析客户网站', prompt: '分析客户网站' },
@@ -41,7 +56,14 @@ export const AGENT_TASK_TEMPLATES: Partial<
   ],
 };
 
-const ONBOARDING_AGENT_IDS = ['geo', 'media', 'sales', 'faq-generator'] as const;
+const ONBOARDING_AGENT_IDS = [
+  'geo',
+  'media-seeding',
+  'media-review',
+  'media-conversion',
+  'sales',
+  'faq-generator',
+] as const;
 
 function scoreAgent(prompt: string, agentId: string): number {
   const lower = prompt.toLowerCase();
@@ -153,8 +175,8 @@ function buildRecommendedActions(): RecommendedAction[] {
   if (lastContent) {
     actions.push({
       id: 'rec-media-xhs',
-      title: '基于上次内容，继续生成小红书改写版',
-      agentId: 'media',
+      title: '基于上次卖点，继续生成真人种草样片',
+      agentId: 'media-seeding',
       sourceTaskId: lastContent.id,
       estimatedTokenMin: 2000,
       estimatedTokenMax: 8000,
@@ -210,6 +232,8 @@ export function getOnboardingMarketCards(): AgentMarketCard[] {
 
 export function statusLabel(status: TaskStatus): string {
   const map: Record<TaskStatus, string> = {
+    draft: '草稿',
+    queued: '排队中',
     running: '进行中',
     waiting_confirmation: '等待确认',
     completed: '已完成',

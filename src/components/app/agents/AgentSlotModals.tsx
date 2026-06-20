@@ -1,8 +1,9 @@
-import type { DeactivateCheckResult, EnableCheckResult } from '../../types/agentSlots';
+import type { ReactNode } from 'react';
+import type { DeactivateCheckResult, EnableCheckResult } from '../../../types/agentSlots';
 
 interface ModalShellProps {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   onClose: () => void;
 }
 

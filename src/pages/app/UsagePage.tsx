@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import {
   getComputeStats,
@@ -6,6 +6,7 @@ import {
   getUsage,
   isLowBalance,
   subscribeUsage,
+  syncUsageState,
 } from '../../lib/usageStore';
 import { formatTime } from '../../components/app/tasks/TaskStatusBadge';
 import { formatToken, formatTokenRange } from '../../lib/tokenBilling';
@@ -19,6 +20,10 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function UsagePage() {
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
+
+  useEffect(() => {
+    void syncUsageState();
+  }, []);
 
   const usage = getUsage();
   const stats = getComputeStats(usage);

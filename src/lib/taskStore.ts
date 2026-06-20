@@ -13,11 +13,12 @@ let snapshot: Task[] = EMPTY_TASKS;
 let snapshotRaw: string | null = '__init__';
 
 function normalizeTask(raw: Task & Record<string, unknown>): Task {
+  const geoInput = isGeoTaskInput(raw.input) ? raw.input : undefined;
   const est =
     raw.estimatedTokenMin != null
       ? { min: Number(raw.estimatedTokenMin), max: Number(raw.estimatedTokenMax) }
-      : raw.input
-        ? estimateGeoTokens(raw.input)
+      : geoInput
+        ? estimateGeoTokens(geoInput)
         : { min: 12000, max: 25000 };
 
   return {
@@ -31,6 +32,15 @@ function normalizeTask(raw: Task & Record<string, unknown>): Task {
       tokenUsed: s.tokenUsed != null ? Number(s.tokenUsed) : undefined,
     })),
   };
+}
+
+function isGeoTaskInput(input: Task['input']): input is GeoTaskInput {
+  return Boolean(
+    input &&
+      typeof input === 'object' &&
+      'brandName' in input &&
+      'websiteUrl' in input,
+  );
 }
 
 function readTasksFromStorage(): Task[] {
@@ -135,6 +145,6 @@ export function createGeoTask(input: GeoTaskInput): Task {
 
 export function duplicateTask(id: string): Task | undefined {
   const source = getTask(id);
-  if (!source?.input) return undefined;
+  if (!isGeoTaskInput(source?.input)) return undefined;
   return createGeoTask(source.input);
 }

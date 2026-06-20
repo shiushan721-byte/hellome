@@ -8,6 +8,7 @@ export type FirstRunHermesStatus =
   | 'waiting_pairing'
   | 'account_mismatch'
   | 'offline'
+  | 'service_unavailable'
   | 'connected';
 
 export interface FirstRunOnboardingState {
@@ -27,6 +28,8 @@ export function mapToFirstRunStatus(snapshot: HermesConnectionSnapshot): FirstRu
       return 'offline';
     case 'account_mismatch':
       return 'account_mismatch';
+    case 'api_unavailable':
+      return 'service_unavailable';
     case 'capability_missing':
       return 'not_connected';
     case 'not_paired':

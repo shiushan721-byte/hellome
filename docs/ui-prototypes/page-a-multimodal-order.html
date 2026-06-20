@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HelloMe Page A - 多模态下单页</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+      :root {
+        color-scheme: light;
+        --canvas: #f5f5f7;
+        --paper: #fdfcfb;
+        --card: #ffffff;
+        --surface: #fcfcfd;
+        --soft: #f7f7f8;
+        --tag: #f2f0ed;
+        --ink: #1a1a1a;
+        --text-subtle: rgba(26, 26, 26, 0.68);
+        --text-muted: rgba(26, 26, 26, 0.5);
+        --line: rgba(26, 26, 26, 0.1);
+        --line-strong: rgba(26, 26, 26, 0.16);
+        --accent: #eaf6f4;
+        --accent-ink: #0f766e;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #3b82f6;
+        --shadow-sm: 0 6px 20px rgba(17, 18, 20, 0.04);
+        --shadow-md: 0 12px 32px rgba(17, 18, 20, 0.06);
+        --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.16);
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 40px;
+        --radius-shell: 24px;
+        --radius-panel: 20px;
+        --radius-card: 14px;
+        --radius-control: 12px;
+        --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--paper) 88%, var(--canvas)) 0%, var(--canvas) 100%);
+        color: var(--ink);
+      }
+      a { color: inherit; text-decoration: none; }
+      button, input, textarea { font: inherit; }
+      .app-shell { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0,1fr); }
+      .sidebar {
+        background: var(--paper);
+        border-right: 1px solid var(--line);
+        padding: 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 4px 6px;
+      }
+      .brand-mark {
+        width: 44px; height: 44px; border-radius: 14px; background: #000; color: #fff;
+        display: grid; place-items: center; font-weight: 900; font-size: 18px;
+      }
+      .brand-copy strong { display: block; font-family: "Playfair Display", serif; font-size: 18px; }
+      .brand-copy span { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+      .nav-group { display: grid; gap: 8px; }
+      .nav-link {
+        display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px;
+        color: var(--text-subtle); font-size: 14px; font-weight: 700;
+      }
+      .nav-link.active { background: #ececef; color: var(--ink); }
+      .nav-link:hover { background: #f1f1f3; }
+      .nav-sep { height: 1px; background: var(--line); margin: 6px 2px; }
+      .nav-pill {
+        margin-top: auto; padding: 12px 14px; border-radius: 16px; background: #f0f1f3; border: 1px solid var(--line);
+        font-size: 13px; font-weight: 700; color: var(--ink);
+      }
+      .main-shell { min-width: 0; display: flex; flex-direction: column; }
+      .topbar {
+        height: 72px; border-bottom: 1px solid var(--line); background: rgba(253,252,251,.94);
+        backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 22px;
+      }
+      .top-pill {
+        display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px;
+        border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 13px; font-weight: 700; color: var(--text-subtle);
+      }
+      .top-pill.success { background: var(--accent); color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 16%, var(--line)); }
+      .avatar {
+        width: 38px; height: 38px; border-radius: 999px; background: linear-gradient(180deg,#f1d3c7 0%,#b78ca4 100%);
+        border: 1px solid var(--line);
+      }
+      .workspace-tabs {
+        display: flex; align-items: end; gap: 8px; padding: 12px 14px 0; background: #dfe3e8; border-bottom: 1px solid var(--line);
+      }
+      .workspace-tab {
+        display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 16px;
+        background: rgba(255,255,255,.55); border: 1px solid rgba(26,26,26,.08); border-bottom: none;
+        border-radius: 16px 16px 0 0; font-size: 14px; font-weight: 700; color: var(--text-subtle);
+      }
+      .workspace-tab.active { background: var(--paper); color: var(--ink); }
+      .workspace-tab.plus { width: 40px; justify-content: center; padding: 0; font-size: 24px; line-height: 1; }
+      .page { width: min(1500px, calc(100vw - 28px)); margin: 0 auto; padding: 20px 0 40px; }
+      .shell, .panel {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-shell);
+        box-shadow: var(--shadow-md);
+      }
+      .shell { padding: 24px 28px; margin-bottom: 18px; }
+      .eyebrow {
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+        background: var(--soft); color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      }
+      h1 {
+        margin: 14px 0 8px;
+        font-family: "Playfair Display", serif;
+        font-size: 40px;
+        line-height: 1.04;
+      }
+      .shell p { margin: 0; color: var(--text-subtle); font-size: 14px; line-height: 1.8; max-width: 920px; }
+      .top-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; margin-top: 18px; }
+      .hero-card, .mini-kpi, .panel, .field-card, .case-card, .delivery-item, .cost-card, .wallet-card, .tab-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+      }
+      .hero-card, .mini-kpi, .wallet-card { padding: 16px; }
+      .hero-card strong, .mini-kpi strong, .wallet-card strong { display: block; margin-top: 8px; font-size: 16px; }
+      .hero-card p, .mini-kpi p, .wallet-card p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-subtle); }
+      .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .workspace { display: grid; grid-template-columns: 360px minmax(0, 1fr) 320px; gap: 16px; }
+      .panel { padding: 18px; }
+      .panel-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+      .panel-title h2 { margin: 0; font-size: 20px; }
+      .meta {
+        font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--text-muted); font-weight: 700;
+      }
+      .field-stack, .action-stack, .case-stack, .right-stack, .tab-content { display: grid; gap: 12px; }
+      .field-card { padding: 14px; }
+      .field-card strong { display: block; font-size: 14px; margin-bottom: 6px; }
+      .field-card p { margin: 0; font-size: 12px; line-height: 1.7; color: var(--text-muted); }
+      .field-card.upload {
+        border-style: dashed;
+        background: radial-gradient(circle at top, color-mix(in srgb, var(--warning) 10%, transparent) 0%, transparent 72%);
+      }
+      .input, .textarea, .select-line {
+        width: 100%; border: 1px solid var(--line); background: var(--card); color: var(--ink);
+        border-radius: var(--radius-control); padding: 12px 14px; font-size: 14px; outline: none;
+      }
+      .textarea { min-height: 108px; resize: vertical; line-height: 1.75; }
+      .input:focus-visible, .textarea:focus-visible, .select-line:focus-within { box-shadow: var(--focus-ring); border-color: color-mix(in srgb, var(--accent-ink) 60%, var(--line)); }
+      .chip-row, .seg-row, .tag-row, .tab-row { display: flex; flex-wrap: wrap; gap: 10px; }
+      .chip, .seg, .tag, .ghost, .primary, .secondary, .tiny-btn, .tab-btn {
+        border: 1px solid transparent; border-radius: 12px; cursor: pointer; transition: .18s ease; font-weight: 700;
+      }
+      .seg, .ghost, .secondary, .tab-btn { background: var(--soft); color: var(--text-subtle); padding: 10px 14px; font-size: 13px; }
+      .seg.active, .tab-btn.active { background: #000; color: #fff; }
+      .chip, .tag { background: var(--card); border-color: var(--line); color: var(--text-subtle); padding: 8px 10px; font-size: 12px; }
+      .primary, .secondary {
+        min-height: 44px; padding: 0 16px; font-size: 14px;
+      }
+      .primary { background: #000; color: #fff; }
+      .secondary { background: var(--card); border-color: var(--line-strong); color: var(--ink); }
+      .ghost { border-color: var(--line); background: var(--card); }
+      .tiny-btn { background: transparent; color: var(--text-muted); padding: 6px 8px; font-size: 12px; border-color: var(--line); }
+      .seg:hover, .ghost:hover, .secondary:hover, .chip:hover, .tag:hover, .tiny-btn:hover, .tab-btn:hover { background: var(--tag); transform: translateY(-1px); }
+      .primary:hover { opacity: .92; transform: translateY(-1px); }
+      .input-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.7; }
+      .parser-card {
+        padding: 14px; border: 1px dashed var(--line-strong); border-radius: var(--radius-control);
+        background: color-mix(in srgb, var(--info) 7%, transparent);
+      }
+      .parser-card strong { display: block; font-size: 14px; margin-bottom: 6px; }
+      .parser-preview {
+        display: grid; grid-template-columns: 76px 1fr; gap: 12px; margin-top: 10px;
+      }
+      .thumb-mini, .doc-lines, .video-preview, .story-panel, .trade-panel, .outline-panel, .asset-thumb {
+        border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+      }
+      .thumb-mini { height: 76px; background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, transparent), var(--soft)); }
+      .doc-lines {
+        padding: 10px;
+        background: linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 24px, var(--card);
+      }
+      .case-card { overflow: hidden; }
+      .case-hero {
+        height: 190px; background: linear-gradient(180deg, #181a1f 0%, #333949 100%); position: relative;
+      }
+      .case-hero::before {
+        content: "HOT CASE · 10s UGC Ad";
+        position: absolute; left: 14px; top: 14px; color: rgba(255,255,255,.74); font-size: 11px; letter-spacing: .08em;
+      }
+      .case-body { padding: 16px; }
+      .case-body h3 { margin: 0 0 8px; font-size: 20px; }
+      .case-body p { margin: 0; font-size: 13px; line-height: 1.75; color: var(--text-subtle); }
+      .story-panel, .outline-panel, .trade-panel { padding: 14px; }
+      .story-panel strong, .outline-panel strong, .trade-panel strong, .cost-card strong, .delivery-item strong { display: block; }
+      .story-panel p, .outline-panel p, .trade-panel p, .cost-card p, .delivery-item p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-subtle); }
+      .video-preview {
+        padding: 12px; background: #111214; box-shadow: var(--shadow-lg);
+      }
+      .video-frame {
+        aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
+        background: linear-gradient(180deg, #ecd8c2 0%, #c5d7e7 54%, #899aa8 100%);
+        position: relative;
+      }
+      .video-frame::before {
+        content: "Preview Carousel";
+        position: absolute; left: 12px; top: 12px; color: rgba(255,255,255,.76); font-size: 11px;
+      }
+      .video-frame::after {
+        content: ""; position: absolute; inset: auto 0 0; height: 64px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.44));
+      }
+      .outline-list, .delivery-list, .config-list { display: grid; gap: 10px; }
+      .outline-row, .delivery-item, .config-row, .wallet-card, .cost-card, .tab-card {
+        padding: 12px 14px;
+      }
+      .outline-row, .config-row {
+        border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+      }
+      .outline-row span, .config-row span, .wallet-card span, .delivery-item span, .cost-card span {
+        display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
+      }
+      .wallet-card strong { font-size: 18px; }
+      .wallet-card.warn strong { color: var(--warning); }
+      .cost-card {
+        border: 1px solid color-mix(in srgb, var(--warning) 36%, var(--line));
+        background: color-mix(in srgb, var(--warning) 8%, transparent);
+      }
+      .cost-range {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--warning) 14%, transparent); color: color-mix(in srgb, var(--warning) 84%, var(--ink));
+        font-size: 12px; font-weight: 700; margin-top: 10px;
+      }
+      .delivery-item { border: 1px solid var(--line); }
+      .checklist { display: grid; gap: 10px; }
+      .check {
+        display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 12px;
+        border: 1px solid var(--line); background: var(--card);
+      }
+      .dot {
+        width: 18px; height: 18px; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+        display: grid; place-items: center; font-size: 11px; font-weight: 800; flex-shrink: 0; margin-top: 2px;
+      }
+      .tab-card { border: 1px solid var(--line); }
+      .empty {
+        padding: 18px; border-radius: 14px; background: var(--soft); color: var(--text-subtle); font-size: 13px; line-height: 1.75;
+      }
+      .floating-bar {
+        position: sticky; bottom: 18px; margin-top: 16px; z-index: 5;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 14px 16px; border-radius: 18px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.88);
+        backdrop-filter: blur(12px); box-shadow: var(--shadow-lg);
+      }
+      .floating-meta { font-size: 12px; color: var(--text-muted); }
+      .floating-strong { font-size: 16px; font-weight: 800; margin-top: 4px; }
+      .top-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+      .linkline { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+
+      @media (max-width: 1220px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar { display: none; }
+        .top-grid, .workspace { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 760px) {
+        .page { width: min(100vw - 18px, 1500px); padding-top: 12px; }
+        .shell, .panel { padding: 18px; }
+        h1 { font-size: 32px; }
+        .kpi-grid { grid-template-columns: 1fr; }
+        .floating-bar { flex-direction: column; align-items: stretch; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">↯</div>
+          <div class="brand-copy"><strong>HelloMe</strong><span>AI 任务交付平台</span></div>
+        </div>
+        <div class="nav-group">
+          <a class="nav-link" href="./frontstage-design-preview.html">规范总览</a>
+          <a class="nav-link active" href="./page-a-multimodal-order.html">下单页</a>
+          <a class="nav-link" href="./page-b-execution-hitl.html">执行页</a>
+          <a class="nav-link" href="./page-c-client-portal.html">交付页</a>
+        </div>
+        <div class="nav-sep"></div>
+        <div class="nav-group">
+          <a class="nav-link" href="./page-a-multimodal-order.html">我的工作台</a>
+          <a class="nav-link" href="./page-b-execution-hitl.html">任务中心</a>
+          <a class="nav-link" href="./page-c-client-portal.html">成果中心</a>
+        </div>
+        <div class="nav-pill">Hermes 已连接 · Backend Silent</div>
+      </aside>
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="top-pill">剩余 Token 20,000</div>
+          <div class="top-pill">可用余额 ￥2,460</div>
+          <div class="top-pill success">Hermes 已连接</div>
+          <div class="avatar"></div>
+          <div class="top-pill">Studio Operator</div>
+        </header>
+        <div class="workspace-tabs">
+          <a class="workspace-tab active" href="./page-a-multimodal-order.html">多模态下单页</a>
+          <a class="workspace-tab" href="./page-b-execution-hitl.html">执行与人工兜底页</a>
+          <a class="workspace-tab" href="./page-c-client-portal.html">服务商客户交付页</a>
+          <span class="workspace-tab plus">+</span>
+        </div>
+    <main class="page">
+      <section class="shell">
+        <div class="eyebrow">Page A · Multimodal Order</div>
+        <h1>HelloMe 多模态 Agent 下单页</h1>
+        <p>这是一张面向真实交易与交付的下单页高保真原型。核心不是“聊一聊”，而是让服务商或客户在一次下单中，清楚输入 Brief、看到优质案例、理解交付内容与成本边界，再决定是否冻结预算执行。</p>
+
+        <div class="top-grid">
+          <div class="hero-card">
+            <div class="meta">Universal Workbench Entry</div>
+            <strong>一个壳承接视频、PPT、网页、长文四类 Agent</strong>
+            <p>左栏按 schema 动态切换输入项，中栏展示最能激发成交的成功案例，右栏聚焦交付、成本和交易动作。</p>
+          </div>
+          <div class="kpi-grid">
+            <div class="mini-kpi">
+              <div class="meta">当前 Agent</div>
+              <strong>短视频广告生成</strong>
+              <p>支持视频、PPT、网页、报告四类交付。</p>
+            </div>
+            <div class="mini-kpi">
+              <div class="meta">执行模式</div>
+              <strong>后端静默执行</strong>
+              <p>高成本节点前必须进入人工确认。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel">
+          <div class="panel-title">
+            <div>
+              <div class="meta">Left · Brief Input</div>
+              <h2>输入需求</h2>
+            </div>
+            <button class="tiny-btn">Schema</button>
+          </div>
+
+          <div class="field-stack">
+            <div class="field-card">
+              <strong>Agent 类型</strong>
+              <div class="seg-row">
+                <button class="seg active">视频</button>
+                <button class="seg">PPT</button>
+                <button class="seg">网页</button>
+                <button class="seg">研报</button>
+              </div>
+            </div>
+
+            <div class="field-card upload">
+              <strong>产品图 / 素材图</strong>
+              <p>点击上传图片、包装图或活动视觉素材。</p>
+            </div>
+
+            <div class="field-card upload">
+              <strong>人物图 / 模特图</strong>
+              <p>支持真人图、品牌代言参考或 AI 人设图。</p>
+            </div>
+
+            <div class="field-card">
+              <strong>一句话 Brief</strong>
+              <textarea class="textarea">做一条更像真人种草的夏季底妆广告，强调 10 秒快速上脸、轻薄不闷、适合通勤白领。</textarea>
+              <div class="input-hint">如果需求太短，后续可用 Magic Wand 扩写成更完整的专业 Prompt。</div>
+            </div>
+
+            <div class="field-card">
+              <strong>发布平台</strong>
+              <div class="seg-row">
+                <button class="seg active">抖音</button>
+                <button class="seg">小红书</button>
+                <button class="seg">视频号</button>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <strong>目标人群</strong>
+              <div class="tag-row">
+                <span class="tag">白领</span>
+                <span class="tag">通勤党</span>
+                <span class="tag">夏季底妆</span>
+                <button class="chip">+ 添加</button>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <strong>参考链接 / 历史材料</strong>
+              <div class="parser-card">
+                <strong>智能 URL / 文件解析卡片</strong>
+                <div class="input-hint">粘贴参考视频链接，或拖入 PDF / DOC / 旧版 PPT，让系统自动提取案例风格与结构。</div>
+                <div class="parser-preview">
+                  <div class="thumb-mini"></div>
+                  <div class="doc-lines"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-card">
+              <strong>高级配置</strong>
+              <div class="config-list">
+                <div class="config-row"><span>画幅比例</span>9:16 竖版</div>
+                <div class="config-row"><span>时长</span>10 秒</div>
+                <div class="config-row"><span>输出策略</span>先出样片，再确认正式生成</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="panel-title">
+            <div>
+              <div class="meta">Center · Success Cases</div>
+              <h2>先看结果，再决定是否下单</h2>
+            </div>
+            <div class="top-actions">
+              <button class="ghost">视频</button>
+              <button class="ghost">PPT</button>
+              <button class="ghost">网页</button>
+            </div>
+          </div>
+
+          <div class="case-stack">
+            <div class="case-card">
+              <div class="case-hero"></div>
+              <div class="case-body">
+                <h3>10 秒真人种草样片</h3>
+                <p>默认先展示该 Agent 最容易成交的成功案例，让用户在第一屏就理解“最终会拿到什么”，而不是先被长表单拖住。</p>
+              </div>
+            </div>
+
+            <div class="video-preview">
+              <div class="video-frame"></div>
+            </div>
+
+            <div class="story-panel">
+              <div class="meta">可预期交付方向</div>
+              <strong>系统将自动生成：Brief 理解、脚本大纲、分镜草案、首版样片、交付包</strong>
+              <p>如果你切换到 PPT / 网页 / 研报 Agent，这块会替换成对应模态的案例预览与结构示意。</p>
+            </div>
+
+            <div class="outline-panel">
+              <div class="meta">样片预期结构</div>
+              <div class="outline-list">
+                <div class="outline-row"><span>01 开场抓眼</span>通勤场景下快速上脸，建立代入感。</div>
+                <div class="outline-row"><span>02 卖点展开</span>近景展示轻薄、服帖、不闷肤。</div>
+                <div class="outline-row"><span>03 转化收束</span>一键带出“适合夏天通勤底妆”的记忆点。</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="panel-title">
+            <div>
+              <div class="meta">Right · Trade & Delivery</div>
+              <h2>交付与交易</h2>
+            </div>
+            <button class="tiny-btn">账单</button>
+          </div>
+
+          <div class="right-stack">
+            <div class="wallet-card">
+              <span>可用余额</span>
+              <strong>￥2,460</strong>
+              <p>生产前先检查可用余额，避免中途失败。</p>
+            </div>
+
+            <div class="wallet-card warn">
+              <span>已冻结金额</span>
+              <strong>￥380</strong>
+              <p>其他任务占用中的预算，防止超额并发。</p>
+            </div>
+
+            <div class="cost-card">
+              <span>预估成本</span>
+              <strong>样片阶段 ￥120 - ￥260</strong>
+              <p>系统会根据时长、模型质量、重试策略动态刷新估价。正式视频生成前会再次进入高风险确认弹窗。</p>
+              <div class="cost-range">预计冻结 ￥120 - ￥260</div>
+            </div>
+
+            <div class="tab-card">
+              <div class="meta">交付物清单</div>
+              <div class="checklist" style="margin-top:10px;">
+                <div class="check"><div class="dot">1</div><div><strong>sample-video.mp4</strong><div class="input-hint">首版样片</div></div></div>
+                <div class="check"><div class="dot">2</div><div><strong>cover-frame.png</strong><div class="input-hint">封面与预览帧</div></div></div>
+                <div class="check"><div class="dot">3</div><div><strong>script.md</strong><div class="input-hint">脚本与大纲</div></div></div>
+                <div class="check"><div class="dot">4</div><div><strong>delivery-summary.pdf</strong><div class="input-hint">交付说明</div></div></div>
+              </div>
+            </div>
+
+            <div class="delivery-list">
+              <div class="delivery-item">
+                <span>执行策略</span>
+                <strong>先出样片，再确认冻结预算进入正式生成</strong>
+                <p>符合 HelloMe 的风控与服务商人工兜底链路。</p>
+              </div>
+              <div class="delivery-item">
+                <span>白牌交付</span>
+                <strong>支持隐藏成本、隐藏中间废稿、生成脱敏链接</strong>
+                <p>后续可直接进入客户交付 Portal。</p>
+              </div>
+            </div>
+
+            <div class="action-stack">
+              <button class="primary">冻结余额并执行</button>
+              <button class="secondary">另存为草稿</button>
+              <button class="ghost">查看高成本规则</button>
+            </div>
+
+            <div class="empty">
+              这张页的核心职责不是“解释系统多聪明”，而是让用户快速完成一次可控的商业下单。
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <div class="floating-bar">
+        <div>
+          <div class="floating-meta">当前主动作</div>
+          <div class="floating-strong">冻结余额并执行首版样片</div>
+          <div class="linkline">下一步会创建任务、进入执行页，并在脚本 / 分镜阶段停下等待人工确认。</div>
+        </div>
+        <div class="top-actions">
+          <button class="secondary">保存草稿</button>
+          <button class="primary">继续下单</button>
+        </div>
+      </div>
+    </main>
+      </div>
+    </div>
+  </body>
+</html>

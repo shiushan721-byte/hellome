@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HelloMe Page B - 执行与人工兜底页</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+      :root {
+        color-scheme: light;
+        --canvas: #f5f5f7;
+        --paper: #fdfcfb;
+        --card: #ffffff;
+        --surface: #fcfcfd;
+        --soft: #f7f7f8;
+        --tag: #f2f0ed;
+        --ink: #1a1a1a;
+        --text-subtle: rgba(26, 26, 26, 0.68);
+        --text-muted: rgba(26, 26, 26, 0.5);
+        --line: rgba(26, 26, 26, 0.1);
+        --line-strong: rgba(26, 26, 26, 0.16);
+        --accent: #eaf6f4;
+        --accent-ink: #0f766e;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #3b82f6;
+        --shadow-sm: 0 6px 20px rgba(17, 18, 20, 0.04);
+        --shadow-md: 0 12px 32px rgba(17, 18, 20, 0.06);
+        --shadow-lg: 0 24px 60px rgba(0,0,0,.16);
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 40px;
+        --radius-shell: 24px;
+        --radius-panel: 20px;
+        --radius-card: 14px;
+        --radius-control: 12px;
+        --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.16);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--paper) 88%, var(--canvas)) 0%, var(--canvas) 100%);
+        color: var(--ink);
+      }
+      a { color: inherit; text-decoration: none; }
+      button, input, textarea { font: inherit; }
+      .app-shell { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0,1fr); }
+      .sidebar {
+        background: var(--paper); border-right: 1px solid var(--line); padding: 18px 16px; display: flex; flex-direction: column; gap: 18px;
+      }
+      .brand { display: flex; align-items: center; gap: 12px; padding: 4px 6px; }
+      .brand-mark { width: 44px; height: 44px; border-radius: 14px; background: #000; color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 18px; }
+      .brand-copy strong { display: block; font-family: "Playfair Display", serif; font-size: 18px; }
+      .brand-copy span { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+      .nav-group { display: grid; gap: 8px; }
+      .nav-link { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; color: var(--text-subtle); font-size: 14px; font-weight: 700; }
+      .nav-link.active { background: #ececef; color: var(--ink); }
+      .nav-link:hover { background: #f1f1f3; }
+      .nav-sep { height: 1px; background: var(--line); margin: 6px 2px; }
+      .nav-pill { margin-top: auto; padding: 12px 14px; border-radius: 16px; background: #f0f1f3; border: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--ink); }
+      .main-shell { min-width: 0; display: flex; flex-direction: column; }
+      .topbar { height: 72px; border-bottom: 1px solid var(--line); background: rgba(253,252,251,.94); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 0 22px; }
+      .top-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 13px; font-weight: 700; color: var(--text-subtle); }
+      .top-pill.success { background: var(--accent); color: var(--accent-ink); border-color: color-mix(in srgb, var(--accent-ink) 16%, var(--line)); }
+      .avatar { width: 38px; height: 38px; border-radius: 999px; background: linear-gradient(180deg,#f1d3c7 0%,#b78ca4 100%); border: 1px solid var(--line); }
+      .workspace-tabs { display: flex; align-items: end; gap: 8px; padding: 12px 14px 0; background: #dfe3e8; border-bottom: 1px solid var(--line); }
+      .workspace-tab { display: inline-flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 16px; background: rgba(255,255,255,.55); border: 1px solid rgba(26,26,26,.08); border-bottom: none; border-radius: 16px 16px 0 0; font-size: 14px; font-weight: 700; color: var(--text-subtle); }
+      .workspace-tab.active { background: var(--paper); color: var(--ink); }
+      .workspace-tab.plus { width: 40px; justify-content: center; padding: 0; font-size: 24px; line-height: 1; }
+      .page { width: min(1540px, calc(100vw - 28px)); margin: 0 auto; padding: 20px 0 40px; }
+      .shell, .panel {
+        background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-shell); box-shadow: var(--shadow-md);
+      }
+      .shell { padding: 24px 28px; margin-bottom: 18px; }
+      .eyebrow {
+        display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+        background: var(--soft); color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      }
+      h1 { margin: 14px 0 8px; font-family: "Playfair Display", serif; font-size: 40px; line-height: 1.04; }
+      .shell p { margin: 0; color: var(--text-subtle); font-size: 14px; line-height: 1.8; max-width: 920px; }
+      .summary-bar { display: grid; grid-template-columns: 1.1fr .9fr; gap: 18px; margin-top: 18px; }
+      .summary-card, .meta-card, .panel, .step-card, .grid-card, .artifact-card, .alert-card, .log-card, .diff-card, .modal-card {
+        background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card);
+      }
+      .summary-card, .meta-card { padding: 16px; }
+      .summary-card strong, .meta-card strong { display: block; margin-top: 8px; font-size: 16px; }
+      .summary-card p, .meta-card p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-subtle); }
+      .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .board { display: grid; grid-template-columns: 280px minmax(0, 1fr) 340px; gap: 16px; }
+      .panel { padding: 18px; }
+      .panel-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+      .panel-title h2 { margin: 0; font-size: 20px; }
+      .meta {
+        font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--text-muted); font-weight: 700;
+      }
+      .step-list, .stack, .timeline, .tool-row, .artifact-list, .right-stack { display: grid; gap: 12px; }
+      .step-card, .alert-card, .artifact-card, .log-card, .diff-card, .modal-card { padding: 14px; }
+      .step-card strong, .alert-card strong, .artifact-card strong, .log-card strong, .diff-card strong, .modal-card strong { display: block; }
+      .step-card p, .alert-card p, .artifact-card p, .log-card p, .diff-card p, .modal-card p { margin: 8px 0 0; font-size: 13px; line-height: 1.7; color: var(--text-subtle); }
+      .step-card.pending {
+        border-color: color-mix(in srgb, var(--warning) 42%, var(--line));
+        background: color-mix(in srgb, var(--warning) 10%, transparent);
+      }
+      .step-card.done { border-color: color-mix(in srgb, var(--success) 32%, var(--line)); }
+      .step-index {
+        display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 999px;
+        background: var(--tag); color: var(--ink); font-size: 11px; font-weight: 800;
+      }
+      .step-card.pending .step-index { background: var(--warning); color: #fff; }
+      .step-card.done .step-index { background: var(--success); color: #fff; }
+      .editor-table { display: grid; gap: 10px; }
+      .editor-row {
+        display: grid; grid-template-columns: 72px minmax(0, 1.1fr) minmax(0, .9fr); gap: 10px;
+        padding: 10px; border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+      }
+      .cell {
+        border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 12px;
+        font-size: 13px; line-height: 1.75; color: var(--text-subtle);
+      }
+      .cell.editing {
+        border-color: color-mix(in srgb, var(--info) 42%, var(--line));
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 12%, transparent);
+      }
+      .tool-row { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .chip, .ghost, .primary, .secondary, .danger, .tiny-btn, .tab, .tool-pill {
+        border: 1px solid transparent; border-radius: 12px; cursor: pointer; transition: .18s ease; font-weight: 700;
+      }
+      .chip, .tool-pill {
+        background: var(--card); border-color: var(--line); color: var(--text-subtle); padding: 9px 10px; font-size: 12px;
+      }
+      .ghost, .secondary, .tab {
+        background: var(--soft); color: var(--text-subtle); padding: 10px 14px; font-size: 13px;
+      }
+      .primary, .danger {
+        min-height: 44px; padding: 0 16px; font-size: 14px;
+      }
+      .primary { background: #000; color: #fff; }
+      .danger { background: var(--danger); color: #fff; }
+      .secondary { background: var(--card); border-color: var(--line-strong); color: var(--ink); }
+      .tab.active { background: #000; color: #fff; }
+      .chip:hover, .ghost:hover, .secondary:hover, .tab:hover, .tool-pill:hover, .tiny-btn:hover { background: var(--tag); transform: translateY(-1px); }
+      .primary:hover, .danger:hover { opacity: .92; transform: translateY(-1px); }
+      .tiny-btn { background: var(--card); border-color: var(--line); color: var(--text-muted); padding: 6px 8px; font-size: 12px; }
+      .canvas-frame {
+        padding: 12px; border-radius: 16px; background: #111214; box-shadow: var(--shadow-lg); margin-bottom: 12px;
+      }
+      .canvas-inner {
+        border-radius: 14px; overflow: hidden; aspect-ratio: 16 / 10; background: linear-gradient(180deg, #ecd8c2 0%, #c5d7e7 54%, #899aa8 100%);
+        position: relative;
+      }
+      .canvas-inner::before {
+        content: "Task Orchestrator · Script Review Stage"; position: absolute; left: 12px; top: 12px; color: rgba(255,255,255,.76); font-size: 11px;
+      }
+      .banner {
+        padding: 12px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--warning) 36%, var(--line));
+        background: color-mix(in srgb, var(--warning) 10%, transparent);
+      }
+      .banner strong { display: block; }
+      .banner p { margin: 8px 0 0; font-size: 13px; line-height: 1.75; color: var(--text-subtle); }
+      .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+      .diff-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .diff-box {
+        border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 12px;
+      }
+      .diff-box span { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+      .diff-highlight {
+        display: inline; background: color-mix(in srgb, var(--warning) 18%, transparent); padding: 0 2px; border-radius: 4px;
+      }
+      .artifact-card { border: 1px solid var(--line); }
+      .artifact-meta { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+      .alert-card.info {
+        border-color: color-mix(in srgb, var(--info) 34%, var(--line));
+        background: color-mix(in srgb, var(--info) 10%, transparent);
+      }
+      .alert-card.warn {
+        border-color: color-mix(in srgb, var(--warning) 34%, var(--line));
+        background: color-mix(in srgb, var(--warning) 10%, transparent);
+      }
+      .log-card pre {
+        margin: 10px 0 0; padding: 12px; border-radius: 12px; background: #111214; color: #d9e3ea; font-size: 12px; line-height: 1.7;
+        overflow: auto; font-family: "JetBrains Mono", monospace;
+      }
+      .modal-card {
+        border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+        box-shadow: 0 24px 60px rgba(239,68,68,.12);
+      }
+      .modal-badge {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px;
+        background: color-mix(in srgb, var(--danger) 12%, transparent); color: color-mix(in srgb, var(--danger) 84%, var(--ink));
+        font-size: 12px; font-weight: 700;
+      }
+      .status-tiny {
+        display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700;
+      }
+      .footer-bar {
+        position: sticky; bottom: 18px; z-index: 5; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 14px 16px; border-radius: 18px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.9); backdrop-filter: blur(12px); box-shadow: var(--shadow-lg);
+      }
+      .footer-meta { font-size: 12px; color: var(--text-muted); }
+      .footer-strong { font-size: 16px; font-weight: 800; margin-top: 4px; }
+      .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+      @media (max-width: 1280px) {
+        .app-shell { grid-template-columns: 1fr; }
+        .sidebar { display: none; }
+        .summary-bar, .board { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 820px) {
+        .page { width: min(100vw - 18px, 1540px); padding-top: 12px; }
+        .shell, .panel { padding: 18px; }
+        h1 { font-size: 32px; }
+        .meta-grid, .tool-row, .diff-wrap { grid-template-columns: 1fr; }
+        .footer-bar { flex-direction: column; align-items: stretch; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">↯</div>
+          <div class="brand-copy"><strong>HelloMe</strong><span>AI 任务交付平台</span></div>
+        </div>
+        <div class="nav-group">
+          <a class="nav-link" href="./frontstage-design-preview.html">规范总览</a>
+          <a class="nav-link" href="./page-a-multimodal-order.html">下单页</a>
+          <a class="nav-link active" href="./page-b-execution-hitl.html">执行页</a>
+          <a class="nav-link" href="./page-c-client-portal.html">交付页</a>
+        </div>
+        <div class="nav-sep"></div>
+        <div class="nav-group">
+          <a class="nav-link" href="./page-a-multimodal-order.html">我的工作台</a>
+          <a class="nav-link active" href="./page-b-execution-hitl.html">任务中心</a>
+          <a class="nav-link" href="./page-c-client-portal.html">成果中心</a>
+        </div>
+        <div class="nav-pill">Hermes 已连接 · HITL Pending</div>
+      </aside>
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="top-pill">剩余 Token 20,000</div>
+          <div class="top-pill">可用余额 ￥2,460</div>
+          <div class="top-pill success">Pending Approval</div>
+          <div class="avatar"></div>
+          <div class="top-pill">Studio Operator</div>
+        </header>
+        <div class="workspace-tabs">
+          <a class="workspace-tab" href="./page-a-multimodal-order.html">多模态下单页</a>
+          <a class="workspace-tab active" href="./page-b-execution-hitl.html">执行与人工兜底页</a>
+          <a class="workspace-tab" href="./page-c-client-portal.html">服务商客户交付页</a>
+          <span class="workspace-tab plus">+</span>
+        </div>
+    <main class="page">
+      <section class="shell">
+        <div class="eyebrow">Page B · Execution & HITL</div>
+        <h1>HelloMe 执行与人工兜底页</h1>
+        <p>这张页承接真实的 Task Orchestrator。重点不是展示“AI 跑得多快”，而是在正确的时候停下来，让服务商修改脚本、审分镜、确认高成本节点，再继续进入正式生成与交付整理。</p>
+
+        <div class="summary-bar">
+          <div class="summary-card">
+            <div class="meta">Current Task</div>
+            <strong>短视频广告生成 · 任务 #UGC-240619-018</strong>
+            <p>当前卡在 “脚本与分镜确认” 阶段。系统已经完成 Brief 解析与首轮脚本输出，等待人工确认后再进入正式视频生成。</p>
+          </div>
+          <div class="meta-grid">
+            <div class="meta-card">
+              <div class="meta">Execution Mode</div>
+              <strong>Backend Silent + HITL Stop</strong>
+              <p>生产默认静默执行，关键节点转人工。</p>
+            </div>
+            <div class="meta-card">
+              <div class="meta">Budget Status</div>
+              <strong>未冻结正式生成预算</strong>
+              <p>确认脚本后才进入扣费阶段。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="board">
+        <aside class="panel">
+          <div class="panel-title">
+            <div>
+              <div class="meta">Left · Timeline</div>
+              <h2>任务步骤</h2>
+            </div>
+            <span class="status-tiny">HITL</span>
+          </div>
+
+          <div class="step-list">
+            <div class="step-card done">
+              <div class="step-index">1</div>
+              <strong>解析需求</strong>
+              <p>已根据 Brief、产品图、参考链接生成任务理解。</p>
+            </div>
+            <div class="step-card pending">
+              <div class="step-index">2</div>
+              <strong>脚本与分镜确认</strong>
+              <p>当前等待人工修改与确认，属于高价值服务商操作节点。</p>
+            </div>
+            <div class="step-card">
+              <div class="step-index">3</div>
+              <strong>视频生成</strong>
+              <p>确认后才冻结预算，并正式调用高成本视频模型。</p>
+            </div>
+            <div class="step-card">
+              <div class="step-index">4</div>
+              <strong>整理交付</strong>
+              <p>自动打包样片、封面、脚本说明和对外发链接。</p>
+            </div>
+          </div>
+
+          <div class="stack" style="margin-top:14px;">
+            <div class="alert-card warn">
+              <strong>Pending Approval</strong>
+              <p>当前页面的唯一主任务不是“继续生成”，而是“确认无误后继续”。</p>
+            </div>
+            <div class="alert-card info">
+              <strong>局部重做优先于整任务推翻</strong>
+              <p>对于一条不满意的旁白或一个镜头，不需要整任务重跑，优先使用局部改写与局部重绘。</p>
+            </div>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="panel-title">
+            <div>
+              <div class="meta">Center · Human Takeover</div>
+              <h2>脚本与分镜工作区</h2>
+            </div>
+            <div class="btn-row">
+              <button class="tab active">脚本表格</button>
+              <button class="tab">Diff 对照</button>
+              <button class="tab">局部重做</button>
+            </div>
+          </div>
+
+          <div class="canvas-frame">
+            <div class="canvas-inner"></div>
+          </div>
+
+          <div class="banner">
+            <strong>请先确认脚本与分镜</strong>
+            <p>这是高成本生成前的最后一道人工质量闸门。你的修改会直接影响后续视频生成效果，也决定预算是否值得冻结。</p>
+          </div>
+
+          <div class="editor-table" style="margin-top:12px;">
+            <div class="editor-row">
+              <div class="cell">01</div>
+              <div class="cell">画面：通勤场景，镜前 10 秒快速上脸，展示底妆自然服帖。</div>
+              <div class="cell editing">旁白：夏天通勤底妆不用拖沓，10 秒完成上脸，轻薄不闷。</div>
+            </div>
+            <div class="editor-row">
+              <div class="cell">02</div>
+              <div class="cell">画面：近景展示膏体延展性与肤感，突出清爽无厚重感。</div>
+              <div class="cell">旁白：近看也不卡粉，午后补妆依旧干净自然。</div>
+            </div>
+            <div class="editor-row">
+              <div class="cell">03</div>
+              <div class="cell">画面：收束到产品与场景记忆点，强调适合夏季通勤。</div>
+              <div class="cell">旁白：如果你最近想找一款夏天通勤更省心的底妆，这条就够了。</div>
+            </div>
+          </div>
+
+          <div class="tool-row" style="margin-top:12px;">
+            <button class="tool-pill">仅重写当前旁白</button>
+            <button class="tool-pill">仅重绘当前镜头</button>
+            <button class="tool-pill">补充转化收尾</button>
+          </div>
+
+          <div class="tabs" style="margin-top:16px;">
+            <button class="tab active">Diff 对照</button>
+            <button class="tab">AI 原版</button>
+            <button class="tab">人工修改版</button>
+          </div>
+
+          <div class="diff-wrap">
+            <div class="diff-card">
+              <span class="meta">AI 原版</span>
+              <strong>偏功能描述</strong>
+              <p>夏季底妆快速上脸，质地轻盈，适合日常使用。</p>
+            </div>
+            <div class="diff-card">
+              <span class="meta">人工修改版</span>
+              <strong>更贴近转化表达</strong>
+              <p><span class="diff-highlight">夏天通勤底妆不用拖沓</span>，10 秒完成上脸，轻薄不闷，<span class="diff-highlight">更像真人种草而不是硬广</span>。</p>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel">
+          <div class="panel-title">
+            <div>
+              <div class="meta">Right · Risk / Assets / Logs</div>
+              <h2>状态与交付</h2>
+            </div>
+            <button class="tiny-btn">日志</button>
+          </div>
+
+          <div class="right-stack">
+            <div class="modal-card">
+              <div class="modal-badge">High-Cost Confirmation</div>
+              <strong style="margin-top:12px;">确认后将冻结 ￥188 并进入正式视频生成</strong>
+              <p>这一步不可逆。建议先完成所有脚本、分镜、卖点和人设修改，再进入正式生成。</p>
+              <div class="btn-row" style="margin-top:12px;">
+                <button class="secondary">返回继续修改</button>
+                <button class="danger">确认并继续</button>
+              </div>
+            </div>
+
+            <div class="artifact-list">
+              <div class="artifact-card">
+                <div class="artifact-meta">当前产物</div>
+                <strong>script-v2.md</strong>
+                <p>已生成，可继续人工编辑。</p>
+              </div>
+              <div class="artifact-card">
+                <div class="artifact-meta">当前产物</div>
+                <strong>storyboard-v2.png</strong>
+                <p>分镜示意图，可局部重绘。</p>
+              </div>
+              <div class="artifact-card">
+                <div class="artifact-meta">待生成</div>
+                <strong>sample-video-v1.mp4</strong>
+                <p>确认后才会进入正式样片生成。</p>
+              </div>
+            </div>
+
+            <div class="log-card">
+              <strong>执行日志摘要</strong>
+              <p>研发和服务商协作时，这里承接最关键的诊断信息，但不抢中间工作区主视觉。</p>
+              <pre>[queued] task created
+[running] brief parsed
+[running] script draft generated
+[running] storyboard assembled
+[waiting_confirmation] human approval required</pre>
+            </div>
+
+            <div class="alert-card">
+              <strong>智能重试面板</strong>
+              <p>如果后续生成失败，不一定整任务重来，可以针对失败步骤单独调整。</p>
+              <div class="btn-row" style="margin-top:12px;">
+                <button class="chip">换一个提示词重试</button>
+                <button class="chip">跳过该错误</button>
+                <button class="chip">降级到低成本模型</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <div class="footer-bar">
+        <div>
+          <div class="footer-meta">当前唯一主动作</div>
+          <div class="footer-strong">确认无误，进入正式视频生成</div>
+          <div class="footer-meta" style="margin-top:6px;">如果还没准备好，就继续修改脚本、镜头和旁白，不要急着冻结预算。</div>
+        </div>
+        <div class="btn-row">
+          <button class="secondary">保存当前修改</button>
+          <button class="danger">确认并继续</button>
+        </div>
+      </div>
+    </main>
+      </div>
+    </div>
+  </body>
+</html>

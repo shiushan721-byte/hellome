@@ -20,6 +20,12 @@ function formatPhone(phone: string): string {
   return digits || '未绑定';
 }
 
+function formatRole(role: string): string {
+  if (role === 'admin') return '管理员';
+  if (role === 'creator') return '创作者';
+  return '普通用户';
+}
+
 export default function SettingsPage() {
   const profile = useSyncExternalStore(subscribeProfile, getProfile, getProfile);
   const user = getUser();
@@ -50,7 +56,7 @@ export default function SettingsPage() {
         isDefaultAvatar: false,
       });
       if (!result.ok) {
-        showMessage(result.error, 'error');
+        showMessage('error' in result ? result.error : '头像更新失败', 'error');
         return;
       }
       showMessage('头像已更新', 'success');
@@ -77,7 +83,7 @@ export default function SettingsPage() {
     }
     const result = updateProfile({ nickname: trimmed });
     if (!result.ok) {
-      showMessage(result.error, 'error');
+      showMessage('error' in result ? result.error : '昵称更新失败', 'error');
       return;
     }
     setEditingNickname(false);
@@ -169,6 +175,7 @@ export default function SettingsPage() {
                 </div>
               )}
               <p className="text-xs text-black/45">{formatPhone(user.phone)}</p>
+              <p className="text-xs text-black/45">当前权限：{formatRole(user.role)}</p>
             </div>
           </div>
         </div>

@@ -1,0 +1,2511 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HelloMe 前台设计规范预览</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+      :root {
+        color-scheme: light;
+
+        --canvas: #f5f5f7;
+        --paper: #fdfcfb;
+        --card: #ffffff;
+        --surface: #fcfcfd;
+        --soft: #f7f7f8;
+        --tag: #f2f0ed;
+        --ink: #1a1a1a;
+        --text-subtle: rgba(26, 26, 26, 0.68);
+        --text-muted: rgba(26, 26, 26, 0.5);
+        --line: rgba(26, 26, 26, 0.1);
+        --line-strong: rgba(26, 26, 26, 0.16);
+        --accent: #eaf6f4;
+        --accent-ink: #0f766e;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --info: #3b82f6;
+        --shadow-sm: 0 6px 20px rgba(17, 18, 20, 0.04);
+        --shadow-md: 0 12px 32px rgba(17, 18, 20, 0.06);
+        --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.14);
+
+        --space-2xs: 4px;
+        --space-xs: 8px;
+        --space-sm: 12px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 40px;
+
+        --radius-shell: 24px;
+        --radius-panel: 20px;
+        --radius-card: 14px;
+        --radius-control: 12px;
+        --radius-chip: 10px;
+
+        --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.16);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          color-scheme: dark;
+          --canvas: #0f1115;
+          --paper: #12161b;
+          --card: #171b21;
+          --surface: #1b2128;
+          --soft: #202730;
+          --tag: #252d38;
+          --ink: #f4f5f7;
+          --text-subtle: rgba(244, 245, 247, 0.76);
+          --text-muted: rgba(244, 245, 247, 0.56);
+          --line: rgba(244, 245, 247, 0.08);
+          --line-strong: rgba(244, 245, 247, 0.14);
+          --accent: rgba(16, 185, 129, 0.14);
+          --accent-ink: #7be0c0;
+          --shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.22);
+          --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.26);
+          --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.36);
+          --focus-ring: 0 0 0 3px rgba(123, 224, 192, 0.18);
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--paper) 86%, var(--canvas)) 0%, var(--canvas) 100%);
+        color: var(--ink);
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      .page {
+        width: min(1440px, calc(100vw - var(--space-lg)));
+        margin: 0 auto;
+        padding: var(--space-lg) 0 var(--space-2xl);
+      }
+
+      .hero,
+      .panel {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-shell);
+        box-shadow: var(--shadow-md);
+      }
+
+      .hero {
+        padding: var(--space-xl);
+        margin-bottom: var(--space-lg);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--soft);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: var(--space-md) 0 var(--space-xs);
+        font-family: "Playfair Display", serif;
+        font-size: 40px;
+        line-height: 1.04;
+      }
+
+      .hero p {
+        margin: 0;
+        max-width: 860px;
+        font-size: 14px;
+        line-height: 1.85;
+        color: var(--text-subtle);
+      }
+
+      .grid {
+        display: grid;
+        gap: var(--space-lg);
+      }
+
+      .grid.two {
+        grid-template-columns: 1.05fr 0.95fr;
+        margin-bottom: var(--space-lg);
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel-title {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        margin-bottom: var(--space-md);
+      }
+
+      .panel-title .icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: var(--tag);
+        display: grid;
+        place-items: center;
+        font-size: 17px;
+        color: var(--ink);
+      }
+
+      .panel-title h2 {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      .principles,
+      .stack,
+      .type-list,
+      .component-list,
+      .right-list,
+      .state-grid {
+        display: grid;
+        gap: var(--space-sm);
+      }
+
+      .principle,
+      .stack-item,
+      .token,
+      .type-item,
+      .spec-card,
+      .rail-item,
+      .metric,
+      .landing,
+      .state-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+      }
+
+      .principle {
+        display: flex;
+        gap: var(--space-sm);
+        padding: 14px var(--space-md);
+      }
+
+      .principle .num {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .principle p,
+      .stack-item p,
+      .rail-item p,
+      .landing p,
+      .state-card p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.75;
+        color: var(--text-subtle);
+      }
+
+      .stack-item,
+      .type-item,
+      .spec-card,
+      .rail-item,
+      .landing,
+      .state-card {
+        padding: 14px var(--space-md);
+      }
+
+      .stack-item strong,
+      .type-item strong,
+      .rail-item strong,
+      .landing strong,
+      .state-card strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--ink);
+      }
+
+      .palette {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-sm);
+      }
+
+      .token {
+        padding: var(--space-sm);
+      }
+
+      .swatch {
+        height: 82px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+      }
+
+      .token strong {
+        display: block;
+        margin-top: 10px;
+      }
+
+      .token code {
+        display: block;
+        margin-top: var(--space-2xs);
+        font-family: "JetBrains Mono", monospace;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .token span,
+      .type-note,
+      .hint,
+      .small {
+        font-size: 12px;
+        line-height: 1.65;
+        color: var(--text-muted);
+      }
+
+      .type-item .sample {
+        margin-top: 10px;
+      }
+
+      .type-display {
+        font-family: "Playfair Display", serif;
+        font-size: 34px;
+        line-height: 1.05;
+        font-weight: 700;
+      }
+
+      .type-heading {
+        font-size: 28px;
+        line-height: 1.12;
+        font-weight: 700;
+      }
+
+      .type-section {
+        font-size: 20px;
+        line-height: 1.25;
+        font-weight: 700;
+      }
+
+      .type-body {
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text-subtle);
+      }
+
+      .type-meta {
+        font-size: 12px;
+        line-height: 1.65;
+        font-weight: 600;
+        color: var(--text-muted);
+      }
+
+      .type-mono {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .components-grid {
+        display: grid;
+        grid-template-columns: 0.92fr 1.08fr;
+        gap: var(--space-md);
+      }
+
+      .spec-card h3 {
+        margin: 0 0 var(--space-sm);
+        font-size: 16px;
+      }
+
+      .button-row,
+      .chip-row,
+      .tab-row,
+      .action-row,
+      .mobile-segments {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .btn,
+      .chip,
+      .status,
+      .tab,
+      .ghost-link,
+      .expand-head,
+      .mobile-segment {
+        cursor: pointer;
+        transition:
+          transform 0.18s ease,
+          background-color 0.18s ease,
+          border-color 0.18s ease,
+          color 0.18s ease,
+          box-shadow 0.18s ease,
+          opacity 0.18s ease;
+        font-family: inherit;
+      }
+
+      .btn,
+      .tab,
+      .chip,
+      .mobile-segment {
+        outline: none;
+      }
+
+      .btn,
+      .ghost-link {
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: var(--radius-control);
+        font-size: 14px;
+        font-weight: 700;
+        border: 1px solid transparent;
+      }
+
+      .btn.primary {
+        background: #000;
+        color: #fff;
+      }
+
+      .btn.secondary,
+      .ghost-link {
+        background: var(--card);
+        color: color-mix(in srgb, var(--ink) 78%, transparent);
+        border-color: var(--line-strong);
+      }
+
+      .chip,
+      .status {
+        min-height: 36px;
+        padding: 0 12px;
+        border-radius: var(--radius-chip);
+        display: inline-flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 700;
+        border: 1px solid transparent;
+      }
+
+      .chip {
+        background: var(--soft);
+        color: var(--text-subtle);
+      }
+
+      .status {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+
+      .tab,
+      .mobile-segment {
+        padding: 10px 14px;
+        border-radius: var(--radius-control);
+        background: var(--soft);
+        color: var(--text-subtle);
+        font-size: 14px;
+        font-weight: 700;
+        border: 1px solid transparent;
+      }
+
+      .tab.active,
+      .mobile-segment.active {
+        background: #000;
+        color: #fff;
+      }
+
+      .btn:hover,
+      .chip:hover,
+      .tab:hover,
+      .ghost-link:hover,
+      .mobile-segment:hover,
+      .expand-head:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn.primary:hover {
+        opacity: 0.92;
+      }
+
+      .btn.secondary:hover,
+      .ghost-link:hover,
+      .tab:hover,
+      .mobile-segment:hover {
+        background: var(--tag);
+        border-color: var(--line-strong);
+      }
+
+      .chip:hover {
+        background: var(--tag);
+      }
+
+      .btn:active,
+      .chip:active,
+      .tab:active,
+      .ghost-link:active,
+      .mobile-segment:active,
+      .expand-head:active {
+        transform: translateY(0);
+      }
+
+      .btn:focus-visible,
+      .chip:focus-visible,
+      .tab:focus-visible,
+      .ghost-link:focus-visible,
+      .mobile-segment:focus-visible,
+      .expand-head:focus-visible {
+        box-shadow: var(--focus-ring);
+      }
+
+      .btn:disabled,
+      .chip:disabled,
+      .tab:disabled,
+      .mobile-segment:disabled {
+        opacity: 0.42;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .upload-card,
+      .input-box,
+      .result-card,
+      .preview-phone,
+      .expand-box {
+        border-radius: var(--radius-card);
+      }
+
+      .upload-card {
+        padding: var(--space-md);
+        border: 1px dashed var(--line-strong);
+        background: radial-gradient(circle at top, color-mix(in srgb, var(--warning) 10%, transparent) 0%, transparent 72%);
+      }
+
+      .upload-card:hover {
+        border-color: color-mix(in srgb, var(--accent-ink) 26%, var(--line-strong));
+        background: radial-gradient(circle at top, color-mix(in srgb, var(--accent) 75%, transparent) 0%, transparent 78%);
+      }
+
+      .upload-card strong {
+        display: block;
+        font-size: 15px;
+        margin-bottom: var(--space-2xs);
+      }
+
+      .input-box {
+        padding: 14px var(--space-md);
+        border: 1px solid var(--line);
+        background: var(--surface);
+        font-size: 14px;
+        color: color-mix(in srgb, var(--ink) 82%, transparent);
+      }
+
+      .input-box.is-focus {
+        border-color: color-mix(in srgb, var(--accent-ink) 65%, transparent);
+        box-shadow: var(--focus-ring);
+      }
+
+      .preview-layout {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: var(--space-sm);
+        align-items: start;
+      }
+
+      .preview-phone {
+        background: #111214;
+        padding: var(--space-sm);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .preview-screen {
+        position: relative;
+        aspect-ratio: 9 / 16;
+        border-radius: 16px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #ecd8c2 0%, #c5d7e7 55%, #8a9aa8 100%);
+      }
+
+      .preview-screen::before {
+        content: "UGC Sample 00:10";
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.74);
+      }
+
+      .preview-screen::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0;
+        height: 72px;
+        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.42));
+      }
+
+      .result-card h4 {
+        margin: 0 0 var(--space-xs);
+        font-size: 18px;
+      }
+
+      .result-card p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.8;
+        color: var(--text-subtle);
+      }
+
+      .result-card {
+        padding: var(--space-md);
+        border: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .prototype {
+        padding: var(--space-sm);
+        border-radius: var(--radius-shell);
+        background: color-mix(in srgb, var(--canvas) 72%, var(--paper));
+        border: 1px solid var(--line);
+      }
+
+      .desktop-workbench {
+        display: block;
+      }
+
+      .triple-layout {
+        display: grid;
+        grid-template-columns: 292px minmax(0, 1fr) 300px;
+        gap: var(--space-sm);
+      }
+
+      .column {
+        padding: 18px;
+        border-radius: var(--radius-panel);
+        background: var(--card);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .column-label {
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        font-weight: 700;
+      }
+
+      .column h3 {
+        margin: var(--space-xs) 0 0;
+        font-size: 20px;
+        line-height: 1.2;
+      }
+
+      .section-gap {
+        margin-top: var(--space-md);
+      }
+
+      .rail-item .meta {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: var(--space-2xs);
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        padding: var(--space-sm);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 14px;
+        margin-top: var(--space-2xs);
+      }
+
+      .expand-box {
+        border: 1px solid var(--line);
+        background: var(--soft);
+        overflow: hidden;
+      }
+
+      .expand-head {
+        width: 100%;
+        padding: 14px var(--space-md);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: transparent;
+        border: none;
+        color: var(--ink);
+        text-align: left;
+      }
+
+      .expand-head strong {
+        font-size: 14px;
+      }
+
+      .expand-body {
+        display: none;
+        padding: 0 var(--space-md) var(--space-md);
+        font-size: 13px;
+        line-height: 1.75;
+        color: var(--text-subtle);
+      }
+
+      .expand-box.open .expand-body {
+        display: block;
+      }
+
+      .landing-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-sm);
+      }
+
+      .mobile-prototype {
+        display: none;
+      }
+
+      .mobile-stage {
+        position: sticky;
+        top: var(--space-sm);
+        z-index: 2;
+        padding: var(--space-sm);
+        border-radius: var(--radius-panel);
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .mobile-stage .preview-phone {
+        max-width: 220px;
+        margin: 0 auto;
+      }
+
+      .mobile-tray {
+        margin-top: var(--space-sm);
+        padding: var(--space-sm);
+        border-radius: var(--radius-panel);
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .mobile-segments {
+        margin-bottom: var(--space-sm);
+      }
+
+      .mobile-panel {
+        display: none;
+      }
+
+      .mobile-panel.active {
+        display: block;
+      }
+
+      .token-note {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: var(--space-sm);
+        padding: 8px 10px;
+        border-radius: 12px;
+        background: color-mix(in srgb, var(--danger) 10%, transparent);
+        color: color-mix(in srgb, var(--danger) 84%, var(--ink));
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .footer-note {
+        margin-top: var(--space-lg);
+        font-size: 13px;
+        line-height: 1.75;
+        color: var(--text-muted);
+      }
+
+      .hero-strip,
+      .business-grid,
+      .blueprint-grid,
+      .component-dual,
+      .modality-grid,
+      .canvas-modes,
+      .stress-grid,
+      .action-grid,
+      .constitution-grid {
+        display: grid;
+        gap: var(--space-sm);
+      }
+
+      .hero-strip {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: var(--space-lg);
+      }
+
+      .hero-kpi,
+      .business-card,
+      .blueprint-card,
+      .modality-card,
+      .mode-card,
+      .stress-card,
+      .action-card,
+      .constitution-card,
+      .timeline-step,
+      .asset-tile,
+      .editor-row,
+      .wallet-bar,
+      .risk-modal,
+      .toggle-row {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+      }
+
+      .hero-kpi,
+      .business-card,
+      .blueprint-card,
+      .modality-card,
+      .mode-card,
+      .stress-card,
+      .action-card,
+      .constitution-card,
+      .wallet-bar,
+      .risk-modal {
+        padding: var(--space-md);
+      }
+
+      .hero-kpi .label,
+      .business-card .label,
+      .blueprint-card .label,
+      .modality-card .label,
+      .mode-card .label,
+      .stress-card .label,
+      .action-card .label,
+      .constitution-card .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--text-muted);
+        font-weight: 700;
+      }
+
+      .hero-kpi strong,
+      .business-card strong,
+      .blueprint-card strong,
+      .modality-card strong,
+      .mode-card strong,
+      .stress-card strong,
+      .action-card strong,
+      .constitution-card strong {
+        display: block;
+        margin-top: var(--space-xs);
+        font-size: 16px;
+        line-height: 1.4;
+      }
+
+      .hero-kpi p,
+      .business-card p,
+      .blueprint-card p,
+      .modality-card p,
+      .mode-card p,
+      .stress-card p,
+      .action-card p,
+      .constitution-card p {
+        margin: var(--space-xs) 0 0;
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text-subtle);
+      }
+
+      .business-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .component-dual {
+        grid-template-columns: 0.95fr 1.05fr;
+      }
+
+      .modality-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .canvas-modes {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .mode-preview {
+        margin-top: var(--space-sm);
+        height: 140px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .mode-preview.video {
+        background: linear-gradient(180deg, #1b1c20 0%, #323848 100%);
+      }
+
+      .mode-preview.doc {
+        background:
+          linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 100% 28px,
+          var(--card);
+      }
+
+      .mode-preview.deck {
+        background: var(--soft);
+        display: grid;
+        grid-template-columns: 84px 1fr;
+        gap: 8px;
+        padding: 8px;
+      }
+
+      .mode-preview.web {
+        background: var(--soft);
+      }
+
+      .mode-preview.video::before {
+        content: "9:16 / 16:9 Player";
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 11px;
+      }
+
+      .mode-preview.doc::before {
+        content: "Markdown / Inline Editing";
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+
+      .deck-thumbs {
+        display: grid;
+        gap: 6px;
+      }
+
+      .deck-thumb,
+      .deck-main,
+      .web-shell,
+      .web-frame,
+      .parser-drop {
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .deck-thumb {
+        height: 28px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 76%, transparent), var(--card));
+      }
+
+      .deck-main {
+        background: linear-gradient(180deg, color-mix(in srgb, var(--info) 10%, transparent), var(--card));
+      }
+
+      .web-shell {
+        position: absolute;
+        inset: 10px;
+        padding: 10px;
+        background: var(--card);
+      }
+
+      .web-shell::before {
+        content: "Desktop   Mobile";
+        display: block;
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+      }
+
+      .web-frame {
+        height: calc(100% - 26px);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 20%, transparent), var(--soft));
+      }
+
+      .parser-drop {
+        padding: 14px;
+        border-style: dashed;
+        background: color-mix(in srgb, var(--warning) 8%, transparent);
+      }
+
+      .schema-rows,
+      .version-list {
+        display: grid;
+        gap: var(--space-xs);
+      }
+
+      .schema-row,
+      .version-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        font-size: 13px;
+        color: var(--text-subtle);
+      }
+
+      .schema-tag,
+      .file-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        border-radius: 999px;
+        background: var(--soft);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .file-icons {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-xs);
+      }
+
+      .file-icon-card {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        text-align: center;
+      }
+
+      .file-glyph {
+        display: inline-grid;
+        place-items: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: var(--soft);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .version-item.active {
+        border-color: color-mix(in srgb, var(--accent-ink) 38%, var(--line));
+        box-shadow: var(--focus-ring);
+      }
+
+      .workflow-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: var(--space-sm);
+      }
+
+      .legend-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+      }
+
+      .legend-dot.auto {
+        background: var(--info);
+      }
+
+      .legend-dot.hitl {
+        background: var(--warning);
+      }
+
+      .legend-dot.cost {
+        background: var(--danger);
+      }
+
+      .delivery-room {
+        padding: var(--space-md);
+        border-radius: var(--radius-panel);
+        border: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .delivery-room-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+      }
+
+      .logo-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .delivery-tabs {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: var(--space-md);
+      }
+
+      .delivery-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: var(--space-sm);
+      }
+
+      .constitution-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .constitution-card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-card);
+      }
+
+      .rule-list {
+        display: grid;
+        gap: var(--space-xs);
+        margin-top: var(--space-sm);
+      }
+
+      .rule-item {
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .rule-item .rule-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+
+      .rule-item .rule-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .rule-item .rule-type {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .rule-item p {
+        margin: 8px 0 0;
+        font-size: 12px;
+        line-height: 1.75;
+        color: var(--text-subtle);
+      }
+
+      .rule-example {
+        margin-top: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: var(--soft);
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+
+      .decision-bar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-sm);
+        margin-top: var(--space-sm);
+      }
+
+      .decision-box {
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .decision-box strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .decision-box p {
+        margin: 8px 0 0;
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--text-subtle);
+      }
+
+      .feedback-note {
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid color-mix(in srgb, var(--info) 28%, var(--line));
+        background: color-mix(in srgb, var(--info) 10%, transparent);
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text-subtle);
+      }
+
+      .wallet-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+      }
+
+      .wallet-balance {
+        display: flex;
+        gap: var(--space-md);
+        flex-wrap: wrap;
+      }
+
+      .wallet-item {
+        min-width: 120px;
+      }
+
+      .wallet-item .meta {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      .wallet-item strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .wallet-item.warn strong {
+        color: var(--warning);
+      }
+
+      .cost-meter {
+        display: grid;
+        gap: var(--space-xs);
+      }
+
+      .cost-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--warning) 12%, transparent);
+        color: color-mix(in srgb, var(--warning) 84%, var(--ink));
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-sm);
+      }
+
+      .timeline-step {
+        padding: 14px var(--space-md);
+      }
+
+      .timeline-step.pending {
+        border-color: color-mix(in srgb, var(--warning) 42%, var(--line));
+        background: color-mix(in srgb, var(--warning) 10%, transparent);
+      }
+
+      .timeline-step.done {
+        border-color: color-mix(in srgb, var(--success) 32%, var(--line));
+      }
+
+      .timeline-step .step-index {
+        display: inline-flex;
+        min-width: 24px;
+        height: 24px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: var(--tag);
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .timeline-step.pending .step-index {
+        background: var(--warning);
+        color: #fff;
+      }
+
+      .timeline-step.done .step-index {
+        background: var(--success);
+        color: #fff;
+      }
+
+      .timeline-step strong {
+        display: block;
+        margin-top: var(--space-sm);
+        font-size: 14px;
+      }
+
+      .timeline-step p {
+        margin: 6px 0 0;
+        font-size: 12px;
+        line-height: 1.7;
+        color: var(--text-subtle);
+      }
+
+      .risk-modal {
+        border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
+        box-shadow: 0 24px 60px rgba(239, 68, 68, 0.12);
+      }
+
+      .risk-banner {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--danger) 12%, transparent);
+        color: color-mix(in srgb, var(--danger) 84%, var(--ink));
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .risk-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: var(--space-md);
+      }
+
+      .editor-table,
+      .assets-grid,
+      .toggle-group {
+        display: grid;
+        gap: var(--space-sm);
+      }
+
+      .editor-row {
+        display: grid;
+        grid-template-columns: 72px 1fr 1fr;
+        gap: var(--space-sm);
+        padding: 12px;
+      }
+
+      .editor-cell {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text-subtle);
+      }
+
+      .editor-cell.editing {
+        border-color: color-mix(in srgb, var(--info) 40%, var(--line));
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 12%, transparent);
+      }
+
+      .assets-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .asset-tile {
+        padding: 12px;
+      }
+
+      .asset-thumb {
+        height: 92px;
+        border-radius: 10px;
+        background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, transparent), var(--soft));
+        border: 1px solid var(--line);
+      }
+
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+        padding: 12px 14px;
+      }
+
+      .switch {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--tag);
+        border: 1px solid var(--line);
+      }
+
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      }
+
+      .switch.on {
+        background: var(--accent-ink);
+      }
+
+      .switch.on::after {
+        left: 22px;
+      }
+
+      .blueprint-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .blueprint-card .blueprint-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-sm);
+      }
+
+      .blueprint-card .col-spec {
+        margin-top: var(--space-sm);
+        display: grid;
+        gap: var(--space-xs);
+      }
+
+      .blueprint-card .col-line {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        font-size: 13px;
+        color: var(--text-subtle);
+      }
+
+      @media (max-width: 1180px) {
+        .grid.two,
+        .components-grid,
+        .preview-layout,
+        .component-dual {
+          grid-template-columns: 1fr;
+        }
+
+        .palette {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero-strip,
+        .business-grid,
+        .timeline,
+        .blueprint-grid,
+        .modality-grid,
+        .canvas-modes,
+        .action-grid,
+        .delivery-grid,
+        .decision-bar {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .assets-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .desktop-workbench {
+          display: none;
+        }
+
+        .mobile-prototype {
+          display: block;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100vw - 20px, 1440px);
+          padding-top: var(--space-sm);
+        }
+
+        .hero,
+        .panel,
+        .column {
+          padding: 18px;
+        }
+
+        h1 {
+          font-size: 32px;
+        }
+
+        .palette,
+        .landing-grid,
+        .metric-grid,
+        .hero-strip,
+        .business-grid,
+        .timeline,
+        .assets-grid,
+        .blueprint-grid,
+        .state-grid,
+        .modality-grid,
+        .canvas-modes,
+        .action-grid,
+        .delivery-grid,
+        .file-icons,
+        .stress-grid,
+        .constitution-grid,
+        .decision-bar {
+          grid-template-columns: 1fr;
+        }
+
+        .mobile-segments {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .mobile-segment {
+          justify-content: center;
+          display: inline-flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="eyebrow">Frontstage Design Preview</div>
+        <h1>HelloMe AI 视频任务交付平台规范预览稿</h1>
+        <p>
+          这是一张独立 HTML 原型，不接当前前端路由，也不改真实业务逻辑。这一版不再把 HelloMe 当成“泛 AI 工具”，而是按
+          “AI 视频任务交付平台”来定义前台体验，优先补上资金风控、人工兜底、白牌交付和任务管线这些真正影响商业闭环的界面能力。
+        </p>
+        <div class="hero-strip">
+          <div class="hero-kpi"><div class="label">设计 Pivot</div><strong>从极简工具转为 B 端交付流水线</strong><p>强调成本感知、长流程反馈和服务商可控性。</p></div>
+          <div class="hero-kpi"><div class="label">资金风控</div><strong>冻结金额、扣费确认、余额感知</strong><p>高成本调用前必须有交易层面的明确提示。</p></div>
+          <div class="hero-kpi"><div class="label">人工兜底</div><strong>脚本 / 分镜可修改后再继续</strong><p>AI 只是生成草稿，服务商必须有接管点。</p></div>
+          <div class="hero-kpi"><div class="label">白牌交付</div><strong>内部视角与客户视角彻底分离</strong><p>客户看到结果，服务商看到成本、废稿和毛利。</p></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">00</div>
+          <h2>Universal Workbench 抽象</h2>
+        </div>
+        <div class="business-grid">
+          <div class="business-card">
+            <div class="label">共性链路</div>
+            <strong>Brief → Outline → Draft → Render → Delivery</strong>
+            <p>无论是短视频、PPT、网站还是长文，系统都应抽象成统一生产链路。</p>
+          </div>
+          <div class="business-card">
+            <div class="label">壳与心分离</div>
+            <strong>Panel 壳固定，Canvas 内容可插拔</strong>
+            <p>工作台的壳层、状态层、动作层固定，内部内容随模态自由切换。</p>
+          </div>
+          <div class="business-card">
+            <div class="label">跨模态一致性</div>
+            <strong>Generate / Retry / Approve / Download 始终同位</strong>
+            <p>换 Agent 不换习惯，让 HelloMe 真正像高级生产力平台而不是包壳网页。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-title">
+            <div class="icon">01</div>
+            <h2>核心原则</h2>
+          </div>
+          <div class="principles">
+            <div class="principle"><div class="num">1</div><p>同一类功能只用一种交互样式，避免一个页面里同时出现多个解释体系。</p></div>
+            <div class="principle"><div class="num">2</div><p>普通用户默认先看结果，不先看系统过程，也不先做复杂配置。</p></div>
+            <div class="principle"><div class="num">3</div><p>信息默认收起，只有用户主动点击时才展开依据、脚本、日志或成本细节。</p></div>
+            <div class="principle"><div class="num">4</div><p>固定左中右三栏分工，左边输入，中间结果，右边状态与交付，避免模块混杂。</p></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <div class="icon">02</div>
+            <h2>模块栈顺序</h2>
+          </div>
+          <div class="stack">
+            <div class="stack-item"><strong>L1 页面框架</strong><p>顶栏、侧栏、标签栏稳定存在，不让用户每进一个功能就重新学习导航。</p></div>
+            <div class="stack-item"><strong>L2 工作台骨架</strong><p>桌面端是固定三栏；移动端不再粗暴堆叠，而是“预览在前，输入与导出切换”。</p></div>
+            <div class="stack-item"><strong>L3 页面内容</strong><p>只展示当前阶段必须做的事，其他信息放到按需展开层。</p></div>
+            <div class="stack-item"><strong>L4 创作者例外层</strong><p>调试、参数结构、版本切换只在 Creator Studio 里展示，不进入普通用户前台。</p></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-title">
+            <div class="icon">03</div>
+            <h2>色彩与语义 Token</h2>
+          </div>
+          <div class="palette">
+            <div class="token"><div class="swatch" style="background:var(--canvas)"></div><strong>Canvas</strong><code>--canvas</code><span>工作区背景</span></div>
+            <div class="token"><div class="swatch" style="background:var(--paper)"></div><strong>Paper</strong><code>--paper</code><span>壳层背景</span></div>
+            <div class="token"><div class="swatch" style="background:var(--card)"></div><strong>Card</strong><code>--card</code><span>主卡片</span></div>
+            <div class="token"><div class="swatch" style="background:var(--soft)"></div><strong>Soft</strong><code>--soft</code><span>弱提示 / 收起层</span></div>
+            <div class="token"><div class="swatch" style="background:var(--accent)"></div><strong>Accent</strong><code>--accent</code><span>轻强调状态</span></div>
+            <div class="token"><div class="swatch" style="background:var(--success)"></div><strong>Success</strong><code>--success</code><span>完成 / 成功</span></div>
+            <div class="token"><div class="swatch" style="background:var(--warning)"></div><strong>Warning</strong><code>--warning</code><span>等待确认 / 成本提醒</span></div>
+            <div class="token"><div class="swatch" style="background:var(--danger)"></div><strong>Error</strong><code>--danger</code><span>失败 / 风险</span></div>
+          </div>
+          <div class="token-note">这版已经补上语义状态 token，并统一让边框、阴影走变量，方便后续扩展暗黑模式。</div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <div class="icon">04</div>
+            <h2>字体与间距规范</h2>
+          </div>
+          <div class="type-list">
+            <div class="type-item">
+              <strong>Display 仅用于 H1 / Banner</strong>
+              <div class="sample type-display">HelloMe Result-First Interface</div>
+            </div>
+            <div class="type-item">
+              <strong>工作台内部统一 Sans-serif</strong>
+              <div class="sample type-heading">左中右三栏交付工作台</div>
+            </div>
+            <div class="type-item">
+              <strong>正文与元信息对比度上调</strong>
+              <div class="sample type-body">普通用户只需要最少输入和最清晰的结果，不需要先理解系统工作原理。</div>
+              <div class="sample type-meta">Hint / Meta 文字已提升到更接近 WCAG AA 的可读级别。</div>
+            </div>
+            <div class="type-item">
+              <strong>Spacing System</strong>
+              <div class="sample type-mono">--space-xs 8px / --space-sm 12px / --space-md 16px / --space-lg 24px / --space-xl 32px</div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">05</div>
+          <h2>交互状态预览</h2>
+        </div>
+        <div class="state-grid" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+          <div class="state-card"><strong>Default</strong><p>基础状态，弱边框、清晰层级、可扫描。</p></div>
+          <div class="state-card"><strong>Hover</strong><p>轻微抬起、背景变化，减少盲感，明确可点击性。</p></div>
+          <div class="state-card"><strong>Focus Visible</strong><p>统一使用 Accent Ink 焦点环，兼顾键盘导航。</p></div>
+          <div class="state-card"><strong>Disabled</strong><p>透明度收敛，完全禁止位移与交互反馈。</p></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">06</div>
+          <h2>组件与交互预览</h2>
+        </div>
+        <div class="components-grid">
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>按钮 / 标签 / 状态</h3>
+              <div class="button-row">
+                <button class="btn primary">立即生成</button>
+                <button class="btn secondary">查看依据</button>
+                <button class="btn secondary" disabled>生成中</button>
+                <span class="chip" tabindex="0">9:16 竖版</span>
+                <span class="status">Hermes 已连接</span>
+              </div>
+            </div>
+
+            <div class="spec-card">
+              <h3>输入类组件</h3>
+              <div class="component-list">
+                <div class="upload-card" tabindex="0">
+                  <strong>产品图</strong>
+                  <div class="hint">点击上传 JPG / PNG / WebP</div>
+                </div>
+                <div class="input-box is-focus" tabindex="0">补水不黏腻，夏天通勤 10 秒上脸就能出门。</div>
+                <div class="tab-row">
+                  <button class="tab active">抖音</button>
+                  <button class="tab">小红书</button>
+                  <button class="tab">视频号</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>结果类组件</h3>
+              <div class="preview-layout">
+                <div class="preview-phone">
+                  <div class="preview-screen"></div>
+                </div>
+                <div class="component-list">
+                  <div class="result-card">
+                    <h4>10 秒竖版样片预览</h4>
+                    <p>普通用户进入页面后，默认应该先看到结果方向，而不是复杂解释、脚本结构和长流程说明。</p>
+                  </div>
+                  <div class="chip-row">
+                    <button class="chip">换一种更像真人的表达</button>
+                    <button class="chip">卖点再强一点</button>
+                    <button class="chip">改成人设更自然</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="spec-card">
+              <h3>按需展开交互</h3>
+              <div class="component-list">
+                <div class="expand-box open" data-expand>
+                  <button class="expand-head" type="button">
+                    <strong>查看脚本依据</strong>
+                    <span>收起</span>
+                  </button>
+                  <div class="expand-body">这里只有在用户主动点击后才显示更细的系统内容，例如脚本摘要、分镜思路或推断依据。</div>
+                </div>
+                <div class="expand-box" data-expand>
+                  <button class="expand-head" type="button">
+                    <strong>查看执行状态</strong>
+                    <span>展开</span>
+                  </button>
+                  <div class="expand-body">任务状态、日志和成本确认不应该默认占据主视觉，只在用户需要时出现。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">06+</div>
+          <h2>多模态底座组件</h2>
+        </div>
+        <div class="modality-grid">
+          <div class="modality-card">
+            <div class="label">Dynamic Form Engine</div>
+            <strong>基于 JSON Schema 动态渲染输入表单</strong>
+            <p>不同 Agent 只换 schema，不重做页面。左栏支持长文本、多图上传、文件解析和属性选择。</p>
+            <div class="schema-rows" style="margin-top:12px;">
+              <div class="schema-row"><span>长文本 Brief</span><span class="schema-tag">Textarea</span></div>
+              <div class="schema-row"><span>多图上传</span><span class="schema-tag">Image Uploader</span></div>
+              <div class="schema-row"><span>PDF / Doc 解析</span><span class="schema-tag">Parser Drop</span></div>
+              <div class="schema-row"><span>属性选择器</span><span class="schema-tag">Tags / Select</span></div>
+            </div>
+          </div>
+          <div class="modality-card">
+            <div class="label">Universal Canvas</div>
+            <strong>中间预览区是多模态容器</strong>
+            <p>视频、文档、PPT、网页只是在同一个 Canvas 容器内切换墨盒，而不是重做整个页面。</p>
+          </div>
+          <div class="modality-card">
+            <div class="label">Asset Manager</div>
+            <strong>交付包容纳任意格式与多版本</strong>
+            <p>右栏统一管理 `.docx / .pptx / .html / .png / .mp4 / .zip`，并支持 V1 / V2 / V3 历史切换。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">06.1</div>
+          <h2>通用工作区 / 变体画布</h2>
+        </div>
+        <div class="canvas-modes">
+          <div class="mode-card">
+            <div class="label">Video Mode</div>
+            <strong>视频模式</strong>
+            <p>保留 9:16 / 16:9 播放器，以及镜头、配音和节奏预览能力。</p>
+            <div class="mode-preview video"></div>
+          </div>
+          <div class="mode-card">
+            <div class="label">Document Mode</div>
+            <strong>文档模式</strong>
+            <p>类似 Notion / 飞书文档，支持 Markdown 渲染和行内编辑。</p>
+            <div class="mode-preview doc"></div>
+          </div>
+          <div class="mode-card">
+            <div class="label">Pitch Deck Mode</div>
+            <strong>PPT 模式</strong>
+            <p>左侧缩略图，右侧大图预览，支持卡片式拖拽排序。</p>
+            <div class="mode-preview deck">
+              <div class="deck-thumbs">
+                <div class="deck-thumb"></div>
+                <div class="deck-thumb"></div>
+                <div class="deck-thumb"></div>
+              </div>
+              <div class="deck-main"></div>
+            </div>
+          </div>
+          <div class="mode-card">
+            <div class="label">Web / UI Mode</div>
+            <strong>网页 / 界面模式</strong>
+            <p>Desktop / Mobile 切换的响应式预览窗，适合网页和 UI 生成。</p>
+            <div class="mode-preview web">
+              <div class="web-shell">
+                <div class="web-frame"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">06.2</div>
+          <h2>动态输入与泛化资产管理器</h2>
+        </div>
+        <div class="component-dual">
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>动态输入表单示意</h3>
+              <div class="schema-rows">
+                <div class="schema-row"><span>网页 Agent</span><span class="schema-tag">Sitemap / 品牌色谱</span></div>
+                <div class="schema-row"><span>PPT Agent</span><span class="schema-tag">历史研报 PDF / 页数</span></div>
+                <div class="schema-row"><span>视频 Agent</span><span class="schema-tag">产品图 / 人物图 / 卖点</span></div>
+              </div>
+              <div class="parser-drop" style="margin-top:12px;">
+                <strong style="display:block;margin-bottom:6px;">文件解析拖拽区</strong>
+                <div class="hint">拖入 PDF / DOC / DOCX，系统自动提取大纲、数据与写作上下文。</div>
+              </div>
+            </div>
+          </div>
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>文件类型与版本控制</h3>
+              <div class="file-icons">
+                <div class="file-icon-card"><div class="file-glyph">DOCX</div><div class="small" style="margin-top:8px;">文档</div></div>
+                <div class="file-icon-card"><div class="file-glyph">PPTX</div><div class="small" style="margin-top:8px;">演示</div></div>
+                <div class="file-icon-card"><div class="file-glyph">HTML</div><div class="small" style="margin-top:8px;">网页</div></div>
+                <div class="file-icon-card"><div class="file-glyph">PNG</div><div class="small" style="margin-top:8px;">图片</div></div>
+                <div class="file-icon-card"><div class="file-glyph">MP4</div><div class="small" style="margin-top:8px;">视频</div></div>
+                <div class="file-icon-card"><div class="file-glyph">ZIP</div><div class="small" style="margin-top:8px;">打包</div></div>
+              </div>
+              <div class="version-list" style="margin-top:12px;">
+                <div class="version-item active"><span>Version 3 / 最新交付稿</span><span class="file-badge">当前</span></div>
+                <div class="version-item"><span>Version 2 / 客户打回修改</span><span class="file-badge">历史</span></div>
+                <div class="version-item"><span>Version 1 / 初版输出</span><span class="file-badge">历史</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">07</div>
+          <h2>业务级核心组件</h2>
+        </div>
+        <div class="business-grid">
+          <div class="business-card">
+            <div class="label">资金与风控</div>
+            <strong>钱包状态条 + 预估成本计算器</strong>
+            <p>常驻展示可用余额、冻结金额和预计成本区间，避免并发任务导致超额调用。</p>
+          </div>
+          <div class="business-card">
+            <div class="label">人工介入</div>
+            <strong>待确认步骤 + 内联编辑器</strong>
+            <p>在脚本与分镜阶段支持人工修改，再进入高成本视频生成。</p>
+          </div>
+          <div class="business-card">
+            <div class="label">白牌交付</div>
+            <strong>脱敏交付包 + 外发链接控制</strong>
+            <p>支持隐藏中间废稿、隐藏成本，并生成面向客户的干净外发页。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">08</div>
+          <h2>资金风控组件群</h2>
+        </div>
+        <div class="component-dual">
+          <div class="component-list">
+            <div class="wallet-bar">
+              <div class="wallet-balance">
+                <div class="wallet-item"><div class="meta">可用余额</div><strong>￥2,460</strong></div>
+                <div class="wallet-item warn"><div class="meta">已冻结金额</div><strong>￥380</strong></div>
+              </div>
+              <div class="cost-meter">
+                <div class="cost-pill">预计冻结 ￥120 - ￥260</div>
+                <div class="small">视频时长、模型质量与重试策略变化时，成本动态刷新。</div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <h3>高风险操作确认弹窗</h3>
+              <div class="risk-modal">
+                <div class="risk-banner">高成本模型调用</div>
+                <strong style="display:block;margin-top:12px;font-size:18px;">即将冻结 ￥188，确认后不可撤销</strong>
+                <p style="margin:8px 0 0;font-size:13px;line-height:1.75;color:var(--text-subtle);">
+                  当前任务将进入正式视频生成阶段，系统会先冻结预算，再按实际消耗结算。
+                </p>
+                <div class="risk-actions">
+                  <button class="btn secondary">返回继续修改</button>
+                  <button class="btn primary" style="background:var(--danger);">确认冻结并执行</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>任务管线中的风控表达</h3>
+              <div class="timeline">
+                <div class="timeline-step done"><span class="step-index">1</span><strong>需求解析</strong><p>已完成输入理解与任务建模。</p></div>
+                <div class="timeline-step pending"><span class="step-index">2</span><strong>脚本与分镜确认</strong><p>等待人工修改与确认后继续。</p></div>
+                <div class="timeline-step"><span class="step-index">3</span><strong>视频生成</strong><p>进入该步时冻结预算并调用昂贵模型。</p></div>
+                <div class="timeline-step"><span class="step-index">4</span><strong>交付整理</strong><p>打包成片、脚本、封面与客户包。</p></div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <h3>风险提示规范</h3>
+              <div class="component-list">
+                <div class="rail-item"><div class="meta">Warning</div><strong style="color:var(--warning);">等待人工确认 / 预算冻结前提示</strong><p>用于高成本节点与余额不足的场景。</p></div>
+                <div class="rail-item"><div class="meta">Danger</div><strong style="color:var(--danger);">失败 / 预算不足 / 不可逆操作</strong><p>用于不可撤销与错误终止场景。</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">09</div>
+          <h2>人工兜底与白牌交付组件群</h2>
+        </div>
+        <div class="component-dual">
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>内联编辑器 / HITL</h3>
+              <div class="editor-table">
+                <div class="editor-row">
+                  <div class="editor-cell">01</div>
+                  <div class="editor-cell">镜头开场：真人展示产品，上脸前后对比。</div>
+                  <div class="editor-cell editing">旁白：夏天通勤 10 秒完成底妆，不闷不假白。</div>
+                </div>
+                <div class="editor-row">
+                  <div class="editor-cell">02</div>
+                  <div class="editor-cell">特写膏体质感，强调清透服帖。</div>
+                  <div class="editor-cell">旁白：近看也不卡纹，午后补妆不斑驳。</div>
+                </div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <h3>智能重试 / Debug Panel</h3>
+              <div class="chip-row">
+                <button class="chip">换一个提示词重试</button>
+                <button class="chip">跳过该镜头错误</button>
+                <button class="chip">改低成本模型重跑</button>
+              </div>
+            </div>
+          </div>
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>多格式资产画廊</h3>
+              <div class="assets-grid">
+                <div class="asset-tile"><div class="asset-thumb"></div><strong style="margin-top:10px;display:block;">sample-video.mp4</strong><div class="small">视频成片</div></div>
+                <div class="asset-tile"><div class="asset-thumb"></div><strong style="margin-top:10px;display:block;">storyboard-01.png</strong><div class="small">分镜图</div></div>
+                <div class="asset-tile"><div class="asset-thumb"></div><strong style="margin-top:10px;display:block;">script.md</strong><div class="small">脚本大纲</div></div>
+              </div>
+            </div>
+            <div class="spec-card">
+              <h3>白牌交付控制器</h3>
+              <div class="toggle-group">
+                <div class="toggle-row"><span>隐藏生成成本</span><span class="switch on"></span></div>
+                <div class="toggle-row"><span>隐藏中间废稿</span><span class="switch on"></span></div>
+                <div class="toggle-row"><span>生成脱敏外发链接</span><span class="switch"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">09+</div>
+          <h2>可插拔 Workflow 与人工接管层</h2>
+        </div>
+        <div class="component-dual">
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>动态步骤时间轴</h3>
+              <div class="timeline">
+                <div class="timeline-step done"><span class="step-index">1</span><strong>Brief</strong><p>自动解析输入材料。</p></div>
+                <div class="timeline-step pending"><span class="step-index">2</span><strong>Outline</strong><p>需要人工确认大纲。</p></div>
+                <div class="timeline-step"><span class="step-index">3</span><strong>Draft</strong><p>系统静默生成草稿。</p></div>
+                <div class="timeline-step"><span class="step-index">4</span><strong>Render</strong><p>高成本生成最终资产。</p></div>
+              </div>
+              <div class="workflow-legend">
+                <span class="legend-pill"><span class="legend-dot auto"></span>Auto 自动执行</span>
+                <span class="legend-pill"><span class="legend-dot hitl"></span>HITL 人工确认</span>
+                <span class="legend-pill"><span class="legend-dot cost"></span>High-Cost 强阻断</span>
+              </div>
+            </div>
+          </div>
+          <div class="component-list">
+            <div class="spec-card">
+              <h3>统一人工接管层</h3>
+              <div class="editor-table">
+                <div class="editor-row">
+                  <div class="editor-cell">原版</div>
+                  <div class="editor-cell">AI 建议：行业分析报告聚焦增长动因。</div>
+                  <div class="editor-cell editing">人工改写：增加市场份额与竞争对手比较段落。</div>
+                </div>
+              </div>
+              <div class="chip-row" style="margin-top:12px;">
+                <button class="chip">仅重写此段</button>
+                <button class="chip">仅重绘此图</button>
+                <button class="chip">Approve & Continue</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">10</div>
+          <h2>完整三栏布局示意</h2>
+        </div>
+
+        <div class="prototype desktop-workbench">
+          <div class="triple-layout">
+            <div class="column">
+              <div class="column-label">Left</div>
+              <h3>最少输入</h3>
+              <div class="section-gap component-list">
+                <div class="upload-card"><strong>产品图</strong><div class="hint">点击上传</div></div>
+                <div class="upload-card"><strong>人物图 / 模特图</strong><div class="hint">点击上传</div></div>
+                <div class="input-box">补水不黏腻，适合夏天通勤 10 秒快速上脸。</div>
+                <div class="tab-row">
+                  <button class="tab active">抖音</button>
+                  <button class="tab">小红书</button>
+                  <button class="tab">视频号</button>
+                </div>
+                <button class="btn primary" style="width:100%">生成样片</button>
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="column-label">Center</div>
+              <h3>结果优先</h3>
+              <div class="section-gap preview-layout">
+                <div class="preview-phone">
+                  <div class="preview-screen"></div>
+                </div>
+                <div class="component-list">
+                  <div class="result-card">
+                    <h4>先看到样片气质，再做轻量纠偏</h4>
+                    <p>中间栏承接的是结果本身，不是复杂表单，也不是日志系统。用户先判断想不想要这个方向，再决定是否微调。</p>
+                  </div>
+                  <div class="metric-grid">
+                    <div class="metric"><div class="small">风格</div><strong>更像真人种草</strong></div>
+                    <div class="metric"><div class="small">时长</div><strong>10 秒</strong></div>
+                    <div class="metric"><div class="small">比例</div><strong>9:16</strong></div>
+                  </div>
+                  <div class="chip-row">
+                    <button class="chip">换一种开场</button>
+                    <button class="chip">卖点再强一点</button>
+                    <button class="chip">更像测评讲解</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="column">
+              <div class="column-label">Right</div>
+              <h3>状态与交付</h3>
+              <div class="section-gap right-list">
+                <div class="rail-item">
+                  <div class="meta">当前状态</div>
+                  <strong style="color:var(--warning)">等待确认后进入正式视频生成</strong>
+                </div>
+                <div class="rail-item">
+                  <div class="meta">交付文件</div>
+                  <strong>sample-video.mp4</strong>
+                  <p>最终样片</p>
+                </div>
+                <div class="rail-item">
+                  <div class="meta">封面图</div>
+                  <strong>cover-frame.png</strong>
+                  <p>封面与预览帧</p>
+                </div>
+                <div class="rail-item">
+                  <div class="meta">脚本与过程</div>
+                  <strong>默认收起</strong>
+                  <p>只有点开时才展示脚本、分镜与执行过程。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="prototype mobile-prototype">
+          <div class="mobile-stage">
+            <div class="column-label">Mobile Result-First</div>
+            <h3 style="margin:8px 0 14px;">预览固定在前，输入与导出切换</h3>
+            <div class="preview-phone">
+              <div class="preview-screen"></div>
+            </div>
+          </div>
+
+          <div class="mobile-tray">
+            <div class="mobile-segments" role="tablist" aria-label="移动端内容切换">
+              <button class="mobile-segment active" data-mobile-tab="input" type="button">输入</button>
+              <button class="mobile-segment" data-mobile-tab="preview" type="button">预览</button>
+              <button class="mobile-segment" data-mobile-tab="delivery" type="button">导出</button>
+            </div>
+
+            <div class="mobile-panel active" data-mobile-panel="input">
+              <div class="component-list">
+                <div class="upload-card"><strong>产品图</strong><div class="hint">点击上传</div></div>
+                <div class="upload-card"><strong>人物图 / 模特图</strong><div class="hint">点击上传</div></div>
+                <div class="input-box">补水不黏腻，适合夏天通勤 10 秒快速上脸。</div>
+                <button class="btn primary" style="width:100%">生成样片</button>
+              </div>
+            </div>
+
+            <div class="mobile-panel" data-mobile-panel="preview">
+              <div class="component-list">
+                <div class="result-card">
+                  <h4>先看结果，再做纠偏</h4>
+                  <p>移动端不再先滚一长段表单，而是让用户先看到样片气质，再切换到输入或导出。</p>
+                </div>
+                <div class="chip-row">
+                  <button class="chip">换一种开场</button>
+                  <button class="chip">卖点更强</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mobile-panel" data-mobile-panel="delivery">
+              <div class="right-list">
+                <div class="rail-item">
+                  <div class="meta">状态</div>
+                  <strong style="color:var(--warning)">等待正式生成</strong>
+                  <p>高成本步骤只在确认节点展示。</p>
+                </div>
+                <div class="rail-item">
+                  <div class="meta">交付</div>
+                  <strong>sample-video.mp4 / cover-frame.png</strong>
+                  <p>默认只展示交付摘要。</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid two">
+        <article class="panel">
+          <div class="panel-title">
+            <div class="icon">11</div>
+            <h2>核心商业页面蓝图</h2>
+          </div>
+          <div class="blueprint-grid">
+            <div class="blueprint-card">
+              <div class="blueprint-head">
+                <div>
+                  <div class="label">Page A</div>
+                  <strong>短视频 Agent 下单页</strong>
+                </div>
+              </div>
+              <p>不是一个大输入框，而是面向交易的结构化下单页面。</p>
+              <div class="col-spec">
+                <div class="col-line">左栏：资料区块、卖点区块、URL 智能解析卡片、配置区块</div>
+                <div class="col-line">中栏：成功案例跑马灯，先卖结果，再让用户下单</div>
+                <div class="col-line">右栏：交付物清单、成本面板、冻结余额并执行</div>
+              </div>
+            </div>
+            <div class="blueprint-card">
+              <div class="blueprint-head">
+                <div>
+                  <div class="label">Page B</div>
+                  <strong>执行与人工兜底页</strong>
+                </div>
+              </div>
+              <p>真正承载 Task Orchestrator 状态流转的业务工作区。</p>
+              <div class="col-spec">
+                <div class="col-line">顶部：横向步骤条，明确待确认节点</div>
+                <div class="col-line">中区：脚本与分镜表格，可人工直接修改</div>
+                <div class="col-line">动作：确认无误后弹窗，再进入正式视频生成</div>
+              </div>
+            </div>
+            <div class="blueprint-card">
+              <div class="blueprint-head">
+                <div>
+                  <div class="label">Page C</div>
+                  <strong>服务商客户交付包页</strong>
+                </div>
+              </div>
+              <p>同一份内容分为内部视角与客户视角，支撑白牌复购闭环。</p>
+              <div class="col-spec">
+                <div class="col-line">内部：看成本、毛利、废稿、调试记录</div>
+                <div class="col-line">客户：只看成片、脚本摘要、下载入口</div>
+                <div class="col-line">支持：Logo 替换、脱敏链接、ZIP 一键打包</div>
+              </div>
+            </div>
+            <div class="blueprint-card">
+              <div class="blueprint-head">
+                <div>
+                  <div class="label">Page D</div>
+                  <strong>多模态服务商客户 Portal</strong>
+                </div>
+              </div>
+              <p>当一次任务交付多个模态时，交付页变成虚拟展厅而不是单文件下载页。</p>
+              <div class="col-spec">
+                <div class="col-line">顶部：白牌 Logo + 一键打包下载 ZIP</div>
+                <div class="col-line">中间：视频素材 / 文档材料 / 演示文稿 三个 Tab</div>
+                <div class="col-line">底部：客户轻量批注，直接回流到任务执行页</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-title">
+            <div class="icon">12</div>
+            <h2>建议落地范围</h2>
+          </div>
+          <div class="landing-grid">
+            <div class="landing"><strong>/app/agents/media</strong><p>收敛成真正的结果导向 UGC 工作台。</p></div>
+            <div class="landing"><strong>/app/tasks/:id</strong><p>任务页升级为执行与人工兜底页，不再只是日志看板。</p></div>
+            <div class="landing"><strong>/app/results/:id</strong><p>新增白牌交付包视角，区分内部与客户外发页面。</p></div>
+            <div class="landing"><strong>/connect-hermes</strong><p>只讲最短安装与连接动作，不讲复杂概念。</p></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">13</div>
+          <h2>多模态交付 Portal 示意</h2>
+        </div>
+        <div class="delivery-room">
+          <div class="delivery-room-top">
+            <div class="logo-chip">Client Portal · White Label Brand</div>
+            <button class="btn primary">下载全套 ZIP</button>
+          </div>
+          <div class="delivery-tabs">
+            <button class="tab active">视频素材</button>
+            <button class="tab">文档材料</button>
+            <button class="tab">演示文稿</button>
+          </div>
+          <div class="delivery-grid">
+            <div class="component-list">
+              <div class="result-card">
+                <h4>虚拟展厅式交付</h4>
+                <p>客户无需先下载，就可以在线预览视频、浏览 PDF、查看 PPT 页面结构。</p>
+              </div>
+              <div class="assets-grid">
+                <div class="asset-tile"><div class="asset-thumb"></div><strong style="margin-top:10px;display:block;">品牌短视频</strong><div class="small">3 条</div></div>
+                <div class="asset-tile"><div class="asset-thumb"></div><strong style="margin-top:10px;display:block;">企业介绍 PPT</strong><div class="small">1 套</div></div>
+                <div class="asset-tile"><div class="asset-thumb"></div><strong style="margin-top:10px;display:block;">公众号文案</strong><div class="small">5 篇</div></div>
+              </div>
+            </div>
+            <div class="component-list">
+              <div class="feedback-note">
+                客户反馈批注：点击某张图或某段文字后，留下 Comment，例如“标题字改大点”。这条批注会直接回流到任务执行页。
+              </div>
+              <div class="rail-item">
+                <div class="meta">回流动作</div>
+                <strong>生成返修任务 / 指向具体资产 / 指向具体位置</strong>
+                <p>这让交付页不只是展示终点，也成为复购与迭代的入口。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">14</div>
+          <h2>Design System 执行建议</h2>
+        </div>
+        <div class="stress-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+          <div class="stress-card">
+            <div class="label">Stress Test A</div>
+            <strong>100 张商品图瀑布流</strong>
+            <p>验证重视觉场景下，筛选、分组、批量下载和版本切换是否仍然清晰。</p>
+          </div>
+          <div class="stress-card">
+            <div class="label">Stress Test B</div>
+            <strong>50 页行业分析报告</strong>
+            <p>验证长文档目录、章节确认、局部重写与版本回退是否撑得住。</p>
+          </div>
+          <div class="stress-card">
+            <div class="label">Stress Test C</div>
+            <strong>混合交付大礼包</strong>
+            <p>验证 HTML 落地页、宣传海报、开场视频混合交付时的 Portal 包容性。</p>
+          </div>
+        </div>
+        <div class="action-grid" style="grid-template-columns:repeat(4,minmax(0,1fr)); margin-top:12px;">
+          <div class="action-card"><div class="label">Atomic Action</div><strong>Generate</strong><p>创建草稿或正式生成，始终位于主操作位。</p></div>
+          <div class="action-card"><div class="label">Atomic Action</div><strong>Retry</strong><p>对失败步骤或局部内容重跑，不必整任务重来。</p></div>
+          <div class="action-card"><div class="label">Atomic Action</div><strong>Approve & Continue</strong><p>HITL 节点统一文案与位置。</p></div>
+          <div class="action-card"><div class="label">Atomic Action</div><strong>Download</strong><p>交付与归档统一在结果 / 交付面板出口。</p></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">
+          <div class="icon">15</div>
+          <h2>HelloMe UX Constitution</h2>
+        </div>
+        <div class="constitution-grid">
+          <div class="constitution-card">
+            <div class="label">维度一</div>
+            <strong>容器与空间</strong>
+            <p>解决“这个内容该放在哪里”，核心目标是控制打断感和聚焦成本。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Modal / Dialog</span><span class="rule-type">强阻断</span></div>
+                <p>只给高危、短动作、必须聚焦的场景，绝不塞长滚动表单，也不允许弹窗套娃。</p>
+                <div class="rule-example">HelloMe: 扣费确认、删除资产、重命名任务</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Drawer / Slide-over</span><span class="rule-type">复杂上下文</span></div>
+                <p>用于需要参考底层页面的复杂操作或长表单，不适合一句话确认。</p>
+                <div class="rule-example">HelloMe: 任务执行日志详情、模型高级参数配置</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Popover / Tooltip</span><span class="rule-type">轻信息</span></div>
+                <p>Popover 可带少量操作，Tooltip 只允许纯文本解释，不放链接和长说明。</p>
+                <div class="rule-example">HelloMe: 余额气泡卡片、CFG Scale 提示文案</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="constitution-card">
+            <div class="label">维度二</div>
+            <strong>数据录入与选择</strong>
+            <p>解决“如何输入最高效”，核心是按选项数量和是否即时生效来选组件。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Switch / Toggle</span><span class="rule-type">即时生效</span></div>
+                <p>只给即时改变系统状态的设置，不放在提交后才生效的表单里。</p>
+                <div class="rule-example">HelloMe: 开启脱敏模式、隐藏生成成本</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Checkbox / Chips / Select</span><span class="rule-type">按数量决策</span></div>
+                <p>2-4 个单选用 Chips；5 个以上用 Select；10 个以上必须带搜索。</p>
+                <div class="rule-example">HelloMe: 画幅比例、平台选择、音色选择、大模型选择</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Slider / Tags Input</span><span class="rule-type">连续值 / 多标签</span></div>
+                <p>用户对程度敏感用 Slider；多个并列短词用 Tags Input。</p>
+                <div class="rule-example">HelloMe: 视频时长、相似度、目标人群标签</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="constitution-card">
+            <div class="label">维度三</div>
+            <strong>状态与反馈</strong>
+            <p>解决“系统如何说话”，特别是缓解 AI 生成时的等待焦虑与不确定感。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Toast / Banner</span><span class="rule-type">轻提示 / 常驻警告</span></div>
+                <p>成功通知走 Toast；高优先级余额不足、权限问题走 Banner 常驻提示。</p>
+                <div class="rule-example">HelloMe: “链接已复制” / “余额不足 20 元，请充值”</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Skeleton / Progress</span><span class="rule-type">加载与进度</span></div>
+                <p>长加载先铺骨架，长任务有真实进度就给 Progress Bar，按钮内部只用 Spinner。</p>
+                <div class="rule-example">HelloMe: 10 个分镜骨架、视频渲染 45%</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Empty State</span><span class="rule-type">无数据</span></div>
+                <p>必须包含图标、友好文案和明确 CTA，不能只写“暂无数据”。</p>
+                <div class="rule-example">HelloMe: “还没有交付过任务” + “立即创建首个 Agent 任务”</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="constitution-card">
+            <div class="label">维度四</div>
+            <strong>导航与结构</strong>
+            <p>解决“用户在哪里、去哪里、怎么回来”，核心是层级清晰与返回成本低。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Stepper / Timeline</span><span class="rule-type">严格顺序</span></div>
+                <p>所有长任务都拆成顺序明确的步骤，并暴露 Auto / HITL / High-Cost 状态。</p>
+                <div class="rule-example">HelloMe: 解析需求 → 确认大纲 → 视频生成 → 整理交付</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Tabs</span><span class="rule-type">同级互斥视图</span></div>
+                <p>同层级内容切换用 Tabs，不要用多个连续大段内容堆叠代替。</p>
+                <div class="rule-example">HelloMe: 视频素材 / 文档材料 / 演示文稿</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Breadcrumbs</span><span class="rule-type">3 级以上层级</span></div>
+                <p>页面层级过深时必须提供面包屑，保证用户能原路返回。</p>
+                <div class="rule-example">HelloMe: 任务中心 > 短视频 Agent 任务 > 执行日志</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="constitution-card">
+            <div class="label">维度五</div>
+            <strong>数据展示</strong>
+            <p>解决“信息怎么呈现最舒服”，按内容主导类型决定用表格、卡片还是列表。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Data Table</span><span class="rule-type">结构化对比</span></div>
+                <p>适合可排序、可筛选、同结构行列数据，不适合看大图大视频。</p>
+                <div class="rule-example">HelloMe: 计费流水账单、任务耗时统计表</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Card Grid</span><span class="rule-type">视觉主导</span></div>
+                <p>看图、看视频、看资产时优先用卡片网格，靠视觉辨识而不是文字。</p>
+                <div class="rule-example">HelloMe: 资产画廊、Agent 卡片墙</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">List</span><span class="rule-type">文字顺序</span></div>
+                <p>适合时间线、历史版本、逻辑步骤，不要硬做成卡片墙。</p>
+                <div class="rule-example">HelloMe: V1 / V2 / V3 版本记录</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="constitution-card">
+            <div class="label">维度六</div>
+            <strong>动作指令</strong>
+            <p>解决“系统如何引导行动”，一个视窗内必须有清晰优先级。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Primary Button</span><span class="rule-type">唯一主目标</span></div>
+                <p>一个视窗或表单内有且仅有一个主按钮，代表最高优先级任务。</p>
+                <div class="rule-example">HelloMe: 确认并继续 / 冻结并执行</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Secondary / Ghost</span><span class="rule-type">辅助动作</span></div>
+                <p>用于取消、返回、另存为草稿、重新生成等次级操作。</p>
+                <div class="rule-example">HelloMe: 上一步 / 另存为草稿 / 重新生成</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Danger Button</span><span class="rule-type">不可逆</span></div>
+                <p>所有会造成数据丢失或任务终止的操作必须显式使用危险按钮样式。</p>
+                <div class="rule-example">HelloMe: 中止生成任务 / 删除视频资产</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="constitution-card">
+            <div class="label">维度七</div>
+            <strong>AI 产品专属范式</strong>
+            <p>这是 HelloMe 区别于传统 SaaS 的核心，必须把“AI 活着”的感觉设计出来。</p>
+            <div class="rule-list">
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Streaming State</span><span class="rule-type">流式输出</span></div>
+                <p>文本不要等全生成完才显示，应该逐字出现，并带闪烁光标。</p>
+                <div class="rule-example">HelloMe: 大纲、脚本、文案、报告摘要</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">HITL Diff</span><span class="rule-type">人工修改对照</span></div>
+                <p>服务商修改 AI 草稿时，要能看到原版与修改版的差异高亮。</p>
+                <div class="rule-example">HelloMe: 左侧 AI 原版 / 右侧人工修改版</div>
+              </div>
+              <div class="rule-item">
+                <div class="rule-head"><span class="rule-name">Partial Reroll / Magic Wand</span><span class="rule-type">局部重做</span></div>
+                <p>允许局部续写、局部重绘、智能扩写，避免因为一个错误整任务推翻重来。</p>
+                <div class="rule-example">HelloMe: 仅重写此段 / 仅重绘此图 / 扩写这个 Brief</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="decision-bar">
+          <div class="decision-box">
+            <strong>决策灵魂一问</strong>
+            <p>这个动作打断感强吗？决定用 Modal、Drawer，还是新开页面。</p>
+          </div>
+          <div class="decision-box">
+            <strong>决策灵魂二问</strong>
+            <p>需要让用户挑多少个选项？决定用 Chip、Select，还是 Switch。</p>
+          </div>
+          <div class="decision-box">
+            <strong>决策灵魂三问</strong>
+            <p>用户等这个结果要多久？决定用 Toast、骨架屏，还是进度条。</p>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        文件路径：<code>/Users/feihong/Documents/hellome/docs/ui-prototypes/frontstage-design-preview.html</code>
+        。这版现在已经不仅是视觉规范，而是带有组件决策逻辑的 UX Constitution。如果你认可这个方向，下一步我就直接单独出
+        Page A 多模态下单页 和 Page B 执行与人工兜底页 两张独立 HTML 高保真原型。
+      </p>
+    </main>
+
+    <script>
+      document.querySelectorAll("[data-expand]").forEach((box) => {
+        const button = box.querySelector(".expand-head");
+        const text = button.querySelector("span");
+        button.addEventListener("click", () => {
+          box.classList.toggle("open");
+          text.textContent = box.classList.contains("open") ? "收起" : "展开";
+        });
+      });
+
+      const mobileTabs = document.querySelectorAll("[data-mobile-tab]");
+      const mobilePanels = document.querySelectorAll("[data-mobile-panel]");
+
+      mobileTabs.forEach((button) => {
+        button.addEventListener("click", () => {
+          const next = button.getAttribute("data-mobile-tab");
+          mobileTabs.forEach((item) => item.classList.toggle("active", item === button));
+          mobilePanels.forEach((panel) => {
+            panel.classList.toggle("active", panel.getAttribute("data-mobile-panel") === next);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

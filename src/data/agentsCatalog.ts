@@ -45,7 +45,7 @@ export const RANKING_SECTIONS = [
     gradient: 'from-amber-50 via-yellow-50/80 to-orange-50',
     accent: 'text-amber-500',
     decor: '👍',
-    agentIds: ['geo', 'media', 'schema-optimizer'],
+    agentIds: ['geo', 'media-seeding', 'schema-optimizer'],
   },
   {
     id: 'popular',
@@ -54,7 +54,7 @@ export const RANKING_SECTIONS = [
     gradient: 'from-orange-50 via-rose-50/60 to-red-50',
     accent: 'text-orange-500',
     decor: '🔥',
-    agentIds: ['geo', 'sales', 'competitor-scan'],
+    agentIds: ['media-conversion', 'sales', 'competitor-scan'],
   },
   {
     id: 'official',
@@ -63,7 +63,7 @@ export const RANKING_SECTIONS = [
     gradient: 'from-sky-50 via-blue-50/70 to-indigo-50',
     accent: 'text-blue-500',
     decor: '⭐',
-    agentIds: ['geo', 'hermes-report', 'faq-generator'],
+    agentIds: ['media-review', 'hermes-report', 'faq-generator'],
   },
 ] as const;
 
@@ -84,10 +84,10 @@ export const AGENTS: AgentItem[] = [
     badge: '官方',
   },
   {
-    id: 'media',
-    name: '自媒体小助手',
-    desc: '公众号、小红书内容起草与发布前合规体检，一键生成爆款标题。',
-    tokenRange: '2,000-20,000 Token',
+    id: 'media-seeding',
+    name: '真人种草视频',
+    desc: '人物图 + 产品图 + 一句话卖点，生成更像真实分享的 10 秒种草样片。',
+    tokenRange: '12,000-28,000 Token',
     category: 'content',
     creator: 'HelloMe',
     creatorAvatar: 'H',
@@ -95,7 +95,36 @@ export const AGENTS: AgentItem[] = [
     likes: '1.2k',
     iconSrc: AGENT_ICONS.media,
     available: true,
-    path: '/app/agents/media',
+    path: '/app/agents/media-seeding',
+    badge: '推荐',
+  },
+  {
+    id: 'media-review',
+    name: '测评讲解视频',
+    desc: '更强调对比、体验和结论，适合先讲效果再给理由的 10 秒讲解样片。',
+    tokenRange: '14,000-30,000 Token',
+    category: 'content',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '1.6w',
+    likes: '1.0k',
+    iconSrc: AGENT_ICONS.media,
+    available: true,
+    path: '/app/agents/media-review',
+  },
+  {
+    id: 'media-conversion',
+    name: '带货转化视频',
+    desc: '更强调节奏、活动和行动引导，适合直接推动下单的 10 秒转化样片。',
+    tokenRange: '15,000-32,000 Token',
+    category: 'content',
+    creator: 'HelloMe',
+    creatorAvatar: 'H',
+    heat: '1.7w',
+    likes: '1.1k',
+    iconSrc: AGENT_ICONS.media,
+    available: true,
+    path: '/app/agents/media-conversion',
   },
   {
     id: 'sales',
@@ -240,5 +269,8 @@ export const AGENTS: AgentItem[] = [
 ];
 
 export function getAgentById(id: string): AgentItem | undefined {
+  if (id === 'media') {
+    return AGENTS.find((a) => a.id === 'media-seeding');
+  }
   return AGENTS.find((a) => a.id === id);
 }

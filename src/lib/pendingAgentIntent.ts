@@ -3,6 +3,7 @@ import { isHermesConnected } from './firstRunOnboarding';
 import { openAgentWorkspace, getAgentWorkspacePath } from './openAgentWorkspace';
 
 export type AgentIntentAction = 'use' | 'view' | 'enter';
+export type UserAccessLevel = 'visitor' | 'logged_in_unpaired' | 'logged_in_paired';
 
 export interface PendingAgentIntent {
   redirect?: string;
@@ -138,4 +139,3 @@ export function getUserAccessLevel(): UserAccessLevel {
   if (!isHermesConnected()) return 'logged_in_unpaired';
   return 'logged_in_paired';
 }
-

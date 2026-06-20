@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import AppSidebar, { MobileNavBar } from './AppSidebar';
 import Topbar from './Topbar';
@@ -8,6 +8,9 @@ import {
   getVisibleRecentAgentIds,
   subscribeWorkbenchTabs,
 } from '../../lib/workbenchTabs';
+import { syncHermesConnection } from '../../lib/hermesConnection';
+import { syncAuthSession } from '../../lib/auth';
+import { syncUsageState } from '../../lib/usageStore';
 
 export default function AppShell() {
   const location = useLocation();
@@ -20,6 +23,12 @@ export default function AppShell() {
   const showWorkbenchTabs =
     workbenchRevision.length > 0 &&
     (location.pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(location.pathname));
+
+  useEffect(() => {
+    void syncAuthSession();
+    void syncHermesConnection();
+    void syncUsageState();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] flex">

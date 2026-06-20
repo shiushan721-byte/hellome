@@ -4,6 +4,8 @@ const statusConfig: Record<
   TaskStatus,
   { label: string; className: string }
 > = {
+  draft: { label: '草稿', className: 'bg-black/5 text-black/45' },
+  queued: { label: '排队中', className: 'bg-violet-50 text-violet-700' },
   running: { label: '执行中', className: 'bg-blue-50 text-blue-700' },
   waiting_confirmation: { label: '等待确认', className: 'bg-amber-50 text-amber-700' },
   completed: { label: '已完成', className: 'bg-emerald-50 text-emerald-700' },
@@ -37,6 +39,6 @@ export function formatTime(iso: string): string {
 }
 
 export function agentLabel(type: Task['agentType']): string {
-  const map = { geo: 'GEO 智能体', media: '自媒体智能体', sales: '销售获客智能体' };
+  const map = { geo: 'GEO 智能体', media: 'UGC 视频广告生成', sales: '销售获客智能体' };
   return map[type];
 }

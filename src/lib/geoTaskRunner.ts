@@ -1,5 +1,5 @@
 import type { GeoResultData } from '../types';
-import type { Task } from '../types/workbench';
+import type { GeoTaskInput, Task } from '../types/workbench';
 import { getTask, saveTask } from './taskStore';
 import {
   computeActualTokenUsage,
@@ -25,6 +25,15 @@ function addLog(task: Task, message: string, level: Task['logs'][0]['level'] = '
   });
 }
 
+function isGeoTask(task: Task): boolean {
+  return Boolean(
+    task.agentType === 'geo' &&
+      task.input &&
+      'brandName' in task.input &&
+      'models' in task.input,
+  );
+}
+
 function setStepStatus(
   task: Task,
   stepIndex: number,
@@ -41,7 +50,10 @@ function setStepStatus(
 }
 
 async function fetchGeoResult(task: Task): Promise<GeoResultData> {
-  const input = task.input!;
+  if (!isGeoTask(task)) {
+    throw new Error('当前任务不是 GEO 任务');
+  }
+  const input = task.input as GeoTaskInput;
   const res = await fetch('/api/check-brand', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -91,10 +103,11 @@ export async function runGeoTask(taskId: string): Promise<void> {
 
   const startMs = Date.now();
   let task = getTask(taskId);
-  if (!task?.input) {
+  if (!task || !isGeoTask(task)) {
     running.delete(taskId);
     return;
   }
+  const geoInput = task.input as GeoTaskInput;
 
   const actualTotal = computeActualTokenUsage(
     taskId,
@@ -115,7 +128,7 @@ export async function runGeoTask(taskId: string): Promise<void> {
 
   const stepMessages: string[][] = [
     ['已生成 24 个检测问题', '已根据关键词扩展长尾问法'],
-    task.input.models.map((m) => `正在检测 ${m}`),
+    geoInput.models.map((m) => `正在检测 ${m}`),
     ['正在统计品牌出现率', '发现部分高价值问法未覆盖品牌'],
     ['正在分析 AI 推荐率', '推荐率与出现率存在差异'],
     ['正在分析竞品占位', '发现竞品出现率较高'],

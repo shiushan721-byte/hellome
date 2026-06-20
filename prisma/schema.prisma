@@ -1,0 +1,280 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TaskStatus {
+  draft
+  queued
+  running
+  waiting_confirmation
+  completed
+  failed
+  cancelled
+}
+
+enum TaskExecutionMode {
+  backend_silent
+  local_debug
+}
+
+enum ArtifactType {
+  video
+  image
+  script
+  report
+}
+
+enum LedgerStatus {
+  reserved
+  settled
+  refunded
+  failed
+}
+
+enum SkillStatus {
+  draft
+  published
+  archived
+}
+
+model User {
+  id          String      @id @default(cuid())
+  externalId  String      @unique
+  displayName String?
+  email       String?
+  phone       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspaces  Workspace[]
+  tasks       Task[]
+  devices     HermesDevice[]
+  ledgers     UsageLedger[]
+  skills      Skill[]
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+}
+
+model Task {
+  id                String            @id @default(cuid())
+  name              String
+  agentType         String
+  status            TaskStatus
+  executionMode     TaskExecutionMode @default(backend_silent)
+  pauseReasonType   String?
+  pauseReasonMessage String?
+  resumeMode        String?
+  recoverable       Boolean           @default(false)
+  artifactsPreserved Json?
+  willChargeAgain   Boolean?
+  showcaseStage     Json?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  startedAt         DateTime?
+  completedAt       DateTime?
+  estimatedTokenMin Int               @default(0)
+  estimatedTokenMax Int               @default(0)
+  tokenUsed         Int               @default(0)
+  currentTokenUsed  Int               @default(0)
+  costEstimate      String?
+  requiresConfirm   Boolean           @default(false)
+  userId            String
+  workspaceId       String?
+  input             TaskInput?
+  runs              TaskRun[]
+  steps             TaskStep[]
+  artifacts         TaskArtifact[]
+  events            TaskEvent[]
+  executions        HermesExecution[]
+  ledgers           UsageLedger[]
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace         Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+}
+
+model TaskInput {
+  id             String   @id @default(cuid())
+  taskId         String   @unique
+  productImage   String?
+  productName    String?
+  talentImage    String?
+  sellingPoint   String
+  platform       String
+  effectGoal     String
+  referenceUrl   String?
+  payload        Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskRun {
+  id          String            @id @default(cuid())
+  taskId      String
+  status      TaskStatus
+  mode        TaskExecutionMode @default(backend_silent)
+  attempt     Int               @default(1)
+  startedAt   DateTime          @default(now())
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  task        Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskStep {
+  id         String   @id @default(cuid())
+  taskId      String
+  key         String
+  title       String
+  orderIndex  Int
+  status      String
+  detail      String?
+  tokenUsed   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, key])
+  @@index([taskId, orderIndex])
+}
+
+model TaskArtifact {
+  id          String       @id @default(cuid())
+  taskId       String
+  type         ArtifactType
+  label        String
+  fileName     String
+  url          String?
+  mimeType     String?
+  sizeBytes    Int?
+  metadata     Json?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model TaskEvent {
+  id         String   @id @default(cuid())
+  taskId      String
+  type        String
+  level       String
+  message     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+model HermesExecution {
+  id           String            @id @default(cuid())
+  taskId        String
+  mode          TaskExecutionMode @default(backend_silent)
+  recipe        String
+  requestId     String?
+  command       String?
+  stdout        String?
+  stderr        String?
+  status        String
+  pauseReasonType String?
+  pauseReasonMessage String?
+  resumeMode    String?
+  recoverable   Boolean           @default(false)
+  artifactsPreserved Json?
+  willChargeAgain Boolean?
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  task          Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model UsageLedger {
+  id          String       @id @default(cuid())
+  userId       String
+  taskId       String?
+  tokenUsed    Int          @default(0)
+  videoCost    String?
+  status       LedgerStatus @default(settled)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task         Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+}
+
+model HermesDevice {
+  id            String   @id @default(cuid())
+  userId        String
+  deviceName    String
+  os            String
+  version       String?
+  status        String
+  lastSeenAt    DateTime?
+  debugEnabled  Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Skill {
+  id             String         @id @default(cuid())
+  slug           String         @unique
+  name           String
+  description    String?
+  category       String         @default("ugc_video")
+  status         SkillStatus    @default(draft)
+  ownerId        String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  publishedAt    DateTime?
+  currentVersion Int            @default(1)
+  owner          User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  versions       SkillVersion[]
+  debugRuns      SkillDebugRun[]
+}
+
+model SkillVersion {
+  id                   String      @id @default(cuid())
+  skillId              String
+  versionNumber        Int
+  versionLabel         String
+  status               SkillStatus @default(draft)
+  title                String
+  summary              String?
+  inputConfig          Json?
+  understandingConfig  Json?
+  executionConfig      Json?
+  businessFrame        Json?
+  artifactConfig       Json?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  publishedAt          DateTime?
+  skill                Skill       @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  debugRuns            SkillDebugRun[]
+
+  @@unique([skillId, versionNumber])
+}
+
+model SkillDebugRun {
+  id              String       @id @default(cuid())
+  skillId         String
+  skillVersionId  String?
+  status          String
+  inputPayload    Json?
+  outputPayload   Json?
+  logPayload      Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  skill           Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  skillVersion    SkillVersion? @relation(fields: [skillVersionId], references: [id], onDelete: SetNull)
+}

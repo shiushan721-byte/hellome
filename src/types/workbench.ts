@@ -1,6 +1,16 @@
 import type { GeoResultData } from '../types';
+import type {
+  TaskExecutionMode,
+  TaskRecoveryState,
+  UgcRoutePlan,
+  UgcSystemUnderstanding,
+  UgcTaskArtifact,
+  UgcTaskInput,
+} from './ugc';
 
 export type TaskStatus =
+  | 'draft'
+  | 'queued'
   | 'running'
   | 'waiting_confirmation'
   | 'completed'
@@ -43,6 +53,7 @@ export interface Task {
   name: string;
   agentType: AgentType;
   status: TaskStatus;
+  executionMode?: TaskExecutionMode;
   createdAt: string;
   completedAt?: string;
   durationMs?: number;
@@ -50,10 +61,15 @@ export interface Task {
   estimatedTokenMax: number;
   tokenUsed: number;
   currentTokenUsed?: number;
-  input?: GeoTaskInput;
+  costEstimate?: string;
+  input?: GeoTaskInput | UgcTaskInput;
   steps: TaskStep[];
   logs: HermesLogEntry[];
   result?: GeoResultData;
+  understanding?: UgcSystemUnderstanding;
+  routePlan?: UgcRoutePlan;
+  artifacts?: UgcTaskArtifact[];
+  recoveryState?: TaskRecoveryState;
   pendingConfirmation?: {
     title: string;
     message: string;

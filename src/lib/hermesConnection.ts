@@ -9,7 +9,8 @@ export type HermesConnectionStatus =
   | 'offline'
   | 'account_mismatch'
   | 'version_unsupported'
-  | 'capability_missing';
+  | 'capability_missing'
+  | 'api_unavailable';
 
 type HermesCapability =
   | 'browser_automation'
@@ -96,6 +97,10 @@ function setHermesConnection(next: HermesConnectionSnapshot): void {
   }
 }
 
+export function setHermesConnectionSnapshot(next: HermesConnectionSnapshot): void {
+  setHermesConnection(next);
+}
+
 export function subscribeHermesConnection(onStoreChange: () => void): () => void {
   const listener = () => onStoreChange();
   try {
@@ -116,31 +121,8 @@ export function subscribeHermesConnection(onStoreChange: () => void): () => void
 
 export function refreshHermesConnection(): HermesConnectionSnapshot {
   const current = getHermesConnection();
-  if (!current.device) return current;
-  const account = getCurrentAccountId();
-  if (!account) return current;
-  if (current.device.accountEmail !== account) {
-    const next: HermesConnectionSnapshot = {
-      ...current,
-      status: 'account_mismatch',
-      lastError: '账号不一致，无法配对',
-    };
-    setHermesConnection(next);
-    return next;
-  }
-  if (current.status === 'offline') return current;
-  const next: HermesConnectionSnapshot = {
-    ...current,
-    status: 'connected',
-    device: {
-      ...current.device,
-      status: 'connected',
-      lastSeenAt: new Date().toISOString(),
-    },
-    lastError: undefined,
-  };
-  setHermesConnection(next);
-  return next;
+  void syncHermesConnection();
+  return current;
 }
 
 export function pairHermesWithCurrentAccount(): HermesConnectionSnapshot {
@@ -171,6 +153,74 @@ export function pairHermesWithCurrentAccount(): HermesConnectionSnapshot {
   };
   setHermesConnection(next);
   return next;
+}
+
+export async function syncHermesConnection(): Promise<HermesConnectionSnapshot> {
+  const accountId = getCurrentAccountId();
+  try {
+    const response = await fetch(`/api/hermes/pairing/status?accountId=${encodeURIComponent(accountId)}`);
+    const json = (await response.json()) as {
+      success: boolean;
+      data?: HermesConnectionSnapshot;
+      error?: string;
+    };
+    if (!response.ok || !json.success || !json.data) {
+      throw new Error(json.error || '读取 Hermes 配对状态失败');
+    }
+    setHermesConnection(json.data);
+    return json.data;
+  } catch (error) {
+    const fallback: HermesConnectionSnapshot = {
+      status: 'api_unavailable',
+      device: null,
+      lastError: error instanceof Error ? error.message : 'Hermes 检测服务暂时不可用',
+    };
+    setHermesConnection(fallback);
+    return fallback;
+  }
+}
+
+export async function pairHermesLocallyWithCurrentAccount(
+  displayName?: string,
+): Promise<HermesConnectionSnapshot> {
+  const accountId = getCurrentAccountId();
+  const response = await fetch('/api/hermes/pairing/local-pair', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      accountId,
+      displayName,
+    }),
+  });
+  const json = (await response.json()) as {
+    success: boolean;
+    data?: HermesConnectionSnapshot;
+    error?: string;
+  };
+  if (!response.ok || !json.success || !json.data) {
+    throw new Error(json.error || 'Hermes 本机配对失败');
+  }
+  setHermesConnection(json.data);
+  return json.data;
+}
+
+export async function disconnectHermesCurrentAccount(): Promise<HermesConnectionSnapshot> {
+  const accountId = getCurrentAccountId();
+  const response = await fetch('/api/hermes/pairing/disconnect', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ accountId }),
+  });
+  const json = (await response.json()) as {
+    success: boolean;
+    data?: HermesConnectionSnapshot;
+    error?: string;
+  };
+  if (!response.ok || !json.success || !json.data) {
+    throw new Error(json.error || '解除 Hermes 配对失败');
+  }
+  setHermesConnection(json.data);
+  return json.data;
 }
 
 export function markHermesOffline(): HermesConnectionSnapshot {

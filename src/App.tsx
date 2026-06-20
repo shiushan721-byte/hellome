@@ -9,6 +9,7 @@ import AppHomePage from './pages/app/AppHomePage';
 import AgentsPage from './pages/app/AgentsPage';
 import AgentsLegacyRedirect from './pages/app/AgentsLegacyRedirect';
 import GeoAgentPage from './pages/app/GeoAgentPage';
+import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import TasksPage from './pages/app/TasksPage';
@@ -18,6 +19,12 @@ import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
 import ResultsPage from './pages/app/ResultsPage';
 import ConnectHermesPage from './pages/ConnectHermesPage';
+import CreatorStudioPage from './pages/app/CreatorStudioPage';
+import CreatorSkillEditorPage from './pages/app/CreatorSkillEditorPage';
+import CreatorSkillDebugPage from './pages/app/CreatorSkillDebugPage';
+import CreatorSkillVersionsPage from './pages/app/CreatorSkillVersionsPage';
+import FrontstageDesignSpecPage from './pages/app/FrontstageDesignSpecPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 
 export default function App() {
   return (
@@ -49,18 +56,70 @@ export default function App() {
         <Route path="agents/market" element={<Navigate to="/app/agents" replace />} />
         <Route path="agents/mine" element={<Navigate to="/app/agents" replace />} />
         <Route path="agents/geo" element={<GeoAgentPage />} />
-        <Route path="agents/media" element={<AgentComingSoonPage agentId="media" />} />
+        <Route path="agents/media" element={<UgcVideoAgentPage />} />
+        <Route path="agents/media-seeding" element={<UgcVideoAgentPage />} />
+        <Route path="agents/media-review" element={<UgcVideoAgentPage />} />
+        <Route path="agents/media-conversion" element={<UgcVideoAgentPage />} />
         <Route path="agents/sales" element={<AgentComingSoonPage agentId="sales" />} />
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
         <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="results" element={<ResultsPage />} />
+        <Route
+          path="studio"
+          element={
+            <ProtectedRoute requireStudio>
+              <CreatorStudioPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="studio/design-spec"
+          element={
+            <ProtectedRoute requireStudio>
+              <FrontstageDesignSpecPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="studio/skills/:skillId"
+          element={
+            <ProtectedRoute requireStudio>
+              <CreatorSkillEditorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="studio/skills/:skillId/debug"
+          element={
+            <ProtectedRoute requireStudio>
+              <CreatorSkillDebugPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="studio/skills/:skillId/versions"
+          element={
+            <ProtectedRoute requireStudio>
+              <CreatorSkillVersionsPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="usage" element={<UsagePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/profile" element={<Navigate to="/app/settings" replace />} />
         <Route path="settings/auth" element={<SettingsAuthPage />} />
       </Route>
+
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute requireAdmin>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="*" element={<HomeRedirect />} />
       </Routes>

@@ -1,7 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, LogOut } from 'lucide-react';
-import { isAuthenticated, logout } from '../../lib/auth';
+import { getUserRole, isAuthenticated, logout } from '../../lib/auth';
 import { useLoginModal } from '../../context/LoginModalProvider';
 import { getProfile, subscribeProfile } from '../../lib/profileStore';
 import UserAvatar from './UserAvatar';
@@ -26,6 +26,7 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
 
   const profile = useSyncExternalStore(subscribeProfile, getProfile, getProfile);
   const usage = useSyncExternalStore(subscribeUsage, getUsage, getUsage);
+  const role = getUserRole();
   const hermes = useSyncExternalStore(
     subscribeHermesConnection,
     getHermesConnection,
@@ -34,16 +35,19 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
   const low = isLowBalance(usage);
   const [showHermesModal, setShowHermesModal] = useState(false);
   const isConnected = hermes.status === 'connected';
-  const isNotPaired = hermes.status === 'not_paired' || hermes.status === 'account_mismatch';
+  const hermesLabel =
+    hermes.status === 'connected'
+      ? 'Hermes 已连接'
+      : hermes.status === 'api_unavailable'
+        ? 'Hermes 检测异常 · 去重试'
+      : hermes.status === 'capability_missing'
+        ? '未安装 Hermes · 去安装'
+        : hermes.status === 'offline'
+          ? 'Hermes 未启动 · 去启动'
+          : 'Hermes 未连接 · 去连接';
 
-  const hermesLabel = isConnected
-    ? 'Hz-Hermes 已连接'
-    : isNotPaired
-      ? 'Hz-Hermes 未配对 · 去配对'
-      : 'Hz-Hermes 离线 · 启动应用';
-
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/agents');
   };
 
@@ -100,7 +104,9 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
           className={`hidden md:inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full border ${
             isConnected
               ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-              : isNotPaired
+              : hermes.status === 'api_unavailable'
+                ? 'border-rose-300 bg-rose-50 text-rose-800'
+              : hermes.status === 'capability_missing' || hermes.status === 'not_paired' || hermes.status === 'account_mismatch'
                 ? 'border-sky-300 bg-sky-50 text-sky-800'
                 : 'border-amber-300 bg-amber-50 text-amber-800'
           }`}
@@ -115,6 +121,9 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
           >
             <UserAvatar profile={profile} size="sm" />
             <span className="hidden sm:inline">{profile.nickname}</span>
+            <span className="hidden lg:inline-flex px-2 py-0.5 rounded-full bg-[#F2F0ED] text-[10px] font-semibold text-black/55">
+              {role === 'admin' ? 'Admin' : role === 'creator' ? 'Creator' : 'User'}
+            </span>
             <ChevronDown className="w-3.5 h-3.5 text-black/40" />
           </button>
           <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-black/10 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
