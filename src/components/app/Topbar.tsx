@@ -86,7 +86,7 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
         </button>
         <button
           type="button"
-          onClick={() => navigate('/app/usage')}
+          onClick={() => navigate('/app/usage/recharge')}
           className={`hidden md:inline-flex text-xs px-3 py-1.5 rounded-full border font-bold transition-colors ${
             low
               ? 'border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200'

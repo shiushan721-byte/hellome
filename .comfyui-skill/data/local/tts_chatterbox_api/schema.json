@@ -1,0 +1,41 @@
+{
+  "description": "",
+  "enabled": true,
+  "parameters": {
+    "language": {
+      "node_id": "10",
+      "field": "language",
+      "required": false,
+      "type": "string",
+      "description": "Language code"
+    },
+    "temperature": {
+      "node_id": "10",
+      "field": "temperature",
+      "required": false,
+      "type": "float",
+      "description": "Sampling temperature"
+    },
+    "prompt": {
+      "node_id": "20",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "seed": {
+      "node_id": "20",
+      "field": "seed",
+      "required": false,
+      "type": "int",
+      "description": "Random seed"
+    },
+    "filename_prefix": {
+      "node_id": "30",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    }
+  }
+}

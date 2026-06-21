@@ -3,8 +3,10 @@ import type {
   SkillBusinessFrame,
   SkillExecutionConfig,
   SkillInputConfig,
+  SkillModelSelectionConfig,
   SkillRecord,
   SkillRoutePlan,
+  SkillShowcaseVideo,
   SkillUnderstandingConfig,
   SkillVersionRecord,
 } from '../types/skills';
@@ -61,12 +63,29 @@ function defaultExecutionConfig(): SkillExecutionConfig {
     routingMode: 'auto',
     defaultPlanId: 'ugc_video_factory',
     availablePlans: defaultPlans(),
+    modelSelection: defaultModelSelectionConfig(),
+  };
+}
+
+function normalizeModelId(modelId: string | undefined, fallback: string): string {
+  const normalized = modelId?.trim();
+  if (!normalized || normalized.startsWith('local/')) return fallback;
+  return normalized;
+}
+
+function defaultModelSelectionConfig(): SkillModelSelectionConfig {
+  return {
+    imageModel: 'z-image-turbo',
+    videoModel: 'wan22-5b',
+    audioModel: 'tts_chatterbox_api',
+    audioEnabled: true,
   };
 }
 
 function defaultArtifactConfig(): SkillArtifactTemplate[] {
   return [
     { label: '样片视频', fileName: 'sample-video.mp4' },
+    { label: 'AI 配音音轨', fileName: 'voiceover.wav' },
     { label: '封面首帧', fileName: 'cover-frame.png' },
     { label: '脚本草案', fileName: 'script.md' },
     { label: '客户交付摘要', fileName: 'delivery-summary.pdf' },
@@ -88,15 +107,27 @@ function defaultBusinessFrame(): SkillBusinessFrame {
       stages: [
         { id: 'goal', label: '明确目标', kind: 'auto' },
         { id: 'structure', label: '组织表达', kind: 'auto' },
+        { id: 'audio_synthesize', label: '配音合成', kind: 'auto' },
         { id: 'confirm', label: '确认方向', kind: 'confirm' },
         { id: 'render', label: '正式生成', kind: 'auto' },
       ],
     },
     result: {
       promiseLine: '快速得到可交付的视频样片。',
-      deliveryLabels: ['9:16', '10 秒样片', '带字幕'],
+      deliveryLabels: ['9:16', '10 秒样片', '带字幕', 'AI 配音版'],
       showcaseHint: '把最好的一次调试结果设为市场展示案例。',
     },
+  };
+}
+
+function normalizeShowcaseVideo(value: SkillShowcaseVideo | undefined): SkillShowcaseVideo | undefined {
+  if (!value?.title || !value?.summary || !value?.videoUrl) return undefined;
+  return {
+    title: value.title,
+    summary: value.summary,
+    videoUrl: value.videoUrl,
+    coverUrl: value.coverUrl || undefined,
+    posterText: value.posterText || undefined,
   };
 }
 
@@ -104,6 +135,17 @@ export function normalizeSkillVersion(version: Partial<SkillVersionRecord> | und
   const execution = {
     ...defaultExecutionConfig(),
     ...(version?.executionConfig ?? {}),
+  };
+  const modelSelection = {
+    ...defaultModelSelectionConfig(),
+    ...(version?.executionConfig?.modelSelection ?? {}),
+    imageModel: normalizeModelId(version?.executionConfig?.modelSelection?.imageModel, defaultModelSelectionConfig().imageModel),
+    videoModel: normalizeModelId(version?.executionConfig?.modelSelection?.videoModel, defaultModelSelectionConfig().videoModel),
+    audioModel: normalizeModelId(version?.executionConfig?.modelSelection?.audioModel, defaultModelSelectionConfig().audioModel),
+    audioEnabled:
+      typeof version?.executionConfig?.modelSelection?.audioEnabled === 'boolean'
+        ? version.executionConfig.modelSelection.audioEnabled
+        : defaultModelSelectionConfig().audioEnabled,
   };
 
   const availablePlans =
@@ -141,6 +183,7 @@ export function normalizeSkillVersion(version: Partial<SkillVersionRecord> | und
       ...execution,
       defaultPlanId,
       availablePlans,
+      modelSelection,
     },
     businessFrame: {
       ...defaultBusinessFrame(),
@@ -176,6 +219,7 @@ export function normalizeSkillVersion(version: Partial<SkillVersionRecord> | und
           version.businessFrame.result.deliveryLabels.length > 0
             ? version.businessFrame.result.deliveryLabels
             : defaultBusinessFrame().result.deliveryLabels,
+        showcaseVideo: normalizeShowcaseVideo(version?.businessFrame?.result?.showcaseVideo),
       },
     },
     artifactConfig:

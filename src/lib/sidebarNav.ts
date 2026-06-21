@@ -147,7 +147,7 @@ export function isAppNavActive(id: AppNavId, pathname: string): boolean {
     case 'admin':
       return pathname === '/admin' || pathname.startsWith('/admin/');
     case 'usage':
-      return pathname === '/app/usage';
+      return pathname === '/app/usage' || pathname.startsWith('/app/usage/');
     case 'settings':
       return pathname === '/app/settings' || pathname.startsWith('/app/settings/');
     default:

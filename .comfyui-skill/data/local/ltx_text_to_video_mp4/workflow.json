@@ -1,0 +1,32 @@
+{
+  "1": {
+    "inputs": {
+      "model": "ltx-video-2b-v0.9.5.safetensors",
+      "prompt": "a cute red fox walking in a misty forest at dawn, cinematic lighting",
+      "duration": 8,
+      "resolution": "768x512",
+      "fps": 25,
+      "generate_audio": false
+    },
+    "class_type": "LtxvApiTextToVideo",
+    "_meta": {
+      "title": "LTX-Video Text-to-Video"
+    }
+  },
+  "2": {
+    "inputs": {
+      "video": [
+        "1",
+        0
+      ],
+      "filename_prefix": "ltx_mp4",
+      "format": "video/h264-mp4",
+      "frame_rate": 25,
+      "crf": 19
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Save MP4"
+    }
+  }
+}

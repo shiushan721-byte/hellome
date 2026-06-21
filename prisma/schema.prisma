@@ -26,6 +26,7 @@ enum ArtifactType {
   image
   script
   report
+  audio
 }
 
 enum LedgerStatus {
@@ -53,6 +54,7 @@ model User {
   tasks       Task[]
   devices     HermesDevice[]
   ledgers     UsageLedger[]
+  topups      BillingTopup[]
   skills      Skill[]
 }
 
@@ -245,6 +247,18 @@ model UsageLedger {
   updatedAt    DateTime     @updatedAt
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   task         Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
+}
+
+model BillingTopup {
+  id          String   @id @default(cuid())
+  userId      String
+  tokenAmount Int
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model HermesDevice {

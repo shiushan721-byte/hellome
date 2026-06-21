@@ -3,10 +3,11 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { CATEGORIES, type AgentCategory } from '../../data/agentsCatalog';
 import type { MarketMediumBannerConfig, MarketProductSpot } from '../../data/agentsMarketHome';
+import { getPublishedMarketAgents, type PublishedMarketAgent } from '../../lib/skillStudioApi';
 import { getUsage, isLowBalance, subscribeUsage } from '../../lib/usageStore';
 import { isHermesConnected } from '../../lib/firstRunOnboarding';
 import { subscribeHermesConnection, getHermesConnection, refreshHermesConnection } from '../../lib/hermesConnection';
-import { getAgentsPageData, getGuestAgentsPageData, resolveAgentsTabFromPath } from '../../lib/agentsPageData';
+import { getAgentsPageData, getGuestAgentsPageData, mergePublishedMarketAgents, resolveAgentsTabFromPath } from '../../lib/agentsPageData';
 import type { AgentMarketCard } from '../../types/agentsPage';
 import MarketCard from '../../components/app/agents/MarketCard';
 import MarketHomeBanner from '../../components/app/agents/MarketHomeBanner';
@@ -33,6 +34,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
     parseMarketCategory(location.search),
   );
   const [query, setQuery] = useState('');
+  const [publishedAgents, setPublishedAgents] = useState<PublishedMarketAgent[]>([]);
   const { openLogin } = useLoginModal();
   const [showHermesModal, setShowHermesModal] = useState(false);
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
@@ -49,6 +51,21 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
     setCategoryState(parseMarketCategory(location.search));
   }, [location.search]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void getPublishedMarketAgents()
+      .then((data) => {
+        if (cancelled) return;
+        setPublishedAgents(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const setCategory = (next: AgentCategory) => {
     setCategoryState(next);
     setSearchParams(
@@ -63,6 +80,10 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
   };
 
   const pageData = isPublic ? getGuestAgentsPageData() : getAgentsPageData(activeTab);
+  const marketCards = useMemo(
+    () => mergePublishedMarketAgents(pageData.marketAgents, publishedAgents),
+    [pageData.marketAgents, publishedAgents],
+  );
   const usage = getUsage();
   const lowBalance = isLowBalance(usage);
 
@@ -83,7 +104,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
       return;
     }
     if (result.reason === 'recharge') {
-      navigate('/app/usage');
+      navigate('/app/usage/recharge');
       return;
     }
     if (result.ok) {
@@ -93,7 +114,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
 
   const filteredMarket = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return pageData.marketAgents.filter((card) => {
+    return marketCards.filter((card) => {
       const matchCategory = category === 'all' || card.category === category;
       const matchQuery =
         !q ||
@@ -102,7 +123,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
         card.creator.toLowerCase().includes(q);
       return matchCategory && matchQuery;
     });
-  }, [pageData.marketAgents, category, query]);
+  }, [marketCards, category, query]);
 
   const handleHeroAction = () => runUseAgent('geo');
 
@@ -123,7 +144,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
         )}
 
         <MarketHomeBanner
-          marketCards={pageData.marketAgents}
+          marketCards={marketCards}
           lowBalance={isPublic ? false : lowBalance}
           guestMode={isPublic}
           onHeroAction={handleHeroAction}
@@ -131,7 +152,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
         />
 
         <MarketProductSpots
-          marketCards={pageData.marketAgents}
+          marketCards={marketCards}
           guestMode={isPublic}
           onUseSpot={handleProductSpot}
         />

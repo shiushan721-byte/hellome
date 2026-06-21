@@ -96,6 +96,8 @@ export interface UsageLedgerEntry {
   estimatedTokenMax: number;
   tokenUsed: number;
   status: LedgerStatus;
+  kind?: 'usage' | 'topup';
+  note?: string;
 }
 
 export interface AuthStatus {

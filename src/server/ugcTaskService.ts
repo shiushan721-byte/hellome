@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { execFile } from 'node:child_process';
+import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import type { Task, TaskStep, TaskStatus, HermesLogEntry } from '../types/workbench';
@@ -21,9 +22,27 @@ import { presentUgcTask } from './taskPresenter';
 import { deriveTaskRunState } from './taskStateMachine';
 import { getPrismaClient } from './db/prisma';
 import { isFallbackAllowed } from './db/runtime';
-import { generateImage, generateVideo } from './adapters/modelAdapter';
+import { generateAudio } from './adapters/audioAdapter';
+import type { SkillModelSelectionConfig } from '../types/skills';
+import { resolvePrimaryVideoArtifact } from '../lib/mediaTaskPresentation';
 
 const execFileAsync = promisify(execFile);
+const HERMES_LOCAL_GEN_SCRIPT = path.join(
+  process.env.HOME ?? '',
+  '.hermes',
+  'skills',
+  'creative',
+  'local-gen',
+  'scripts',
+  'run.py',
+);
+const PUBLIC_MEDIA_DIR = path.resolve(process.cwd(), 'public', 'media');
+const DEFAULT_SKILL_MODELS: SkillModelSelectionConfig = {
+  imageModel: 'z-image-turbo',
+  videoModel: 'wan22-5b',
+  audioModel: 'tts_chatterbox_api',
+  audioEnabled: true,
+};
 
 const UGC_STEPS = [
   { key: 'understanding', title: '理解需求' },
@@ -86,6 +105,22 @@ type CreateTaskPayload = {
 type DebugRunPayload = {
   prompt?: string;
   recipe?: string;
+};
+
+type HermesLocalGenResult = {
+  status: 'ok';
+  prompt_id: string;
+  model: string;
+  task: 'txt2img' | 'txt2video' | 'img2video' | 'edit';
+  elapsed_s: number;
+  outputs: Array<{
+    file?: string;
+    url?: string;
+    size_bytes?: number;
+    type?: string;
+    node_id?: string;
+    error?: string;
+  }>;
 };
 
 const terminalStatuses = new Set<TaskStatus>(['completed', 'failed', 'cancelled']);
@@ -192,7 +227,10 @@ function createUnderstanding(input: UgcTaskInput): UgcSystemUnderstanding {
 function skillLabel(skillId?: string): string {
   if (skillId === 'media-review') return '测评讲解视频';
   if (skillId === 'media-conversion') return '带货转化视频';
-  if (skillId === 'media-seeding') return '真人种草视频';
+  if (skillId === 'media-showcase') return '品牌宣传视频';
+  if (skillId === 'media-demo') return '产品演示视频';
+  if (skillId === 'media-proposal') return '客户提案视频';
+  if (skillId === 'media-seeding') return '新品种草视频';
   return 'UGC 视频广告';
 }
 
@@ -227,6 +265,276 @@ function buildArtifacts(taskId: string): UgcTaskArtifact[] {
       mimeType: 'application/pdf',
     },
   ];
+}
+
+function toPublicArtifactUrl(absoluteFile: string): string {
+  const normalized = path.normalize(absoluteFile);
+  const relative = path.relative(process.cwd(), normalized).split(path.sep).join('/');
+  if (!relative.startsWith('public/')) {
+    throw new Error(`产物路径不在 public 目录内：${absoluteFile}`);
+  }
+  return relative;
+}
+
+function resolveTaskBundleDir(taskId: string): string {
+  return path.join(PUBLIC_MEDIA_DIR, taskId);
+}
+
+function resolveUploadedFilePath(fileUrl?: string): string | undefined {
+  if (!fileUrl) return undefined;
+  const normalized = fileUrl.replace(/^\//, '');
+  if (normalized.startsWith('public/')) {
+    return path.resolve(process.cwd(), normalized);
+  }
+  if (normalized.startsWith('uploads/')) {
+    return path.resolve(process.cwd(), 'public', normalized);
+  }
+  return undefined;
+}
+
+function sanitizeSelectedHermesModel(selectedModel?: string): string | undefined {
+  const normalized = selectedModel?.trim();
+  if (!normalized || normalized.startsWith('local/')) return undefined;
+  return normalized;
+}
+
+function chooseHermesVideoModel(input: UgcTaskInput, hasInputImage: boolean, selectedModel?: string): string {
+  const normalizedSelectedModel = sanitizeSelectedHermesModel(selectedModel);
+  if (normalizedSelectedModel) {
+    if (hasInputImage && normalizedSelectedModel === 'ltx-2b') {
+      return process.env.HERMES_I2V_MODEL?.trim() || 'wan22-5b';
+    }
+    return normalizedSelectedModel;
+  }
+  if (hasInputImage) return process.env.HERMES_I2V_MODEL?.trim() || 'wan22-5b';
+  if (input.effectGoal.includes('高质量') || input.platform === '视频号') {
+    return process.env.HERMES_T2V_QUALITY_MODEL?.trim() || 'wan22-5b';
+  }
+  return process.env.HERMES_T2V_MODEL?.trim() || 'ltx-2b';
+}
+
+function chooseHermesImageModel(selectedModel?: string): string {
+  const normalizedSelectedModel = sanitizeSelectedHermesModel(selectedModel);
+  if (normalizedSelectedModel) return normalizedSelectedModel;
+  return process.env.HERMES_T2I_MODEL?.trim() || 'z-image-turbo';
+}
+
+function resolveTaskModelSelection(record: TaskAggregate): SkillModelSelectionConfig {
+  const raw = record.executions[0]?.metadata?.skillModels;
+  if (!raw || typeof raw !== 'object') return DEFAULT_SKILL_MODELS;
+  const value = raw as Record<string, unknown>;
+  return {
+    imageModel: typeof value.imageModel === 'string' && value.imageModel.trim()
+      ? value.imageModel
+      : DEFAULT_SKILL_MODELS.imageModel,
+    videoModel: typeof value.videoModel === 'string' && value.videoModel.trim()
+      ? value.videoModel
+      : DEFAULT_SKILL_MODELS.videoModel,
+    audioModel: typeof value.audioModel === 'string' && value.audioModel.trim()
+      ? value.audioModel
+      : DEFAULT_SKILL_MODELS.audioModel,
+    audioEnabled: typeof value.audioEnabled === 'boolean'
+      ? value.audioEnabled
+      : DEFAULT_SKILL_MODELS.audioEnabled,
+  };
+}
+
+function buildVideoPrompt(input: UgcTaskInput): string {
+  return [
+    `${input.platform} 9:16 UGC 短视频广告`,
+    `核心卖点：${input.sellingPoint}`,
+    `风格目标：${input.effectGoal}`,
+    '真实中文口播感、自然手持镜头、商品特写、首秒抓人、适合正式交付预览',
+  ]
+    .filter(Boolean)
+    .join('；');
+}
+
+function buildCoverPrompt(input: UgcTaskInput): string {
+  return [
+    '9:16 视频封面首帧',
+    input.sellingPoint,
+    input.effectGoal,
+    '真实 UGC 主播感，近景半身，商品展示明确，适合抖音/小红书封面',
+  ]
+    .filter(Boolean)
+    .join('，');
+}
+
+async function detectArtifactFormat(filePath: string): Promise<{ ext: string; mimeType: string }> {
+  const handle = await fs.open(filePath, 'r');
+  try {
+    const header = Buffer.alloc(16);
+    await handle.read(header, 0, header.length, 0);
+    if (header.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]))) {
+      return { ext: 'webm', mimeType: 'video/webm' };
+    }
+    if (header.subarray(0, 4).toString('ascii') === 'RIFF' && header.subarray(8, 12).toString('ascii') === 'WEBP') {
+      return { ext: 'webp', mimeType: 'image/webp' };
+    }
+    if (header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+      return { ext: 'png', mimeType: 'image/png' };
+    }
+  } finally {
+    await handle.close();
+  }
+  const ext = path.extname(filePath).replace(/^\./, '').toLowerCase();
+  if (ext === 'webm') return { ext: 'webm', mimeType: 'video/webm' };
+  if (ext === 'webp') return { ext: 'webp', mimeType: 'image/webp' };
+  if (ext === 'png') return { ext: 'png', mimeType: 'image/png' };
+  return { ext: 'mp4', mimeType: 'video/mp4' };
+}
+
+async function normalizeArtifactPath(filePath: string, expectedExt: string): Promise<string> {
+  const currentExt = path.extname(filePath).replace(/^\./, '').toLowerCase();
+  if (currentExt === expectedExt) return filePath;
+  const nextPath = path.join(path.dirname(filePath), `${path.basename(filePath, path.extname(filePath))}.${expectedExt}`);
+  await fs.rename(filePath, nextPath);
+  return nextPath;
+}
+
+async function extractPrimaryOutput(
+  result: HermesLocalGenResult,
+  preferredKinds: Array<'images' | 'gifs' | 'video'>,
+): Promise<{ file: string; sizeBytes?: number; mimeType: string }> {
+  const output = result.outputs.find(
+    (item) =>
+      typeof item.file === 'string' &&
+      item.file.trim().length > 0 &&
+      (!!item.type && preferredKinds.includes(item.type as 'images' | 'gifs' | 'video')),
+  ) ?? result.outputs.find((item) => typeof item.file === 'string' && item.file.trim().length > 0);
+  if (!output?.file) {
+    throw new Error('Hermes local-gen 未返回本地产物文件。');
+  }
+  const detected = await detectArtifactFormat(output.file);
+  const normalizedPath = await normalizeArtifactPath(output.file, detected.ext);
+  return {
+    file: normalizedPath,
+    sizeBytes: output.size_bytes,
+    mimeType: detected.mimeType,
+  };
+}
+
+async function runHermesLocalGen(args: {
+  task: 'txt2img' | 'txt2video' | 'img2video';
+  model: string;
+  prompt: string;
+  outputPath: string;
+  inputPath?: string;
+  timeoutSeconds: number;
+}): Promise<HermesLocalGenResult> {
+  await fs.mkdir(path.dirname(args.outputPath), { recursive: true });
+
+  const commandArgs = [
+    HERMES_LOCAL_GEN_SCRIPT,
+    args.task,
+    '--model',
+    args.model,
+    '--prompt',
+    args.prompt,
+    '--output',
+    args.outputPath,
+    '--timeout',
+    String(args.timeoutSeconds),
+    '--json',
+  ];
+
+  if (args.inputPath) {
+    commandArgs.push('--input', args.inputPath);
+  }
+
+  const { stdout, stderr } = await execFileAsync('python3', commandArgs, {
+    timeout: (args.timeoutSeconds + 30) * 1000,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+
+  const raw = stdout.trim() || stderr.trim();
+  if (!raw) {
+    throw new Error('Hermes local-gen 没有返回任何输出。');
+  }
+
+  const parsed = JSON.parse(raw) as HermesLocalGenResult | { status?: string; message?: string };
+  if (
+    parsed.status !== 'ok' ||
+    typeof (parsed as HermesLocalGenResult).prompt_id !== 'string' ||
+    !Array.isArray((parsed as HermesLocalGenResult).outputs)
+  ) {
+    throw new Error(
+      `Hermes local-gen 执行失败：${'message' in parsed && parsed.message ? parsed.message : raw}`,
+    );
+  }
+  return parsed as HermesLocalGenResult;
+}
+
+async function buildTextArtifacts(
+  record: TaskAggregate,
+  bundleDir: string,
+  models: { videoModel: string; imageModel: string; audioModel?: string; audioEnabled: boolean },
+): Promise<{
+  scriptArtifact: UgcTaskArtifact;
+  summaryArtifact: UgcTaskArtifact;
+}> {
+  await fs.mkdir(bundleDir, { recursive: true });
+  const scriptPath = path.join(bundleDir, 'script.md');
+  const summaryPath = path.join(bundleDir, 'delivery-summary.md');
+
+  const scriptContent = [
+    `# ${record.task.name}`,
+    '',
+    `- 平台：${record.input.platform}`,
+    `- 目标：${record.input.effectGoal}`,
+    `- 卖点：${record.input.sellingPoint}`,
+    '',
+    '## 建议脚本',
+    '',
+    record.task.understanding?.draftScript ?? '开场展示产品与人物场景，突出核心卖点，结尾轻引导转化。',
+    '',
+    '## 路由方案',
+    '',
+    `- 方案：${record.task.routePlan?.label ?? 'Hermes Local Delivery'}`,
+    `- 原因：${record.task.routePlan?.reason ?? '正式任务走 Hermes 本地视频 skill'}`,
+    '',
+  ].join('\n');
+
+  const summaryContent = [
+    `# ${record.task.name} 正式交付摘要`,
+    '',
+    `- 任务 ID：${record.task.id}`,
+    `- Skill：${record.skillId ?? 'media-ugc'} @ ${record.skillVersionId ?? 'unknown'}`,
+    `- 视频模型：${models.videoModel}`,
+    `- 图片模型：${models.imageModel}`,
+    `- 音频模型：${models.audioEnabled ? models.audioModel ?? '未命名模型' : '未启用'}`,
+    `- 创建时间：${record.task.createdAt}`,
+    `- 完成时间：${record.completedAt ?? nowIso()}`,
+    '',
+    '## 交付说明',
+    '',
+    '- 本次样片由 Hermes 本地 local-gen skill 直接生成。',
+    '- 前端任务中心与成果中心展示的是正式落库产物，而不是 mock 占位图。',
+    '',
+  ].join('\n');
+
+  await fs.writeFile(scriptPath, scriptContent, 'utf8');
+  await fs.writeFile(summaryPath, summaryContent, 'utf8');
+
+  return {
+    scriptArtifact: {
+      id: `${record.task.id}-script`,
+      type: 'script',
+      label: '脚本草案',
+      fileName: 'script.md',
+      mimeType: 'text/markdown',
+      url: toPublicArtifactUrl(scriptPath),
+    },
+    summaryArtifact: {
+      id: `${record.task.id}-summary`,
+      type: 'report',
+      label: '交付摘要',
+      fileName: 'delivery-summary.md',
+      mimeType: 'text/markdown',
+      url: toPublicArtifactUrl(summaryPath),
+    },
+  };
 }
 
 function cloneAggregate(record: TaskAggregate): TaskAggregate {
@@ -855,48 +1163,48 @@ async function executeRenderPhase(taskId: string): Promise<void> {
     pushEvent(record, 'video_rendering', 'info', '样片视频正在合成，准备生成封面与交付摘要');
     await persist(record);
 
-    // --- Real generation: call the unified media adapter. The adapter
-    // dispatches based on MEDIA_PROVIDER (gemini / local-comfyui / mock).
-    // Output goes to MEDIA_OUTPUT_DIR and is referenced as a stable URL
-    // by the artifact we build below. ---
-    const ugcInput = record.task.input as
-      | { sellingPoint?: string; referenceUrl?: string; effectGoal?: string }
-      | undefined;
-    const videoPrompt =
-      ugcInput?.referenceUrl ||
-      ugcInput?.sellingPoint ||
-      ugcInput?.effectGoal ||
-      'a short product showcase video';
-    let videoArtifact: UgcTaskArtifact | null = null;
-    try {
-      const video = await generateVideo({
-        prompt: videoPrompt,
-        // Keep a generous timeout; local-comfyui users will see the actual
-        // elapsed time in the artifact metadata.
-        timeoutMs: 60_000,
-      });
-      pushEvent(
-        record,
-        'video_rendering',
-        video.source === 'provider' ? 'success' : 'warning',
-        `视频生成完成（${video.provider}/${video.model} · ${video.elapsedMs ?? '?'}ms · source=${video.source}）`,
-      );
-      videoArtifact = {
-        id: `${record.task.id}-video`,
-        type: 'video',
-        label: '样片视频',
-        fileName: path.basename(video.url),
-        mimeType: video.mimeType,
-        url: video.url,
-      };
-    } catch (error) {
-      pushEvent(
-        record,
-        'video_rendering',
-        'warning',
-        `视频生成失败，继续交付降级产物：${(error as Error).message}`,
-      );
-    }
+    const bundleDir = resolveTaskBundleDir(record.task.id);
+    const referenceImagePath =
+      resolveUploadedFilePath(record.input.talentImageUrl) ?? resolveUploadedFilePath(record.input.productImageUrl);
+    const videoTask = referenceImagePath ? 'img2video' : 'txt2video';
+    const selectedModels = resolveTaskModelSelection(record);
+    const videoModel = chooseHermesVideoModel(record.input, Boolean(referenceImagePath), selectedModels.videoModel);
+    const videoPrompt = buildVideoPrompt(record.input);
+    const videoOutputPath = path.join(bundleDir, `sample-video.${videoTask === 'img2video' ? 'mp4' : 'mp4'}`);
+
+    const videoResult = await runHermesLocalGen({
+      task: videoTask,
+      model: videoModel,
+      prompt: videoPrompt,
+      outputPath: videoOutputPath,
+      inputPath: referenceImagePath,
+      timeoutSeconds: videoTask === 'img2video' || videoModel === 'wan22-5b' ? 1800 : 900,
+    });
+    const videoOutput = await extractPrimaryOutput(videoResult, ['video', 'gifs']);
+    const videoArtifact: UgcTaskArtifact = {
+      id: `${record.task.id}-video`,
+      type: 'video',
+      label: '样片视频',
+      fileName: path.basename(videoOutput.file),
+      mimeType: videoOutput.mimeType,
+      url: toPublicArtifactUrl(videoOutput.file),
+    };
+    pushEvent(
+      record,
+      'artifact_created',
+      'success',
+      `Hermes 已生成正式视频产物（${videoResult.model} · ${videoResult.elapsed_s}s）`,
+      {
+        artifactType: 'video',
+        fileName: videoArtifact.fileName,
+        url: videoArtifact.url,
+        mimeType: videoArtifact.mimeType,
+        sizeBytes: videoOutput.sizeBytes,
+        model: videoResult.model,
+        promptId: videoResult.prompt_id,
+      },
+    );
+    await persist(record);
 
     record = await loadOne(taskId);
     if (!record) return;
@@ -906,43 +1214,82 @@ async function executeRenderPhase(taskId: string): Promise<void> {
     pushEvent(record, 'delivery_packaging', 'info', '正在导出视频、封面、脚本与交付摘要');
     await persist(record);
 
-    // --- Cover frame: pull a still from the video via the same adapter
-    // (txt2img, using the same prompt). If video generation fell back,
-    // the cover follows the same fallback path. ---
-    let coverArtifact: UgcTaskArtifact | null = null;
-    try {
-      const cover = await generateImage({
-        prompt: `cover frame, ${videoPrompt}, first shot, vertical composition, hero pose`,
-        timeoutMs: 60_000,
+    let audioArtifact: UgcTaskArtifact | null = null;
+    if (selectedModels.audioEnabled) {
+      const audioText = record.task.understanding?.draftScript ?? `${record.input.sellingPoint}。${record.input.effectGoal}。`;
+      const audioResult = await generateAudio({
+        text: audioText,
+        workflow: selectedModels.audioModel,
+        language: 'Chinese',
       });
-      coverArtifact = {
-        id: `${record.task.id}-cover`,
-        type: 'image',
-        label: '封面首帧',
-        fileName: path.basename(cover.url),
-        mimeType: cover.mimeType,
-        url: cover.url,
+      const audioFilePath = path.resolve(process.cwd(), audioResult.url);
+      audioArtifact = {
+        id: `${record.task.id}-audio`,
+        type: 'audio',
+        label: 'AI 配音音轨',
+        fileName: path.basename(audioFilePath),
+        mimeType: audioResult.mimeType,
+        url: toPublicArtifactUrl(audioFilePath),
       };
-    } catch (error) {
-      pushEvent(
-        record,
-        'delivery_packaging',
-        'warning',
-        `封面生成失败，继续交付降级产物：${(error as Error).message}`,
-      );
+      pushEvent(record, 'artifact_created', audioResult.source === 'provider' ? 'success' : 'warning', 'AI 配音音轨已生成', {
+        artifactType: 'audio',
+        fileName: audioArtifact.fileName,
+        url: audioArtifact.url,
+        mimeType: audioArtifact.mimeType,
+        model: audioResult.model,
+        provider: audioResult.provider,
+        source: audioResult.source,
+        durationMs: audioResult.durationMs,
+        sizeBytes: audioResult.sizeBytes,
+      });
+      await persist(record);
     }
+
+    const coverResult = await runHermesLocalGen({
+      task: 'txt2img',
+      model: chooseHermesImageModel(selectedModels.imageModel),
+      prompt: buildCoverPrompt(record.input),
+      outputPath: path.join(bundleDir, 'cover-frame.png'),
+      timeoutSeconds: 600,
+    });
+    const coverOutput = await extractPrimaryOutput(coverResult, ['images']);
+    const coverArtifact: UgcTaskArtifact = {
+      id: `${record.task.id}-cover`,
+      type: 'image',
+      label: '封面首帧',
+      fileName: path.basename(coverOutput.file),
+      mimeType: coverOutput.mimeType,
+      url: toPublicArtifactUrl(coverOutput.file),
+    };
+    pushEvent(record, 'artifact_created', 'success', `Hermes 已生成封面首帧（${coverResult.model}）`, {
+      artifactType: 'image',
+      fileName: coverArtifact.fileName,
+      url: coverArtifact.url,
+      mimeType: coverArtifact.mimeType,
+      sizeBytes: coverOutput.sizeBytes,
+      model: coverResult.model,
+      promptId: coverResult.prompt_id,
+    });
+
+    const { scriptArtifact, summaryArtifact } = await buildTextArtifacts(record, bundleDir, {
+      videoModel,
+      imageModel: chooseHermesImageModel(selectedModels.imageModel),
+      audioModel: selectedModels.audioModel,
+      audioEnabled: selectedModels.audioEnabled,
+    });
 
     await delay(450);
     record = await loadOne(taskId);
     if (!record) return;
-    const built = buildArtifacts(record.task.id);
-    // Swap the two media artifacts for the real ones we just generated,
-    // if present. script.md and delivery-summary.pdf stay as-is.
-    record.task.artifacts = built.map((artifact) => {
-      if (artifact.id === `${record!.task.id}-video` && videoArtifact) return videoArtifact;
-      if (artifact.id === `${record!.task.id}-cover` && coverArtifact) return coverArtifact;
-      return artifact;
-    });
+    const finalizedArtifacts = [videoArtifact, ...(audioArtifact ? [audioArtifact] : []), coverArtifact, scriptArtifact, summaryArtifact];
+    const primaryVideoArtifact = resolvePrimaryVideoArtifact(finalizedArtifacts);
+    if (!primaryVideoArtifact) {
+      throw new Error('主视频未生成成功，不能标记任务完成');
+    }
+    record.task.artifacts = [
+      primaryVideoArtifact,
+      ...finalizedArtifacts.filter((artifact) => artifact.id !== primaryVideoArtifact.id),
+    ];
     record.task.tokenUsed = 22600;
     record.task.currentTokenUsed = 22600;
     record.completedAt = nowIso();
@@ -965,10 +1312,46 @@ async function executeRenderPhase(taskId: string): Promise<void> {
     );
     record.executions[0] = {
       ...record.executions[0],
-      stdout: 'sample-video.mp4\ncover-frame.png\nscript.md\ndelivery-summary.pdf',
+      command: `python3 ${HERMES_LOCAL_GEN_SCRIPT}`,
+      stdout: [
+        videoArtifact.fileName,
+        ...(audioArtifact ? [audioArtifact.fileName] : []),
+        coverArtifact.fileName,
+        scriptArtifact.fileName,
+        summaryArtifact.fileName,
+      ].join('\n'),
+      metadata: {
+        ...(record.executions[0].metadata ?? {}),
+        hermesRunner: 'local-gen',
+        videoModel,
+        imageModel: chooseHermesImageModel(selectedModels.imageModel),
+        audioModel: selectedModels.audioEnabled ? selectedModels.audioModel : null,
+      },
     };
     pushEvent(record, 'task_completed', 'success', 'UGC 样片与交付包已生成完成');
     await persist(record);
+  } catch (error) {
+    const record = await loadOne(taskId);
+    if (record) {
+      record.task.status = 'failed';
+      updateStep(record.task, 4, 'failed');
+      record.executions[0] = {
+        ...record.executions[0],
+        status: 'failed',
+        stderr: error instanceof Error ? error.message : 'Hermes 正式交付失败',
+        pauseReasonType: 'provider_error',
+        pauseReasonMessage: error instanceof Error ? error.message : 'Hermes 正式交付失败',
+        resumeMode: 'retry_step',
+        recoverable: true,
+      };
+      pushEvent(
+        record,
+        'task_failed',
+        'error',
+        error instanceof Error ? `Hermes 正式交付失败：${error.message}` : 'Hermes 正式交付失败',
+      );
+      await persist(record);
+    }
   } finally {
     activeRuns.delete(taskId);
   }
@@ -991,6 +1374,7 @@ export async function createUgcTask(payload: CreateTaskPayload): Promise<Task> {
       skillVersionId: skillBinding.skillVersionId,
       skillChecksum: skillBinding.checksum,
       versionNumber: skillBinding.versionNumber,
+      skillModels: skillBinding.version.executionConfig.modelSelection ?? DEFAULT_SKILL_MODELS,
     },
   };
   pushEvent(

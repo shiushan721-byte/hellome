@@ -11,9 +11,12 @@ import {
   listAvailableMediaModels,
   type GenerateTextInput,
 } from './src/server/adapters/modelAdapter';
+import { listAvailableAudioModels } from './src/server/adapters/audioAdapter';
 import {
   getUsageLedgerForExternalId,
   getUsageSummaryForExternalId,
+  normalizeBillingTopupInput,
+  recordBillingTopupForExternalId,
 } from './src/server/billingService';
 import {
   getSkillExperienceConfig,
@@ -26,6 +29,14 @@ import {
   updateSkill,
 } from './src/server/skillStudioService';
 import { listAllSkills } from './src/server/adminSkillService';
+import { getPublishedMarketAgent, listPublishedMarketAgents } from './src/server/publishedMarketService';
+import {
+  createAgentFromSpec,
+  getAgentView,
+  listAgentViews,
+  updateAgentBusinessFrame,
+  VOCABULARIES,
+} from './src/server/agentOrchestratorService';
 import {
   cancelUgcTask,
   createUgcTask,
@@ -63,6 +74,8 @@ dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+const ALLOWED_UPLOAD_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+const MAX_UPLOAD_FILE_SIZE = 10 * 1024 * 1024;
 
 fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -74,7 +87,19 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_UPLOAD_FILE_SIZE,
+  },
+  fileFilter: (_req, file, cb) => {
+    if (!ALLOWED_UPLOAD_MIME_TYPES.has(file.mimetype)) {
+      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'file'));
+      return;
+    }
+    cb(null, true);
+  },
+});
 
 app.use(express.json({ limit: '8mb' }));
 app.use('/uploads', express.static(uploadDir));
@@ -125,6 +150,29 @@ app.get('/api/billing/ledger', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : '读取算力账本失败',
+    });
+  }
+});
+
+app.post('/api/billing/topups', async (req, res) => {
+  try {
+    const externalId = authKit.getCurrentExternalId(req);
+    if (!externalId.trim()) {
+      res.status(401).json({ success: false, error: '请先登录后再充值' });
+      return;
+    }
+
+    const input = normalizeBillingTopupInput({
+      tokenAmount: req.body?.tokenAmount,
+      note: req.body?.note,
+    });
+    await recordBillingTopupForExternalId(externalId, input);
+    const data = await getUsageSummaryForExternalId(externalId);
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error instanceof Error ? error.message : '充值失败',
     });
   }
 });
@@ -244,8 +292,135 @@ app.post('/api/studio/skills/:skillId/debug', async (req, res) => {
   }
 });
 
+app.get('/api/studio/model-catalog', (req, res) => {
+  const session = authKit.requireCreatorSession(req, res);
+  if (!session) return;
+  res.json({
+    success: true,
+    data: {
+      text: listAvailableModels(),
+      media: listAvailableMediaModels(),
+      audio: listAvailableAudioModels(),
+    },
+  });
+});
+
 app.get('/api/models', (_req, res) => {
   res.json({ success: true, data: listAvailableModels() });
+});
+
+app.get('/api/published-market/agents', async (_req, res) => {
+  try {
+    const data = await listPublishedMarketAgents();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : '读取已发布智能体广场失败',
+    });
+  }
+});
+
+app.get('/api/published-market/agents/:agentId', async (req, res) => {
+  try {
+    const data = await getPublishedMarketAgent(req.params.agentId);
+    if (!data) {
+      res.status(404).json({ success: false, error: '未找到已发布智能体' });
+      return;
+    }
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : '读取已发布智能体详情失败',
+    });
+  }
+});
+
+// =============================================================================
+// Agent Orchestrator API — implements the "HelloMe 智能体工坊" data model.
+// Every skill = a 4-object video agent (goal / budget / executionPlan / result).
+// =============================================================================
+
+/** GET /api/studio/orchestrator/vocabularies — entry-point B dictionaries. */
+app.get('/api/studio/orchestrator/vocabularies', (_req, res) => {
+  res.json({ success: true, data: VOCABULARIES });
+});
+
+/** GET /api/studio/orchestrator/agents — list every agent with the 4-object view. */
+app.get('/api/studio/orchestrator/agents', async (_req, res) => {
+  try {
+    const data = await listAgentViews();
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'listAgentViews failed',
+    });
+  }
+});
+
+/** POST /api/studio/orchestrator/agents/from-spec — entry-point B create. */
+app.post('/api/studio/orchestrator/agents/from-spec', async (req, res) => {
+  try {
+    const body = (req.body ?? {}) as {
+      industry?: string;
+      scenario?: string;
+      displayName?: string;
+      slug?: string;
+    };
+    if (!body.industry || !body.scenario) {
+      res.status(400).json({ success: false, error: 'industry and scenario are required' });
+      return;
+    }
+    const data = await createAgentFromSpec({
+      industry: body.industry,
+      scenario: body.scenario,
+      displayName: body.displayName,
+      slug: body.slug,
+    });
+    res.status(201).json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'createAgentFromSpec failed',
+    });
+  }
+});
+
+/** GET /api/studio/orchestrator/agents/:agentId — single agent with 4-object view. */
+app.get('/api/studio/orchestrator/agents/:agentId', async (req, res) => {
+  try {
+    const data = await getAgentView(req.params.agentId);
+    res.json({ success: true, data });
+  } catch (error) {
+    if (error instanceof Error && /not found/i.test(error.message)) {
+      res.status(404).json({ success: false, error: error.message });
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'getAgentView failed',
+    });
+  }
+});
+
+/**
+ * PATCH /api/studio/orchestrator/agents/:agentId/business
+ *   Partial mutation of any of the four business objects (goal / budget /
+ *   executionPlan / result). Body shape:
+ *     { goal?: {...}, budget?: {...}, executionPlan?: { stages?: [...] }, result?: {...} }
+ */
+app.patch('/api/studio/orchestrator/agents/:agentId/business', async (req, res) => {
+  try {
+    const data = await updateAgentBusinessFrame(req.params.agentId, req.body ?? {});
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'updateAgentBusinessFrame failed',
+    });
+  }
 });
 
 /**
@@ -493,20 +668,39 @@ app.post('/api/hermes/pairing/disconnect', async (req, res) => {
   }
 });
 
-app.post('/api/uploads', upload.single('file'), (req, res) => {
-  if (!req.file) {
-    res.status(400).json({ success: false, error: '未收到上传文件' });
-    return;
-  }
+app.post('/api/uploads', (req, res) => {
+  upload.single('file')(req, res, (error) => {
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ success: false, error: '图片不能超过 10MB' });
+        return;
+      }
 
-  res.json({
-    success: true,
-    data: {
-      url: `/uploads/${req.file.filename}`,
-      fileName: req.file.originalname,
-      mimeType: req.file.mimetype,
-      size: req.file.size,
-    },
+      if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+        res.status(400).json({ success: false, error: '仅支持 JPG、PNG、WebP 图片' });
+        return;
+      }
+    }
+
+    if (error) {
+      res.status(400).json({ success: false, error: '上传失败，请稍后重试' });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ success: false, error: '未收到上传文件' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        url: `/uploads/${req.file.filename}`,
+        fileName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      },
+    });
   });
 });
 

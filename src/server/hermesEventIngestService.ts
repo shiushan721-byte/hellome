@@ -20,6 +20,13 @@ export class HermesEventIngestError extends Error {
 }
 
 const TERMINAL_STATUSES = new Set<TaskStatus>(['completed', 'failed', 'cancelled']);
+const ARTIFACT_LABELS: Record<string, string> = {
+  video: '样片视频',
+  image: '封面首帧',
+  script: '脚本草案',
+  report: '交付摘要',
+  audio: 'AI 配音音轨',
+};
 
 function eventLevel(eventType: string): 'info' | 'success' | 'warning' | 'error' {
   if (eventType === 'task_completed') return 'success';
@@ -153,6 +160,56 @@ function applyStepCompleted(record: UgcTaskAggregateRecord, envelope: HermesTask
   });
 }
 
+function inferArtifactType(payload: Record<string, unknown>): 'video' | 'image' | 'script' | 'report' | 'audio' {
+  const explicit = typeof payload.artifactType === 'string' ? payload.artifactType.trim().toLowerCase() : '';
+  if (explicit === 'video' || explicit === 'image' || explicit === 'script' || explicit === 'report' || explicit === 'audio') {
+    return explicit;
+  }
+
+  const mimeType = typeof payload.mimeType === 'string' ? payload.mimeType.toLowerCase() : '';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  if (mimeType.includes('markdown') || mimeType.startsWith('text/')) return 'script';
+  return 'report';
+}
+
+function applyArtifactCreated(record: UgcTaskAggregateRecord, envelope: HermesTaskEventEnvelope): void {
+  const fileName =
+    typeof envelope.payload.fileName === 'string' && envelope.payload.fileName.trim().length > 0
+      ? envelope.payload.fileName.trim()
+      : `artifact-${record.task.artifacts.length + 1}`;
+  const artifactType = inferArtifactType(envelope.payload);
+  const artifact = {
+    id: `${record.task.id}-artifact-${artifactType}-${record.task.artifacts.length + 1}`,
+    type: artifactType,
+    label:
+      (typeof envelope.payload.label === 'string' && envelope.payload.label.trim().length > 0
+        ? envelope.payload.label.trim()
+        : ARTIFACT_LABELS[artifactType]) ?? fileName,
+    fileName,
+    url: typeof envelope.payload.url === 'string' ? envelope.payload.url : undefined,
+    mimeType: typeof envelope.payload.mimeType === 'string' ? envelope.payload.mimeType : undefined,
+  };
+
+  const nextArtifacts = [...(record.task.artifacts ?? [])];
+  const existingIndex = nextArtifacts.findIndex(
+    (item) => item.fileName === artifact.fileName || (artifact.url && item.url === artifact.url),
+  );
+
+  if (existingIndex >= 0) {
+    nextArtifacts[existingIndex] = {
+      ...nextArtifacts[existingIndex],
+      ...artifact,
+      id: nextArtifacts[existingIndex].id,
+    };
+  } else {
+    nextArtifacts.push(artifact);
+  }
+
+  record.task.artifacts = nextArtifacts;
+}
+
 export async function ingestHermesTaskEvent(input: {
   taskId: string;
   envelope: unknown;
@@ -211,6 +268,10 @@ export async function ingestHermesTaskEvent(input: {
 
   if (envelope.eventType === 'step_completed') {
     applyStepCompleted(record, envelope);
+  }
+
+  if (envelope.eventType === 'artifact_created') {
+    applyArtifactCreated(record, envelope);
   }
 
   if (envelope.eventType === 'task_completed') {

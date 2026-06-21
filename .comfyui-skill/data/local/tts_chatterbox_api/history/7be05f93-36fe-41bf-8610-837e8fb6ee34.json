@@ -1,0 +1,23 @@
+{
+  "run_id": "7be05f93-36fe-41bf-8610-837e8fb6ee34",
+  "job_id": "",
+  "prompt_id": "7be05f93-36fe-41bf-8610-837e8fb6ee34",
+  "server_id": "local",
+  "workflow_id": "tts_chatterbox_api",
+  "status": "success",
+  "timestamp": "2026-06-21T07:36:03.366706+00:00",
+  "duration_ms": 4166,
+  "args": {
+    "prompt": "Final smoke test through the comfyui-skill CLI from the skill team.",
+    "language": "English"
+  },
+  "outputs": [
+    {
+      "filename": "hello_test_00003.flac",
+      "subfolder": "",
+      "type": "output",
+      "media_type": "audio",
+      "local_path": "/Users/feihong/Documents/hellome/.comfyui-skill/outputs/hello_test_00003.flac"
+    }
+  ]
+}

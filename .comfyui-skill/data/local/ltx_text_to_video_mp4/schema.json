@@ -1,0 +1,41 @@
+{
+  "description": "",
+  "enabled": true,
+  "parameters": {
+    "prompt": {
+      "node_id": "1",
+      "field": "prompt",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "fps": {
+      "node_id": "1",
+      "field": "fps",
+      "required": false,
+      "type": "int",
+      "description": "Frames per second"
+    },
+    "filename_prefix": {
+      "node_id": "2",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    },
+    "format": {
+      "node_id": "2",
+      "field": "format",
+      "required": false,
+      "type": "string",
+      "description": "Output video format"
+    },
+    "frame_rate": {
+      "node_id": "2",
+      "field": "frame_rate",
+      "required": false,
+      "type": "int",
+      "description": "Video frame rate"
+    }
+  }
+}

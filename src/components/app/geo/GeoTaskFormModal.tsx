@@ -251,7 +251,7 @@ export default function GeoTaskFormModal({
                   降低为快速检测
                 </button>
                 <Link
-                  to="/app/usage"
+                  to="/app/usage/recharge"
                   className="px-3 py-2 text-xs font-bold bg-[#14958A] text-white rounded-lg hover:bg-[#128278]"
                 >
                   充值 Token

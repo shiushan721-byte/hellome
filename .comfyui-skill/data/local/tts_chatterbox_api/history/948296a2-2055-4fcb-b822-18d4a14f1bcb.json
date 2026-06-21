@@ -1,0 +1,22 @@
+{
+  "run_id": "948296a2-2055-4fcb-b822-18d4a14f1bcb",
+  "job_id": "",
+  "prompt_id": "948296a2-2055-4fcb-b822-18d4a14f1bcb",
+  "server_id": "local",
+  "workflow_id": "tts_chatterbox_api",
+  "status": "success",
+  "timestamp": "2026-06-21T07:37:10.354213+00:00",
+  "duration_ms": 6905,
+  "args": {
+    "language": "English"
+  },
+  "outputs": [
+    {
+      "filename": "hello_test_00004.flac",
+      "subfolder": "",
+      "type": "output",
+      "media_type": "audio",
+      "local_path": "/Users/feihong/Documents/hellome/.comfyui-skill/outputs/hello_test_00004.flac"
+    }
+  ]
+}

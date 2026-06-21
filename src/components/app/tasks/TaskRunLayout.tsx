@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Task } from '../../../types/workbench';
+import { getUserRole } from '../../../lib/auth';
 import TaskTimeline from './TaskTimeline';
 import HermesLogPanel from './HermesLogPanel';
 import GeoReportPanel from './GeoReportPanel';
@@ -8,6 +9,7 @@ import ResultActionBar from './ResultActionBar';
 import TaskStatusBadge, { formatDuration } from './TaskStatusBadge';
 import ConfirmationNode from './ConfirmationNode';
 import { formatToken, formatTokenRange } from '../../../lib/tokenBilling';
+import { buildMediaDeliveryView, deriveMediaTaskStage } from '../../../lib/mediaTaskPresentation';
 
 interface TaskRunLayoutProps {
   task: Task;
@@ -33,13 +35,17 @@ export default function TaskRunLayout({
   onReviseAndRerun,
   copyHint,
 }: TaskRunLayoutProps) {
+  const role = getUserRole();
+  const isPowerUser = role === 'creator' || role === 'admin';
   const activeStep = task.steps.find((s) => s.status === 'active');
   const isUgcTask = task.agentType === 'media';
+  const mediaStage = isUgcTask ? deriveMediaTaskStage(task) : null;
+  const mediaDelivery = isUgcTask ? buildMediaDeliveryView(task) : null;
   const geoBrandName =
     task.agentType === 'geo' && task.input && 'brandName' in task.input
       ? task.input.brandName
       : undefined;
-  const headerSubtitle = isUgcTask ? '视频任务' : '任务详情';
+  const headerSubtitle = isUgcTask ? '视频智能体任务' : '任务详情';
   const currentUsed =
     task.status === 'running' || task.status === 'waiting_confirmation'
       ? formatToken(task.currentTokenUsed ?? 0)
@@ -70,7 +76,9 @@ export default function TaskRunLayout({
                 <p className="mt-2 text-sm leading-7 text-black/48">{headerSubtitle}</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusPill label={task.executionMode === 'local_debug' ? '本地调试' : '后端执行'} />
+                {isPowerUser ? (
+                  <StatusPill label={task.executionMode === 'local_debug' ? '本地调试' : '后端执行'} />
+                ) : null}
                 {task.pendingConfirmation ? (
                   <StatusPill label="待确认" tone="warning" />
                 ) : null}
@@ -81,12 +89,14 @@ export default function TaskRunLayout({
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.1fr_0.9fr]">
               <SummaryCard
                 eyebrow="任务"
-                title={`${isUgcTask ? '短视频广告生成' : '任务执行'} · ${task.id}`}
+                title={`${isUgcTask ? '视频任务执行' : '任务执行'} · ${task.id}`}
                 description={
                   task.pendingConfirmation
                     ? '等待确认'
                     : activeStep?.name
-                      ? `当前正在执行：${activeStep.name}`
+                      ? isUgcTask
+                        ? `当前正在推进：${deriveMediaStageLabel(task)}`
+                        : `当前正在执行：${activeStep.name}`
                       : task.status === 'completed'
                         ? '已完成'
                         : '准备中'
@@ -94,8 +104,20 @@ export default function TaskRunLayout({
               />
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <SummaryCard
-                  eyebrow="运行"
-                  title={task.executionMode === 'local_debug' ? '本地调试' : '后端执行'}
+                  eyebrow={isUgcTask ? '状态' : '运行'}
+                  title={
+                    isUgcTask
+                      ? mediaStage === 'waiting_confirmation'
+                        ? '等待确认'
+                        : mediaStage === 'completed'
+                          ? '正式交付完成'
+                          : mediaStage === 'recoverable_error' || mediaStage === 'failed'
+                            ? '执行中断'
+                            : '推进中'
+                      : task.executionMode === 'local_debug'
+                      ? '本地调试'
+                      : '后端执行'
+                  }
                   compact
                 />
                 <SummaryCard
@@ -110,7 +132,7 @@ export default function TaskRunLayout({
 
         <section className="grid grid-cols-1 gap-5 xl:grid-cols-[280px_minmax(0,1fr)_340px]">
           <aside className="space-y-4">
-            <LayoutPanel eyebrow="Left" title="步骤">
+            <LayoutPanel eyebrow="Left" title={isUgcTask ? '任务进度' : '步骤'}>
               <div className="space-y-4">
                 <div className="rounded-2xl border border-black/[0.06] bg-[#FCFCFD] p-4 text-sm">
                   <div className="flex items-center justify-between gap-3">
@@ -140,9 +162,13 @@ export default function TaskRunLayout({
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/35">当前步骤</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-black/35">
+                    {isUgcTask ? '当前阶段' : '当前步骤'}
+                  </p>
                   <p className="mt-2 text-sm font-medium text-[#1A1A1A]">
-                    {activeStep?.name || (task.status === 'completed' ? '全部步骤已完成' : '准备中…')}
+                    {isUgcTask
+                      ? deriveMediaStageLabel(task)
+                      : activeStep?.name || (task.status === 'completed' ? '全部步骤已完成' : '准备中…')}
                   </p>
                 </div>
 
@@ -189,7 +215,7 @@ export default function TaskRunLayout({
           </main>
 
           <aside className="space-y-4">
-            <LayoutPanel eyebrow="Right" title="状态与日志">
+            <LayoutPanel eyebrow="Right" title={isUgcTask ? '补充说明' : '状态与日志'}>
               <div className="space-y-4">
                 {task.recoveryState?.runState === 'interrupted' ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
@@ -236,6 +262,9 @@ export default function TaskRunLayout({
                           ? '任务失败'
                           : '执行中'}
                     </p>
+                    {mediaDelivery ? (
+                      <p className="mt-2 text-sm leading-6 text-black/50">{mediaDelivery.statusBody}</p>
+                    ) : null}
                   </div>
                 )}
 
@@ -250,7 +279,7 @@ export default function TaskRunLayout({
                   <p className="mt-2 text-sm font-semibold text-[#1A1A1A]">{task.costEstimate ?? '处理中'}</p>
                 </div>
 
-                <HermesLogPanel logs={task.logs} />
+                {(!isUgcTask || isPowerUser) && task.logs.length > 0 ? <HermesLogPanel logs={task.logs} /> : null}
               </div>
             </LayoutPanel>
           </aside>
@@ -314,4 +343,17 @@ function StatusPill({
       {label}
     </span>
   );
+}
+
+function deriveMediaStageLabel(task: Task): string {
+  const stage = deriveMediaTaskStage(task);
+  if (stage === 'recoverable_error') return '等待继续';
+  if (stage === 'waiting_confirmation') return '等待你确认后继续';
+  if (stage === 'completed') return '正式样片与交付已完成';
+  if (stage === 'failed') return '任务执行失败';
+  if (stage === 'queued') return '已接收，准备整理结果方向';
+  if (stage === 'understanding') return '正在理解这次任务';
+  if (stage === 'route_planning') return '正在整理表达方向';
+  if (stage === 'rendering_video') return '正在生成正式样片';
+  return '正在整理交付附件';
 }

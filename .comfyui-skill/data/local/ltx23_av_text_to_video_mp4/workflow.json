@@ -1,0 +1,214 @@
+{
+  "10": {
+    "inputs": {
+      "unet_name": "ltx-2.3-22b-distilled_transformer_only_fp8_scaled.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load LTX 2.3 Diffusion Model"
+    }
+  },
+  "15": {
+    "inputs": {
+      "model": [
+        "10",
+        0
+      ],
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "latent": [
+        "70",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingLTXV",
+    "_meta": {
+      "title": "LTX Model Sampling (auto shift)"
+    }
+  },
+  "20": {
+    "inputs": {
+      "text_encoder": "qwen_3_4b_fp8_mixed.safetensors",
+      "ckpt_name": "ltx-2.3_text_projection_bf16.safetensors",
+      "device": "default"
+    },
+    "class_type": "LTXAVTextEncoderLoader",
+    "_meta": {
+      "title": "Load LTX 2.3 AV Text Encoder"
+    }
+  },
+  "30": {
+    "inputs": {
+      "ckpt_name": "LTX23_video_vae_bf16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load LTX 2.3 Video VAE"
+    }
+  },
+  "50": {
+    "inputs": {
+      "width": 768,
+      "height": 512,
+      "length": 49,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLTXVLatentVideo",
+    "_meta": {
+      "title": "Empty Latent Video (5s @ 25fps)"
+    }
+  },
+  "60": {
+    "inputs": {
+      "samples": [
+        "50",
+        0
+      ],
+      "seconds": 5.0,
+      "batch_size": 1
+    },
+    "class_type": "LTXVEmptyLatentAudio",
+    "_meta": {
+      "title": "Empty Latent Audio (5s)"
+    }
+  },
+  "70": {
+    "inputs": {
+      "video_latent": [
+        "50",
+        0
+      ],
+      "audio_latent": [
+        "60",
+        0
+      ]
+    },
+    "class_type": "LTXVConcatAVLatent",
+    "_meta": {
+      "title": "Concat AV Latent"
+    }
+  },
+  "80": {
+    "inputs": {
+      "text": "a cute red fox walking in a misty forest at dawn, cinematic lighting, gentle breeze",
+      "clip": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "85": {
+    "inputs": {
+      "text": "blurry, ugly, low quality, static, deformed",
+      "clip": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative Prompt"
+    }
+  },
+  "90": {
+    "inputs": {
+      "positive": [
+        "80",
+        0
+      ],
+      "negative": [
+        "85",
+        0
+      ],
+      "frame_rate": 25.0
+    },
+    "class_type": "LTXVConditioning",
+    "_meta": {
+      "title": "LTX Conditioning (frame_rate)"
+    }
+  },
+  "100": {
+    "inputs": {
+      "steps": 20,
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "stretch": true,
+      "terminal": 0.1
+    },
+    "class_type": "LTXVScheduler",
+    "_meta": {
+      "title": "LTX Scheduler"
+    }
+  },
+  "110": {
+    "inputs": {
+      "seed": 42,
+      "steps": 20,
+      "cfg": 5.0,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1.0,
+      "model": [
+        "15",
+        0
+      ],
+      "positive": [
+        "90",
+        0
+      ],
+      "negative": [
+        "90",
+        1
+      ],
+      "latent_image": [
+        "70",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (AV)"
+    }
+  },
+  "120": {
+    "inputs": {
+      "samples": [
+        "110",
+        0
+      ],
+      "vae": [
+        "30",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode (Video)"
+    }
+  },
+  "150": {
+    "inputs": {
+      "images": [
+        "120",
+        0
+      ],
+      "frame_rate": 25,
+      "loop_count": 0,
+      "filename_prefix": "ltx23_v",
+      "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": true,
+      "crf": 19,
+      "pix_fmt": "yuv420p"
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Save Video MP4"
+    }
+  }
+}

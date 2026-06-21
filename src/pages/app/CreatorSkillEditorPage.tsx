@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Play, Rocket, Save, Sparkles } from 'lucide-react';
 import {
+  getStudioModelCatalog,
   getStudioSkill,
   publishStudioSkill,
   runStudioSkillDebug,
@@ -16,7 +17,8 @@ import {
   type CustomerType,
   type OptimizationDirection,
 } from '../../lib/creatorStudio';
-import type { SkillDebugResult, SkillRecord } from '../../types/skills';
+import type { SkillDebugResult, SkillModelSelectionConfig, SkillRecord } from '../../types/skills';
+import type { StudioModelCatalog } from '../../lib/skillStudioApi';
 import SkillStudioNav from '../../components/app/studio/SkillStudioNav';
 import BusinessFlowPreviewPanel from '../../components/app/studio/BusinessFlowPreviewPanel';
 import {
@@ -44,6 +46,13 @@ export default function CreatorSkillEditorPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [debugResult, setDebugResult] = useState<SkillDebugResult | null>(null);
+  const [modelCatalog, setModelCatalog] = useState<StudioModelCatalog | null>(null);
+  const [modelSelection, setModelSelection] = useState<SkillModelSelectionConfig>({
+    imageModel: 'z-image-turbo',
+    videoModel: 'wan22-5b',
+    audioModel: 'tts_chatterbox_api',
+    audioEnabled: true,
+  });
   const [customerType, setCustomerType] = useState<CustomerType>(
     mode === 'create' ? DEFAULT_CREATE_CUSTOMER_TYPE : DEFAULT_EDIT_CUSTOMER_TYPE,
   );
@@ -58,10 +67,20 @@ export default function CreatorSkillEditorPage() {
     void getStudioSkill(skillId)
       .then((data) => {
         if (cancelled) return;
-        setSkill(normalizeSkillRecord(data));
+        const normalized = normalizeSkillRecord(data);
+        setSkill(normalized);
+        setModelSelection(normalized.latestVersion.executionConfig.modelSelection);
       })
       .catch((loadError) => {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : '读取 Skill 失败');
+      });
+    void getStudioModelCatalog()
+      .then((data) => {
+        if (cancelled) return;
+        setModelCatalog(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
       });
     return () => {
       cancelled = true;
@@ -95,6 +114,10 @@ export default function CreatorSkillEditorPage() {
             summary: mode === 'create' ? `帮助${customerType}更高效完成${scenario}` : `持续优化${customerType}的${scenario}智能体表现`,
             scenarios: [scenario],
           },
+        },
+        executionConfig: {
+          ...skill.latestVersion.executionConfig,
+          modelSelection,
         },
       },
     };
@@ -262,6 +285,11 @@ export default function CreatorSkillEditorPage() {
               <>
                 <BusinessCustomerTypeSelector value={customerType} onChange={setCustomerType} />
                 <BusinessScenarioSelector value={scenario} onChange={setScenario} />
+                <ModelSelectionSection
+                  modelCatalog={modelCatalog}
+                  value={modelSelection}
+                  onChange={setModelSelection}
+                />
                 <CompactToneCard
                   title="发送给 Hermes 之前"
                   lines={['系统会先生成智能体草稿', '再补全默认执行链路与前台页面结构']}
@@ -278,6 +306,11 @@ export default function CreatorSkillEditorPage() {
             ) : (
               <>
                 <OptimizationDirectionSelector value={direction} onChange={setDirection} />
+                <ModelSelectionSection
+                  modelCatalog={modelCatalog}
+                  value={modelSelection}
+                  onChange={setModelSelection}
+                />
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-[#1A1A1A]">明确优化指令</h3>
@@ -365,6 +398,104 @@ function CompactToneCard({ title, lines }: { title: string; lines: string[] }) {
         ))}
       </div>
     </section>
+  );
+}
+
+function ModelSelectionSection({
+  modelCatalog,
+  value,
+  onChange,
+}: {
+  modelCatalog: StudioModelCatalog | null;
+  value: SkillModelSelectionConfig;
+  onChange: (next: SkillModelSelectionConfig) => void;
+}) {
+  const imageOptions =
+    modelCatalog?.media.models.filter((model) => model.task === 'txt2img') ?? [];
+  const videoOptions =
+    modelCatalog?.media.models.filter((model) => model.task === 'txt2video' || model.task === 'img2video') ?? [];
+  const audioOptions = modelCatalog?.audio.models ?? [];
+
+  return (
+    <section className="rounded-[24px] border border-black/[0.06] bg-[#FCFCFD] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-[#1A1A1A]">生成模型参数</h3>
+          <p className="mt-1 text-sm leading-6 text-black/52">
+            面向创作者配置，业务侧任务页不会把这些模型选择直接暴露给客户。
+          </p>
+        </div>
+        <label className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white px-3 py-2 text-xs text-black/60">
+          <input
+            type="checkbox"
+            checked={value.audioEnabled}
+            onChange={(event) => onChange({ ...value, audioEnabled: event.target.checked })}
+          />
+          启用 AI 配音
+        </label>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <ModelSelectCard
+          label="图片模型"
+          value={value.imageModel}
+          options={imageOptions}
+          emptyLabel="暂无图片模型"
+          onChange={(imageModel) => onChange({ ...value, imageModel })}
+        />
+        <ModelSelectCard
+          label="视频模型"
+          value={value.videoModel}
+          options={videoOptions}
+          emptyLabel="暂无视频模型"
+          onChange={(videoModel) => onChange({ ...value, videoModel })}
+        />
+        <ModelSelectCard
+          label="音频模型"
+          value={value.audioModel}
+          options={audioOptions}
+          emptyLabel="暂无音频模型"
+          disabled={!value.audioEnabled}
+          onChange={(audioModel) => onChange({ ...value, audioModel })}
+        />
+      </div>
+    </section>
+  );
+}
+
+function ModelSelectCard({
+  label,
+  value,
+  options,
+  emptyLabel,
+  disabled = false,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ id: string; label: string; configured: boolean }>;
+  emptyLabel: string;
+  disabled?: boolean;
+  onChange: (next: string) => void;
+}) {
+  return (
+    <label className="block rounded-2xl border border-black/[0.05] bg-white px-4 py-3">
+      <span className="text-[11px] uppercase tracking-[0.12em] text-black/35">{label}</span>
+      <select
+        value={value}
+        disabled={disabled || options.length === 0}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-3 h-11 w-full rounded-2xl border border-black/10 bg-[#FCFCFD] px-4 text-sm text-black outline-none disabled:opacity-60"
+      >
+        {options.length === 0 ? <option value="">{emptyLabel}</option> : null}
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.label}{option.configured ? '' : '（fallback）'}
+          </option>
+        ))}
+      </select>
+      <p className="mt-2 text-xs text-black/42">{value || emptyLabel}</p>
+    </label>
   );
 }
 

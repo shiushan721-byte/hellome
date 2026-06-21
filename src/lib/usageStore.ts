@@ -90,6 +90,8 @@ function readLedgerFromCache(): UsageLedgerEntry[] {
       estimatedTokenMax: Number(e.estimatedTokenMax ?? 0),
       tokenUsed: Number(e.tokenUsed ?? 0),
       status: e.status ?? 'settled',
+      kind: e.kind === 'topup' ? 'topup' : 'usage',
+      note: e.note ?? undefined,
     }));
   } catch {
     ledgerSnapshot = [];
@@ -156,13 +158,15 @@ export async function syncUsageLedgerFromServer(): Promise<UsageLedgerEntry[]> {
     throw new Error(json.error || '读取算力账本失败');
   }
 
-  const normalized = json.data.map((entry) => ({
+  const normalized: UsageLedgerEntry[] = json.data.map((entry) => ({
     ...entry,
     taskId: entry.taskId ?? '',
     estimatedTokenMin: Number(entry.estimatedTokenMin ?? 0),
     estimatedTokenMax: Number(entry.estimatedTokenMax ?? 0),
     tokenUsed: Number(entry.tokenUsed ?? 0),
     status: entry.status ?? 'settled',
+    kind: entry.kind === 'topup' ? 'topup' : 'usage',
+    note: entry.note ?? undefined,
   }));
   persistLedgerCache(normalized);
   notifyUsage();
@@ -204,16 +208,21 @@ export function isLowBalance(usage = getUsage()): boolean {
 export function getComputeStats(usage = getUsage()) {
   const ledger = getLedger();
   const ledgerUsed = ledger.reduce(
-    (sum, entry) => sum + (entry.status === 'refunded' ? 0 : entry.tokenUsed),
+    (sum, entry) =>
+      sum + (entry.status === 'refunded' || entry.kind === 'topup' ? 0 : entry.tokenUsed),
+    0,
+  );
+  const topupTotal = ledger.reduce(
+    (sum, entry) => sum + (entry.kind === 'topup' ? entry.tokenUsed : 0),
     0,
   );
   const lifetimeUsedTokens = Math.max(ledgerUsed, usage.monthlyTokenUsed);
-  const lifetimePurchasedTokens = usage.tokenBalance + lifetimeUsedTokens;
 
   return {
     lifetimeUsedTokens,
-    lifetimePurchasedTokens,
+    lifetimePurchasedTokens: topupTotal,
     monthlyUsed: usage.monthlyTokenUsed,
+    topupTotal,
   };
 }
 
@@ -229,6 +238,36 @@ export function addLedgerEntry(entry: Omit<UsageLedgerEntry, 'id'>): void {
   ].slice(0, 100);
   persistLedgerCache(next);
   notifyUsage();
+}
+
+export async function submitBillingTopup(input: {
+  tokenAmount: number;
+  note?: string;
+}): Promise<UsageSnapshot> {
+  const response = await fetch('/api/billing/topups', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  });
+
+  const json = (await response.json()) as {
+    success: boolean;
+    data?: UsageSnapshot;
+    error?: string;
+  };
+
+  if (!response.ok || !json.success || !json.data) {
+    throw new Error(json.error || '充值失败');
+  }
+
+  saveUsage(
+    normalizeUsage(json.data as Partial<UsageSnapshot> & Record<string, unknown>),
+  );
+  await syncUsageLedgerFromServer();
+  return getUsage();
 }
 
 export function settleTaskTokens(params: {

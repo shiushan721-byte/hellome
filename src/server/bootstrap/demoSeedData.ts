@@ -1,6 +1,7 @@
-import type { Prisma } from '@prisma/client';
-import { buildDefaultBusinessFrame } from '../skillStudioService';
+import { Prisma } from '@prisma/client';
+import { buildDefaultBusinessFrame as buildOrchestratorDefaultBusinessFrame } from '../agentOrchestratorService';
 import { buildDemoProfile } from './demoSeedHelpers';
+import { getVideoAgentProfile } from '../../config/videoAgentProfiles';
 
 export function buildDemoUsers() {
   return [
@@ -85,12 +86,23 @@ export type DemoSkillSeed = {
     inputConfig: Prisma.InputJsonValue;
     understandingConfig: Prisma.InputJsonValue;
     executionConfig: Prisma.InputJsonValue;
-    businessFrame: Prisma.InputJsonValue;
-    artifactConfig: Prisma.InputJsonValue;
+      businessFrame: Prisma.InputJsonValue;
+      artifactConfig: Prisma.InputJsonValue;
   };
 };
 
-function defaultInputConfig() {
+function defaultShowcaseVideo(skillId: string): Prisma.InputJsonValue | undefined {
+  if (skillId !== 'media-seeding') return undefined;
+  return {
+    title: '通勤防晒真人种草样片',
+    summary: '围绕轻薄防晒与通勤场景的 10 秒真人种草案例。',
+    videoUrl: '/media/showcase/media-seeding-sample.webm',
+    coverUrl: '/media/showcase/media-seeding-cover.png',
+    posterText: '真人种草 · 通勤防晒',
+  };
+}
+
+function defaultInputConfig(): Prisma.InputJsonValue {
   return {
     sellingPointLabel: '一句话卖点',
     sellingPointPlaceholder: '请用一句话说清产品最想让客户记住什么。',
@@ -100,14 +112,14 @@ function defaultInputConfig() {
   };
 }
 
-function defaultUnderstandingConfig() {
+function defaultUnderstandingConfig(): Prisma.InputJsonValue {
   return {
     prompt: '先理解客户业务，再输出目标用户、风格、人设、脚本草案和交付目标。',
     confirmationMessage: '样片生成会进入高成本步骤，确认后将正式调用视频模型。',
   };
 }
 
-function defaultExecutionConfig() {
+function defaultExecutionConfig(): Prisma.InputJsonValue {
   return {
     mode: 'backend_silent',
     debugMode: 'local_debug',
@@ -124,21 +136,50 @@ function defaultExecutionConfig() {
         fitPlatforms: ['抖音', '小红书', '视频号'],
       },
     ],
+    modelSelection: {
+      imageModel: 'z-image-turbo',
+      videoModel: 'wan22-5b',
+      audioModel: 'tts_chatterbox_api',
+      audioEnabled: true,
+    },
   };
 }
 
-function defaultArtifactConfig() {
+function defaultArtifactConfig(): Prisma.InputJsonValue {
   return [
     { label: '样片视频', fileName: 'sample-video.mp4' },
+    { label: 'AI 配音音轨', fileName: 'voiceover.wav' },
     { label: '封面首帧', fileName: 'cover-frame.png' },
     { label: '脚本草案', fileName: 'script.md' },
     { label: '客户交付摘要', fileName: 'delivery-summary.pdf' },
   ];
 }
 
+// =============================================================================
+// HelloMe 智能体工坊 — 6 个视频智能体 demo seed
+// 直接对应设计稿要求的 6 个变体：产品种草 / 测评 / 带货 / 宣传 / 演示 / 招商
+// =============================================================================
+export const DEMO_VIDEO_AGENT_SPECS: Array<{
+  id: string;
+  industry: string;
+  scenario: string;
+}> = [
+  { id: 'media-seeding',  industry: 'consumer',     scenario: 'seeding' },
+  { id: 'media-review',   industry: 'consumer',     scenario: 'review' },
+  { id: 'media-conversion',industry: 'retail',       scenario: 'conversion' },
+  { id: 'media-showcase', industry: 'service',      scenario: 'showcase' },
+  { id: 'media-demo',     industry: 'manufacturing',scenario: 'demo' },
+  { id: 'media-proposal', industry: 'service',      scenario: 'proposal' },
+];
+
 export function buildDemoSkillSeed(): DemoSkillSeed {
+  // 保留单一默认 seed 兼容旧调用；新工坊走 listAgentViews() 看完整 6 个
   const creator = buildDemoUsers()[1];
-  const businessFrame = buildDefaultBusinessFrame();
+  const businessFrame = buildOrchestratorDefaultBusinessFrame({
+    industry: 'consumer',
+    scenario: 'seeding',
+    displayName: '短视频客户交付 Agent',
+  });
 
   return {
     id: 'media-ugc',
@@ -159,6 +200,52 @@ export function buildDemoSkillSeed(): DemoSkillSeed {
       artifactConfig: defaultArtifactConfig(),
     },
   };
+}
+
+export function buildDemoVideoAgentSeeds(): DemoSkillSeed[] {
+  const creator = buildDemoUsers()[1];
+  return DEMO_VIDEO_AGENT_SPECS.map((spec) => {
+    const profile = getVideoAgentProfile(spec.id);
+    const executionConfig = defaultExecutionConfig() as Record<string, unknown>;
+    if (spec.id === 'media-seeding') {
+      executionConfig.modelSelection = {
+        ...((executionConfig.modelSelection as Record<string, unknown>) ?? {}),
+        videoModel: 'ltx-2b',
+      };
+    }
+    const businessFrame = buildOrchestratorDefaultBusinessFrame({
+      industry: spec.industry,
+      scenario: spec.scenario,
+      displayName: '',
+    });
+    return {
+      id: spec.id,
+      slug: spec.id,
+      name: profile?.publicName ?? businessFrame.goal.summary,
+      description: profile?.marketDescription ?? businessFrame.goal.businessSentence ?? businessFrame.goal.summary,
+      ownerExternalId: creator.externalId,
+      version: {
+        id: `${spec.id}-v1`,
+        versionNumber: 1,
+        versionLabel: 'v0.1.0',
+        title: profile?.title ?? businessFrame.goal.summary,
+        summary: profile?.workbenchSubtitle ?? businessFrame.goal.businessSentence ?? businessFrame.goal.summary,
+        inputConfig: (profile?.inputConfig ?? defaultInputConfig()) as unknown as Prisma.InputJsonValue,
+        understandingConfig: defaultUnderstandingConfig(),
+        executionConfig: executionConfig as unknown as Prisma.InputJsonValue,
+        businessFrame: {
+          ...businessFrame,
+          result: {
+            ...businessFrame.result,
+            promiseLine: profile?.workbenchSubtitle ?? businessFrame.result.promiseLine,
+            orientationTags: profile?.orientationTags ?? businessFrame.result.orientationTags,
+            showcaseVideo: defaultShowcaseVideo(spec.id),
+          },
+        } as unknown as Prisma.InputJsonValue,
+        artifactConfig: defaultArtifactConfig(),
+      },
+    };
+  });
 }
 
 export type DemoLedgerSeed = {

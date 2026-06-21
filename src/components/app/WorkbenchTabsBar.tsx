@@ -126,7 +126,7 @@ export default function WorkbenchTabsBar() {
       return;
     }
     if (result.reason === 'recharge') {
-      navigate('/app/usage');
+      navigate('/app/usage/recharge');
       return;
     }
     if (result.ok) {

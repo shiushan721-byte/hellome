@@ -1,4 +1,5 @@
 import type { Task } from '../../../types/workbench';
+import { deriveMediaTaskStage } from '../../../lib/mediaTaskPresentation';
 
 export interface TaskRailStage {
   label: string;
@@ -6,21 +7,20 @@ export interface TaskRailStage {
 }
 
 function resolveCursor(task: Pick<Task, 'status' | 'steps' | 'recoveryState'>): number {
-  const activeIndex = task.steps.findIndex((step) => step.status === 'active');
-
-  if (task.status === 'queued') return 0;
-  if (task.status === 'waiting_confirmation') return 2;
-  if (task.recoveryState?.runState === 'interrupted') {
+  const stage = deriveMediaTaskStage(task);
+  if (stage === 'queued') return 0;
+  if (stage === 'understanding' || stage === 'route_planning') return 1;
+  if (stage === 'waiting_confirmation') return 2;
+  if (stage === 'rendering_video') return 3;
+  if (stage === 'packaging_delivery') return 4;
+  if (stage === 'completed') return 5;
+  if (stage === 'recoverable_error' || stage === 'failed') {
+    const activeIndex = task.steps.findIndex((step) => step.status === 'active');
     if (activeIndex >= 5) return 4;
     if (activeIndex >= 3) return 3;
     if (activeIndex >= 0) return 1;
     return 1;
   }
-  if (task.status === 'completed') return 5;
-  if (activeIndex >= 5) return 4;
-  if (activeIndex >= 3) return 3;
-  if (activeIndex >= 0) return 1;
-  if (task.status === 'running') return 1;
   return 0;
 }
 

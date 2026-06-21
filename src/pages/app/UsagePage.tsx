@@ -32,6 +32,7 @@ export default function UsagePage() {
 
   const agentRanking = Object.entries(
     ledger.reduce<Record<string, number>>((acc, entry) => {
+      if (entry.kind === 'topup') return acc;
       acc[entry.agent] = (acc[entry.agent] ?? 0) + entry.tokenUsed;
       return acc;
     }, {}),
@@ -48,7 +49,7 @@ export default function UsagePage() {
           <p className="text-sm text-black/50 mt-1">查看 Token 余额、消耗明细与智能体用量。</p>
         </div>
         <Link
-          to="/login"
+          to="/app/usage/recharge"
           className="inline-flex justify-center px-5 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
         >
           充值算力
@@ -97,18 +98,18 @@ export default function UsagePage() {
       )}
 
       <section>
-        <h2 className="text-xs font-bold uppercase tracking-wider text-black/45 mb-4">最近消耗记录</h2>
+        <h2 className="text-xs font-bold uppercase tracking-wider text-black/45 mb-4">最近账单记录</h2>
         {ledger.length === 0 ? (
-          <p className="text-sm text-black/40">暂无消耗记录</p>
+          <p className="text-sm text-black/40">暂无账单记录</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-[10px] font-bold uppercase tracking-wider text-black/40 border-b border-black/10">
                   <th className="pb-3 text-left pr-4">时间</th>
-                  <th className="pb-3 text-left pr-4">任务名称</th>
-                  <th className="pb-3 text-left pr-4">智能体</th>
-                  <th className="pb-3 text-left pr-4">消耗 Token</th>
+                  <th className="pb-3 text-left pr-4">记录名称</th>
+                  <th className="pb-3 text-left pr-4">来源</th>
+                  <th className="pb-3 text-left pr-4">Token 变动</th>
                   <th className="pb-3 text-left pr-4">预计 Token</th>
                   <th className="pb-3 text-left">状态</th>
                 </tr>
@@ -122,10 +123,13 @@ export default function UsagePage() {
                     <td className="py-3 pr-4">{entry.taskName}</td>
                     <td className="py-3 pr-4 text-black/55 text-xs">{entry.agent}</td>
                     <td className="py-3 pr-4 font-mono text-xs font-bold">
+                      {entry.kind === 'topup' ? '+' : '-'}
                       {formatToken(entry.tokenUsed)}
                     </td>
                     <td className="py-3 pr-4 font-mono text-xs text-black/45">
-                      {formatTokenRange({ min: entry.estimatedTokenMin, max: entry.estimatedTokenMax })}
+                      {entry.kind === 'topup'
+                        ? entry.note || '--'
+                        : formatTokenRange({ min: entry.estimatedTokenMin, max: entry.estimatedTokenMax })}
                     </td>
                     <td className="py-3 text-xs text-black/55">
                       {STATUS_LABEL[entry.status] ?? entry.status}

@@ -1,19 +1,39 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { isAuthenticated } from '../lib/auth';
 import { getAgentById } from '../data/agentsCatalog';
+import { getVideoAgentProfile } from '../config/videoAgentProfiles';
 import AgentIcon from '../components/app/agents/AgentIcon';
 import { useLoginModal } from '../context/LoginModalProvider';
 import PublicMarketLayout from '../layouts/PublicMarketLayout';
+import { getPublishedMarketAgent, type PublishedMarketAgent } from '../lib/skillStudioApi';
 
 export default function PublicAgentDetailPage() {
   const { agentId } = useParams<{ agentId: string }>();
   const { openLogin } = useLoginModal();
+  const [publishedAgent, setPublishedAgent] = useState<PublishedMarketAgent | null>(null);
 
   if (isAuthenticated()) {
     return <Navigate to={agentId ? `/app/agents/${agentId}` : '/app/agents'} replace />;
   }
 
   const agent = agentId ? getAgentById(agentId) : undefined;
+  const videoProfile = agentId ? getVideoAgentProfile(agentId) : undefined;
+  useEffect(() => {
+    if (!agentId) return;
+    let cancelled = false;
+    void getPublishedMarketAgent(agentId)
+      .then((data) => {
+        if (cancelled) return;
+        setPublishedAgent(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId]);
   if (!agent) {
     return (
       <PublicMarketLayout>
@@ -33,17 +53,42 @@ export default function PublicAgentDetailPage() {
           <div className="flex items-start gap-4">
             <AgentIcon src={agent.iconSrc} alt={agent.name} size="lg" />
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold font-display">{agent.name}</h1>
-              <p className="text-sm text-black/55 mt-2 leading-relaxed">{agent.desc}</p>
-              <p className="text-[11px] font-mono text-black/40 mt-3">预计 {agent.tokenRange}</p>
+              <h1 className="text-2xl font-bold font-display">{publishedAgent?.name ?? agent.name}</h1>
+              <p className="text-sm text-black/55 mt-2 leading-relaxed">{publishedAgent?.description ?? agent.desc}</p>
+              <p className="text-[11px] font-mono text-black/40 mt-3">预计 {publishedAgent?.tokenRange ?? agent.tokenRange}</p>
             </div>
           </div>
 
+          {publishedAgent?.showcaseVideo ? (
+            <div className="overflow-hidden rounded-2xl border border-black/[0.06] bg-[#FCFCFD]">
+              <video
+                src={publishedAgent.showcaseVideo.videoUrl}
+                poster={publishedAgent.showcaseVideo.coverUrl}
+                controls
+                playsInline
+                className="aspect-[9/16] w-full bg-black object-cover"
+              />
+              <div className="space-y-2 px-4 py-4">
+                <p className="text-sm font-semibold text-[#1A1A1A]">{publishedAgent.showcaseVideo.title}</p>
+                <p className="text-sm leading-6 text-black/55">{publishedAgent.showcaseVideo.summary}</p>
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid sm:grid-cols-2 gap-4 text-sm">
-            <InfoBlock title="适合谁" text="需要该场景自动化能力的个人与团队用户" />
+            <InfoBlock
+              title="适合谁"
+              text={videoProfile?.audienceSummary ?? '需要该场景自动化能力的个人与团队用户'}
+            />
             <InfoBlock title="能做什么" text={agent.desc} />
-            <InfoBlock title="需要输入什么" text="品牌、产品或任务目标等基础信息" />
-            <InfoBlock title="最终交付物" text="可下载、可继续编辑的任务结果与过程记录" />
+            <InfoBlock
+              title="需要输入什么"
+              text={videoProfile?.inputSummary ?? '品牌、产品或任务目标等基础信息'}
+            />
+            <InfoBlock
+              title="最终交付物"
+              text={videoProfile?.deliverySummary ?? '可下载、可继续编辑的任务结果与过程记录'}
+            />
           </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
@@ -59,7 +104,7 @@ export default function PublicAgentDetailPage() {
                 }
                 className="px-4 py-2.5 text-xs font-bold bg-black text-white hover:bg-black/85 rounded-lg"
               >
-                使用智能体
+                {videoProfile?.marketEntryLabel ?? '使用智能体'}
               </button>
             ) : (
               <button

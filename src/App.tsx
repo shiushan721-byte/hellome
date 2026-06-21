@@ -15,6 +15,7 @@ import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
+import UsageRechargePage from './pages/app/UsageRechargePage';
 import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
 import ResultsPage from './pages/app/ResultsPage';
@@ -60,6 +61,9 @@ export default function App() {
         <Route path="agents/media-seeding" element={<UgcVideoAgentPage />} />
         <Route path="agents/media-review" element={<UgcVideoAgentPage />} />
         <Route path="agents/media-conversion" element={<UgcVideoAgentPage />} />
+        <Route path="agents/media-showcase" element={<UgcVideoAgentPage />} />
+        <Route path="agents/media-demo" element={<UgcVideoAgentPage />} />
+        <Route path="agents/media-proposal" element={<UgcVideoAgentPage />} />
         <Route path="agents/sales" element={<AgentComingSoonPage agentId="sales" />} />
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
         <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
@@ -107,6 +111,7 @@ export default function App() {
           }
         />
         <Route path="usage" element={<UsagePage />} />
+        <Route path="usage/recharge" element={<UsageRechargePage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/profile" element={<Navigate to="/app/settings" replace />} />
         <Route path="settings/auth" element={<SettingsAuthPage />} />

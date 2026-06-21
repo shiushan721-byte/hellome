@@ -1,0 +1,104 @@
+{
+  "description": "",
+  "enabled": true,
+  "parameters": {
+    "width": {
+      "node_id": "50",
+      "field": "width",
+      "required": false,
+      "type": "int",
+      "description": "Image width"
+    },
+    "height": {
+      "node_id": "50",
+      "field": "height",
+      "required": false,
+      "type": "int",
+      "description": "Image height"
+    },
+    "batch_size_empty_latent_video_5s_25fps": {
+      "node_id": "50",
+      "field": "batch_size",
+      "required": false,
+      "type": "int",
+      "description": "Batch size"
+    },
+    "batch_size_empty_latent_audio_5s": {
+      "node_id": "60",
+      "field": "batch_size",
+      "required": false,
+      "type": "int",
+      "description": "Batch size"
+    },
+    "prompt_positive_prompt": {
+      "node_id": "80",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "prompt_negative_prompt": {
+      "node_id": "85",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "frame_rate_ltx_conditioning_frame_rate": {
+      "node_id": "90",
+      "field": "frame_rate",
+      "required": false,
+      "type": "float",
+      "description": "Video frame rate"
+    },
+    "steps_ltx_scheduler": {
+      "node_id": "100",
+      "field": "steps",
+      "required": false,
+      "type": "int",
+      "description": "Generation steps"
+    },
+    "seed": {
+      "node_id": "110",
+      "field": "seed",
+      "required": false,
+      "type": "int",
+      "description": "Random seed"
+    },
+    "steps_ksampler_av": {
+      "node_id": "110",
+      "field": "steps",
+      "required": false,
+      "type": "int",
+      "description": "Generation steps"
+    },
+    "cfg": {
+      "node_id": "110",
+      "field": "cfg",
+      "required": false,
+      "type": "float",
+      "description": "Classifier-free guidance scale"
+    },
+    "frame_rate_save_video_mp4": {
+      "node_id": "150",
+      "field": "frame_rate",
+      "required": false,
+      "type": "int",
+      "description": "Video frame rate"
+    },
+    "filename_prefix": {
+      "node_id": "150",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    },
+    "format": {
+      "node_id": "150",
+      "field": "format",
+      "required": false,
+      "type": "string",
+      "description": "Output video format"
+    }
+  }
+}

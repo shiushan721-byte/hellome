@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, Film, PlayCircle, Sparkles } from 'lucide-react';
 import type { Task } from '../../../types/workbench';
+import { buildMediaDeliveryView } from '../../../lib/mediaTaskPresentation';
 
 export type ShowcaseTaskLike = Pick<
   Task,
@@ -57,21 +58,20 @@ function deriveTags(task: ShowcaseTaskLike): string[] {
 
 export function buildTaskShowcaseViewModel(task: ShowcaseTaskLike): TaskShowcaseViewModel {
   const tags = deriveTags(task);
+  const deliveryView = buildMediaDeliveryView(task as Task);
 
   if (task.recoveryState?.runState === 'interrupted') {
     return {
       statusLabel: '待恢复',
-      headline: '任务已中断待恢复',
-      body: task.recoveryState.pauseReasonMessage ?? '执行中断，可从上一步恢复',
+      headline: deliveryView.statusHeadline,
+      body: task.recoveryState.pauseReasonMessage ?? deliveryView.statusBody,
       primaryActionLabel: resolvePrimaryActionLabel(task),
       accentClassName:
         'bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.22),transparent_34%),linear-gradient(180deg,#3B2318_0%,#7C2D12_54%,#F59E0B_100%)]',
       badgeToneClassName: 'border-amber-200 bg-amber-50 text-amber-700',
       heroEyebrow: '恢复模式',
       heroTitle: task.routePlan?.label ?? '继续当前任务',
-      heroMeta: task.recoveryState.artifactsPreserved?.length
-        ? `已保留 ${task.recoveryState.artifactsPreserved.length} 项中间结果`
-        : '可保留中间结果后继续推进',
+      heroMeta: deliveryView.statusBody,
       tags,
     };
   }
@@ -80,14 +80,14 @@ export function buildTaskShowcaseViewModel(task: ShowcaseTaskLike): TaskShowcase
     return {
       statusLabel: '待确认',
       headline: task.pendingConfirmation?.title ?? '等待确认',
-      body: task.pendingConfirmation?.message ?? '请确认后继续',
+      body: task.pendingConfirmation?.message ?? deliveryView.statusBody,
       primaryActionLabel: resolvePrimaryActionLabel(task),
       accentClassName:
         'bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.28),transparent_36%),linear-gradient(180deg,#163B3A_0%,#0F766E_54%,#5EEAD4_100%)]',
       badgeToneClassName: 'border-emerald-200 bg-emerald-50 text-emerald-700',
       heroEyebrow: '确认节点',
       heroTitle: task.understanding?.coreAngle ?? task.routePlan?.label ?? '确认后进入正式生成',
-      heroMeta: task.costEstimate ?? '进入下一阶段前需要你确认',
+      heroMeta: deliveryView.statusBody,
       tags,
     };
   }
@@ -95,33 +95,30 @@ export function buildTaskShowcaseViewModel(task: ShowcaseTaskLike): TaskShowcase
   if (task.status === 'completed') {
     return {
       statusLabel: '已完成',
-      headline: '结果已整理完成',
-      body: task.understanding?.outputGoal ?? '样片与交付文件已准备完成',
+      headline: deliveryView.statusHeadline,
+      body: task.understanding?.outputGoal ?? deliveryView.statusBody,
       primaryActionLabel: resolvePrimaryActionLabel(task),
       accentClassName:
         'bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.28),transparent_36%),linear-gradient(180deg,#111214_0%,#1A1A1A_38%,#50535A_100%)]',
       badgeToneClassName: 'border-black/10 bg-white/90 text-black/70',
       heroEyebrow: '交付完成',
       heroTitle: task.understanding?.coreAngle ?? task.routePlan?.label ?? '样片已生成',
-      heroMeta: task.artifacts?.length ? `已整理 ${task.artifacts.length} 项交付物` : '可继续查看与下载交付',
+      heroMeta: deliveryView.statusBody,
       tags,
     };
   }
 
   return {
     statusLabel: task.status === 'running' ? '生成中' : '待开始',
-    headline: '结果正在路上',
-    body:
-      task.status === 'running'
-        ? task.routePlan?.reason ?? 'Hermes 正在组织执行方案并推进样片生成'
-        : '已接收需求，正在组织执行方案',
+    headline: deliveryView.statusHeadline,
+    body: deliveryView.statusBody,
     primaryActionLabel: resolvePrimaryActionLabel(task),
     accentClassName:
       'bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.34),transparent_36%),linear-gradient(180deg,#0F172A_0%,#334155_52%,#94A3B8_100%)]',
     badgeToneClassName: 'border-slate-200 bg-slate-50 text-slate-700',
-    heroEyebrow: '结果方向',
-    heroTitle: task.understanding?.coreAngle ?? task.routePlan?.label ?? '视频智能体正在组织结果',
-    heroMeta: task.understanding?.videoStyle ?? task.routePlan?.providerHint ?? '先给你稳定的结果方向，再进入正式执行',
+    heroEyebrow: task.status === 'running' ? '生成中' : '结果方向',
+    heroTitle: task.understanding?.coreAngle ?? task.routePlan?.label ?? '视频智能体正在整理本次结果',
+    heroMeta: deliveryView.statusBody,
     tags,
   };
 }

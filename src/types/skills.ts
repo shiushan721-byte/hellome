@@ -23,6 +23,13 @@ export interface SkillRoutePlan {
   fitPlatforms: string[];
 }
 
+export interface SkillModelSelectionConfig {
+  imageModel: string;
+  videoModel: string;
+  audioModel: string;
+  audioEnabled: boolean;
+}
+
 export interface SkillExecutionConfig {
   mode: TaskExecutionMode;
   debugMode: TaskExecutionMode;
@@ -31,6 +38,7 @@ export interface SkillExecutionConfig {
   routingMode: 'auto' | 'fixed';
   defaultPlanId: string;
   availablePlans: SkillRoutePlan[];
+  modelSelection: SkillModelSelectionConfig;
 }
 
 export interface SkillArtifactTemplate {
@@ -38,28 +46,61 @@ export interface SkillArtifactTemplate {
   fileName: string;
 }
 
+export interface SkillShowcaseVideo {
+  title: string;
+  summary: string;
+  videoUrl: string;
+  coverUrl?: string;
+  posterText?: string;
+}
+
 export interface SkillBusinessFrame {
   goal: {
     summary: string;
     scenarios: string[];
+    /** Optional — set when the agent was built from the entry-point B spec. */
+    industry?: string;
+    /** "我想做一个服务于 [industry] 的视频智能体，帮我完成 [scenario]" */
+    businessSentence?: string;
   };
   budget: {
     defaultTier: 'basic' | 'standard' | 'premium';
     confirmationRequired: boolean;
     notes: string;
+    /** Allow user to upgrade tier at runtime (e.g. pay more for higher quality). */
+    upgradeEnabled?: boolean;
   };
   executionPlan: {
     stages: Array<{
       id: string;
       label: string;
       kind: 'auto' | 'confirm';
+      /** Producer-side labels — Hermes execution chain is opaque by default. */
+      producerSteps?: Array<{ id: string; label: string }>;
     }>;
   };
   result: {
     promiseLine: string;
     deliveryLabels: string[];
     showcaseHint: string;
+    /** Tags used by the right-side product bar (1-3 orientation tags, 2-4 delivery tags). */
+    orientationTags?: string[];
+    showcaseVideo?: SkillShowcaseVideo;
   };
+}
+
+/**
+ * Partial update payload — every field is optional so a single endpoint
+ * (`POST /api/studio/agents/:id/business`) can mutate any subset of the
+ * four business objects in one round-trip.
+ */
+export interface SkillBusinessFrameUpdate {
+  goal?: Partial<SkillBusinessFrame['goal']>;
+  budget?: Partial<SkillBusinessFrame['budget']>;
+  executionPlan?: {
+    stages?: SkillBusinessFrame['executionPlan']['stages'];
+  };
+  result?: Partial<SkillBusinessFrame['result']>;
 }
 
 export interface SkillVersionRecord {

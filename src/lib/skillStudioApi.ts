@@ -4,8 +4,37 @@ import type {
   SkillExecutionConfig,
   SkillExperienceConfig,
   SkillRecord,
+  SkillShowcaseVideo,
   SkillVersionRecord,
 } from '../types/skills';
+
+export type StudioModelCatalog = {
+  text: {
+    provider: string;
+    models: Array<{ id: string; provider: string; label: string; configured: boolean }>;
+  };
+  media: {
+    provider: string;
+    tasks: string[];
+    models: Array<{ id: string; provider: string; task: string; label: string; configured: boolean }>;
+  };
+  audio: {
+    provider: string;
+    models: Array<{ id: string; provider: string; language: string; label: string; configured: boolean }>;
+  };
+};
+
+export type PublishedMarketAgent = {
+  agentId: string;
+  skillId: string;
+  name: string;
+  description: string;
+  status: 'published';
+  entryLabel: string;
+  tokenRange: string;
+  category: 'content';
+  showcaseVideo?: SkillShowcaseVideo;
+};
 
 type JsonResponse<T> = {
   success: boolean;
@@ -61,6 +90,18 @@ export function runStudioSkillDebug(skillId: string, input: SkillDebugInput): Pr
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
+}
+
+export function getStudioModelCatalog(): Promise<StudioModelCatalog> {
+  return requestJson('/api/studio/model-catalog');
+}
+
+export function getPublishedMarketAgents(): Promise<PublishedMarketAgent[]> {
+  return requestJson('/api/published-market/agents');
+}
+
+export function getPublishedMarketAgent(agentId: string): Promise<PublishedMarketAgent> {
+  return requestJson(`/api/published-market/agents/${agentId}`);
 }
 
 export function getSkillRuntimeConfig(skillId: string): Promise<SkillExecutionConfig> {

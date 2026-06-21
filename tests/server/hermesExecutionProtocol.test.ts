@@ -9,7 +9,7 @@ import {
 } from '../../src/server/skillStudioService';
 import { createExecutionGrant, validateExecutionGrantToken } from '../../src/server/executionGrantService';
 import { ingestHermesTaskEvent } from '../../src/server/hermesEventIngestService';
-import { createUgcTask } from '../../src/server/ugcTaskService';
+import { createUgcTask, getUgcTask } from '../../src/server/ugcTaskService';
 
 process.env.ALLOW_INMEMORY_FALLBACK = 'true';
 
@@ -40,6 +40,12 @@ test('computeSkillVersionChecksum is stable for the same snapshot', () => {
       routingMode: 'auto' as const,
       defaultPlanId: 'ugc_video_factory',
       availablePlans: [],
+      modelSelection: {
+        imageModel: 'image-model',
+        videoModel: 'video-model',
+        audioModel: 'audio-model',
+        audioEnabled: true,
+      },
     },
     businessFrame: {
       goal: { summary: 'goal', scenarios: ['a'] },
@@ -133,6 +139,76 @@ test('ingestHermesTaskEvent persists structured task_received event', async () =
 
   assert.equal(result.eventId, envelope.eventId);
   assert.equal(result.status, 'running');
+});
+
+test('ingestHermesTaskEvent stores artifact_created output for frontend preview', async () => {
+  const task = await createUgcTask({
+    input: {
+      skillId: 'media-ugc',
+      sellingPoint: '防晒清透不假白，通勤场景更自然',
+      platform: '抖音',
+      effectGoal: '更像真人种草',
+    },
+    userExternalId: 'artifact-user',
+    workspaceName: '个人空间',
+  });
+
+  await ingestHermesTaskEvent({
+    taskId: task.id,
+    envelope: {
+      taskId: task.id,
+      executionId: `${task.id}-exec-0`,
+      eventId: `${task.id}-artifact-1`,
+      eventType: 'artifact_created',
+      createdAt: new Date().toISOString(),
+      payload: {
+        artifactType: 'video',
+        fileName: 'sample-video.mp4',
+        url: 'public/media/sample-video.mp4',
+        mimeType: 'video/mp4',
+      },
+    },
+  });
+
+  const stored = await getUgcTask(task.id);
+  assert.ok(stored);
+  assert.equal(stored?.artifacts?.[0]?.fileName, 'sample-video.mp4');
+  assert.equal(stored?.artifacts?.[0]?.url, 'public/media/sample-video.mp4');
+});
+
+test('ingestHermesTaskEvent recognizes audio artifacts for frontend playback', async () => {
+  const task = await createUgcTask({
+    input: {
+      skillId: 'media-ugc',
+      sellingPoint: '人声讲解更清楚，视频更像真人口播',
+      platform: '视频号',
+      effectGoal: '更像测评讲解',
+    },
+    userExternalId: 'audio-artifact-user',
+    workspaceName: '个人空间',
+  });
+
+  await ingestHermesTaskEvent({
+    taskId: task.id,
+    envelope: {
+      taskId: task.id,
+      executionId: `${task.id}-exec-0`,
+      eventId: `${task.id}-artifact-audio-1`,
+      eventType: 'artifact_created',
+      createdAt: new Date().toISOString(),
+      payload: {
+        artifactType: 'audio',
+        fileName: 'voiceover.wav',
+        url: 'public/media/voiceover.wav',
+        mimeType: 'audio/wav',
+      },
+    },
+  });
+
+  const stored = await getUgcTask(task.id);
+  assert.ok(stored);
+  assert.equal(stored?.artifacts?.[0]?.type, 'audio');
+  assert.equal(stored?.artifacts?.[0]?.mimeType, 'audio/wav');
 });
 
 test('normalizeHermesTaskEventEnvelope falls back safely', () => {

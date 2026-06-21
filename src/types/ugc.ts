@@ -1,6 +1,6 @@
 export type TaskExecutionMode = 'backend_silent' | 'local_debug';
 
-export type TaskArtifactType = 'video' | 'image' | 'script' | 'report';
+export type TaskArtifactType = 'video' | 'image' | 'script' | 'report' | 'audio';
 
 export type TaskRunState =
   | 'queued'

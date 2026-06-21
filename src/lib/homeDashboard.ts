@@ -19,6 +19,9 @@ const AGENT_KEYWORDS: Partial<Record<string, string[]>> = {
   'media-seeding': ['视频', '样片', 'ugc', '种草', '口播', '广告', '产品图', '模特图'],
   'media-review': ['视频', '样片', 'ugc', '测评', '讲解', '开箱', '产品图', '模特图'],
   'media-conversion': ['视频', '样片', 'ugc', '带货', '转化', '成交', '下单', '口播'],
+  'media-showcase': ['视频', '样片', '宣传', '品牌', '门店', '空间', '氛围', '展示'],
+  'media-demo': ['视频', '样片', '演示', '设备', '功能', '流程', '讲解', '工厂'],
+  'media-proposal': ['视频', '样片', '提案', '客户', '方案', '展示', '汇报', '沟通'],
   sales: ['销售', '客户', '私信', '邮件', '获客', '外联', '跟进', '话术'],
   'faq-generator': ['faq', '问答', 'llms', '语料', '召回', '结构化', '批量'],
 };
@@ -46,6 +49,18 @@ export const AGENT_TASK_TEMPLATES: Partial<
     { id: 'media-conversion-ugc', title: '生成带货转化样片', prompt: '生成一条带货转化 UGC 样片视频' },
     { id: 'media-conversion-script', title: '生成转化脚本', prompt: '先生成带货转化脚本与首帧' },
   ],
+  'media-showcase': [
+    { id: 'media-showcase-ugc', title: '生成品牌宣传样片', prompt: '生成一条品牌宣传视频样片' },
+    { id: 'media-showcase-script', title: '生成宣传脚本', prompt: '先生成品牌宣传视频脚本与首帧' },
+  ],
+  'media-demo': [
+    { id: 'media-demo-ugc', title: '生成产品演示样片', prompt: '生成一条产品演示视频样片' },
+    { id: 'media-demo-script', title: '生成演示脚本', prompt: '先生成产品演示视频脚本与首帧' },
+  ],
+  'media-proposal': [
+    { id: 'media-proposal-ugc', title: '生成客户提案样片', prompt: '生成一条客户提案视频样片' },
+    { id: 'media-proposal-script', title: '生成提案脚本', prompt: '先生成客户提案视频脚本与首帧' },
+  ],
   sales: [
     { id: 'sales-analyze', title: '分析客户网站', prompt: '分析客户网站' },
     { id: 'sales-dm', title: '生成销售私信', prompt: '生成销售私信' },
@@ -61,6 +76,9 @@ const ONBOARDING_AGENT_IDS = [
   'media-seeding',
   'media-review',
   'media-conversion',
+  'media-showcase',
+  'media-demo',
+  'media-proposal',
   'sales',
   'faq-generator',
 ] as const;

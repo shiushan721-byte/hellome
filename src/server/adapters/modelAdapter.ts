@@ -268,6 +268,37 @@ export type MediaDescriptor = {
   configured: boolean;
 };
 
+const LOCAL_COMFY_MODELS: MediaDescriptor[] = [
+  {
+    id: 'z-image-turbo',
+    provider: 'local-comfyui',
+    task: 'txt2img',
+    label: 'Z Image Turbo',
+    configured: true,
+  },
+  {
+    id: 'ltx-2b',
+    provider: 'local-comfyui',
+    task: 'txt2video',
+    label: 'LTX 2B',
+    configured: true,
+  },
+  {
+    id: 'wan22-5b',
+    provider: 'local-comfyui',
+    task: 'img2video',
+    label: 'Wan 2.2 5B',
+    configured: true,
+  },
+  {
+    id: 'qwen-image-edit-2511',
+    provider: 'local-comfyui',
+    task: 'edit',
+    label: 'Qwen Image Edit 2511',
+    configured: true,
+  },
+];
+
 const DEFAULT_MEDIA_OUTPUT_DIR =
   process.env.MEDIA_OUTPUT_DIR ?? path.resolve(process.cwd(), 'public', 'media');
 
@@ -290,13 +321,13 @@ function defaultModelForTask(provider: MediaProvider, task: MediaTask): string {
   if (provider === 'local-comfyui') {
     switch (task) {
       case 'txt2img':
-        return 'local/txt2img';
+        return 'z-image-turbo';
       case 'txt2video':
-        return 'local/txt2video';
+        return 'ltx-2b';
       case 'img2video':
-        return 'local/img2video';
+        return 'wan22-5b';
       case 'edit':
-        return 'local/edit';
+        return 'qwen-image-edit-2511';
     }
   }
   return `mock-${task}`;
@@ -697,6 +728,16 @@ export function listAvailableMediaModels(): {
   const tasks: MediaTask[] = provider === 'grsai'
     ? ['txt2img', 'edit']
     : ['txt2img', 'txt2video', 'img2video', 'edit'];
+  if (provider === 'local-comfyui') {
+    return {
+      provider,
+      tasks,
+      models: LOCAL_COMFY_MODELS.map((model) => ({
+        ...model,
+        configured,
+      })),
+    };
+  }
   return {
     provider,
     tasks,

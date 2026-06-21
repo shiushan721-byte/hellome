@@ -6,6 +6,7 @@ import type {
   AgentsTab,
 } from '../types/agentsPage';
 import { getUsage } from './usageStore';
+export { mergePublishedMarketAgents } from './publishedMarketModel';
 
 export function normalizeAgentsTab(tab: string | null): AgentsTab {
   return 'market';

@@ -1,0 +1,21 @@
+{
+  "run_id": "307b5247-b790-4d8d-946f-2280dcd44f65",
+  "job_id": "",
+  "prompt_id": "307b5247-b790-4d8d-946f-2280dcd44f65",
+  "server_id": "local",
+  "workflow_id": "wan22_text_to_video_mp4",
+  "status": "success",
+  "timestamp": "2026-06-21T12:52:09.972788+00:00",
+  "duration_ms": 256138,
+  "args": {
+    "prompt_clip_text_encode_positive_prompt": "a cute red fox walking in a misty forest at dawn",
+    "prompt_clip_text_encode_negative_prompt": "blurry, ugly, low quality",
+    "width": 832,
+    "height": 480,
+    "frame_rate": 24,
+    "filename_prefix": "wan22_mp4_real",
+    "format": "video/h264-mp4",
+    "steps": 20,
+    "cfg": 5
+  }
+}

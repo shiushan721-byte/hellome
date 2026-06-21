@@ -60,7 +60,7 @@ export default function AppHomePage() {
       return;
     }
     if (result.reason === 'recharge') {
-      navigate('/app/usage');
+      navigate('/app/usage/recharge');
     }
   }, [requestedAgentId, lowBalance, navigate]);
 
@@ -86,7 +86,7 @@ export default function AppHomePage() {
       return;
     }
     if (result.reason === 'recharge') {
-      navigate('/app/usage');
+      navigate('/app/usage/recharge');
       return;
     }
     if (result.ok) {

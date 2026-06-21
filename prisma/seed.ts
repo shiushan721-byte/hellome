@@ -7,6 +7,7 @@ import {
   buildDemoSkillSeed,
   buildDemoTaskSeeds,
   buildDemoUsers,
+  buildDemoVideoAgentSeeds,
 } from '../src/server/bootstrap/demoSeedData';
 
 const prisma = requirePrismaClient();
@@ -199,8 +200,10 @@ async function seedTasks(
   }
 }
 
-async function seedSkill(userIdByExternalId: Map<string, string>) {
-  const skillSeed = buildDemoSkillSeed();
+async function seedSkillRow(
+  userIdByExternalId: Map<string, string>,
+  skillSeed: ReturnType<typeof buildDemoSkillSeed>,
+): Promise<{ skillId: string; skillVersionId: string; checksum: string } | null> {
   const ownerId = userIdByExternalId.get(skillSeed.ownerExternalId);
   if (!ownerId) return null;
 
@@ -290,6 +293,17 @@ async function seedSkill(userIdByExternalId: Map<string, string>) {
     skillVersionId: skillSeed.version.id,
     checksum,
   };
+}
+
+async function seedSkill(userIdByExternalId: Map<string, string>) {
+  // 6 个智能体工坊视频智能体（设计稿要求）+ 1 个默认 media-ugc（兼容旧调用）
+  const allSeeds = [buildDemoSkillSeed(), ...buildDemoVideoAgentSeeds()];
+  let lastBinding = null;
+  for (const seed of allSeeds) {
+    const binding = await seedSkillRow(userIdByExternalId, seed);
+    if (binding && seed.id === 'media-ugc') lastBinding = binding;
+  }
+  return lastBinding;
 }
 
 async function seedLedger(userIdByExternalId: Map<string, string>) {

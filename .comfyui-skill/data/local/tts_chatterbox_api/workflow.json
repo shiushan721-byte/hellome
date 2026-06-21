@@ -1,0 +1,47 @@
+{
+  "10": {
+    "inputs": {
+      "language": "English",
+      "device": "auto",
+      "exaggeration": 0.5,
+      "temperature": 0.8,
+      "cfg_weight": 0.5,
+      "crash_protection_template": "hmm ,, {seg} hmm ,,"
+    },
+    "class_type": "ChatterBoxEngineNode",
+    "_meta": {
+      "title": "ChatterBox Engine"
+    }
+  },
+  "20": {
+    "inputs": {
+      "TTS_engine": [
+        "10",
+        0
+      ],
+      "text": "Hello! This is a TTS Audio Suite test running locally on Apple Silicon Mac. Welcome to the local generation pipeline.",
+      "narrator_voice": "none",
+      "seed": 1,
+      "enable_chunking": 1,
+      "max_chars_per_chunk": 100
+    },
+    "class_type": "UnifiedTTSTextNode",
+    "_meta": {
+      "title": "Unified TTS Text"
+    }
+  },
+  "30": {
+    "inputs": {
+      "audio": [
+        "20",
+        0
+      ],
+      "filename_prefix": "hello_test",
+      "format": "wav"
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "Save Audio"
+    }
+  }
+}

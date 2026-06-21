@@ -1,4 +1,5 @@
 import { getAgentById } from '../../../data/agentsCatalog';
+import { getVideoAgentProfile } from '../../../config/videoAgentProfiles';
 import {
   MARKET_HERO_BANNER,
   MARKET_MEDIUM_BANNERS,
@@ -29,6 +30,8 @@ function mediumCtaLabel(
   if (banner.displayStatus === 'beta') return '申请内测';
   if (guestMode) return '使用智能体';
   if (lowBalance) return '充值算力';
+  const profile = getVideoAgentProfile(banner.agentId);
+  if (profile) return profile.marketEntryLabel;
   return '使用智能体';
 }
 

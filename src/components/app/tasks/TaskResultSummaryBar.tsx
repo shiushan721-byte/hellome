@@ -1,5 +1,6 @@
 import type { Task } from '../../../types/workbench';
 import type { ShowcaseTaskLike } from './TaskShowcaseStage';
+import { buildMediaDeliveryView } from '../../../lib/mediaTaskPresentation';
 
 function deriveResultType(task: ShowcaseTaskLike): string {
   const input = task.input;
@@ -8,12 +9,16 @@ function deriveResultType(task: ShowcaseTaskLike): string {
 }
 
 function deriveDelivery(task: ShowcaseTaskLike): string {
-  return task.understanding?.outputGoal ?? '10 秒视频样片';
+  const base = task.understanding?.outputGoal ?? '10 秒视频样片';
+  const deliveryView = buildMediaDeliveryView(task as Task);
+  if (deliveryView.primaryArtifact) return `${base} · 正式主视频`;
+  return deliveryView.hasFallbackAudio ? `${base} · 降级音轨附件` : base;
 }
 
 function deriveBudget(task: ShowcaseTaskLike): string {
-  if (task.status === 'waiting_confirmation') return '待确认后进入正式生成';
-  if (task.recoveryState?.runState === 'interrupted') return '恢复后续跑，不重复从零开始';
+  const deliveryView = buildMediaDeliveryView(task as Task);
+  if (deliveryView.stage === 'waiting_confirmation') return '待确认后进入正式生成';
+  if (deliveryView.stage === 'recoverable_error') return '恢复后续跑，不重复从零开始';
   return task.costEstimate ?? '样片阶段执行';
 }
 
