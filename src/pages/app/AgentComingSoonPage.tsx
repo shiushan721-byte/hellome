@@ -1,6 +1,4 @@
-import { useLocation } from 'react-router-dom';
 import { getAgentById } from '../../data/agentsCatalog';
-import type { AgentEntryState } from '../../types/agentNavigation';
 import AgentIcon from '../../components/app/agents/AgentIcon';
 
 interface AgentComingSoonPageProps {
@@ -8,8 +6,6 @@ interface AgentComingSoonPageProps {
 }
 
 export default function AgentComingSoonPage({ agentId }: AgentComingSoonPageProps) {
-  const location = useLocation();
-  const entry = (location.state as AgentEntryState | null) ?? {};
   const agent = getAgentById(agentId);
 
   if (!agent) {
@@ -29,9 +25,6 @@ export default function AgentComingSoonPage({ agentId }: AgentComingSoonPageProp
           <p className="text-sm text-black/45 leading-relaxed">{agent.desc}</p>
         </div>
         <p className="text-base font-medium text-black/35 tracking-wide">敬请期待</p>
-        {entry.from && (
-          <p className="text-[11px] text-black/25">工作台预览 · {agentId}</p>
-        )}
       </div>
     </div>
   );

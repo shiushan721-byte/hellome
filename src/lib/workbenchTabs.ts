@@ -167,3 +167,12 @@ export function pruneWorkbenchTabs(validAgentIds: Set<string>): void {
     writeStringArray(WORKBENCH_TAB_ORDER_KEY, order);
   }
 }
+
+/** 清空工作台标签（首次进入 / 调试重置） */
+export function clearWorkbenchTabs(): void {
+  localStorage.removeItem(WORKBENCH_TAB_ORDER_KEY);
+  localStorage.removeItem(WORKBENCH_HIDDEN_TABS_KEY);
+  localStorage.removeItem(WORKBENCH_LAST_AGENT_KEY);
+  localStorage.removeItem(WORKBENCH_PINNED_TABS_KEY);
+  notify();
+}

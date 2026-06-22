@@ -12,6 +12,7 @@ import GeoAgentPage from './pages/app/GeoAgentPage';
 import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
+import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';

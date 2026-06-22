@@ -129,9 +129,9 @@ export default function SidebarMoreMenu({
       </div>
 
       <div className="mt-5 space-y-1 text-[11px] text-black/40 leading-relaxed">
-        <p>杭州哈啰蜜科技有限公司</p>
-        <p>浙ICP备00000000号-1</p>
-        <p>算法备案号：待更新</p>
+        <p>江苏汇智智能数字科技有限公司</p>
+        <p>苏ICP备2023021414号-8</p>
+        <p>算法备案号：Jiangsu-CarrotAI-202407030002</p>
       </div>
     </div>
   );

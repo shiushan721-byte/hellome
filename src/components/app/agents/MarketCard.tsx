@@ -43,7 +43,7 @@ export default function MarketCard({
 
       <h3 className="text-base font-bold text-[#1A1A1A] mb-2">{card.name}</h3>
       <p className="text-sm text-black/45 leading-relaxed line-clamp-2 flex-1 mb-2">{card.description}</p>
-      <p className="text-[11px] font-mono text-black/35 mb-3">预计 {card.tokenRange}</p>
+      <p className="text-[11px] font-mono mb-3 min-h-[17px]" aria-hidden="true" />
 
       <div className="flex items-center justify-between pt-3 border-t border-black/[0.04] mb-3">
         <div className="flex items-center gap-2 min-w-0">

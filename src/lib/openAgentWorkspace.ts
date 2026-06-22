@@ -1,4 +1,5 @@
 import { openAgentTab } from './workbenchTabs';
+import { getAgentWorkbenchPath } from './agentWorkbench';
 
 /** 打开智能体工作台（记录最近标签并导航） */
 export function openAgentWorkspace(agentId: string): void {
@@ -6,5 +7,5 @@ export function openAgentWorkspace(agentId: string): void {
 }
 
 export function getAgentWorkspacePath(agentId: string): string {
-  return `/app?agent=${agentId}`;
+  return getAgentWorkbenchPath(agentId);
 }
