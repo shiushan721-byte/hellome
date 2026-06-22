@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { CATEGORIES, type AgentCategory } from '../../data/agentsCatalog';
-import type { MarketMediumBannerConfig, MarketProductSpot } from '../../data/agentsMarketHome';
-import { getPublishedMarketAgents, type PublishedMarketAgent } from '../../lib/skillStudioApi';
+import type { MarketProductSpot } from '../../data/agentsMarketHome';
 import { getUsage, isLowBalance, subscribeUsage } from '../../lib/usageStore';
 import { isHermesConnected } from '../../lib/firstRunOnboarding';
 import { subscribeHermesConnection, getHermesConnection, refreshHermesConnection } from '../../lib/hermesConnection';
-import { getAgentsPageData, getGuestAgentsPageData, mergePublishedMarketAgents, resolveAgentsTabFromPath } from '../../lib/agentsPageData';
+import { getAgentsPageData, getGuestAgentsPageData, resolveAgentsTabFromPath } from '../../lib/agentsPageData';
 import type { AgentMarketCard } from '../../types/agentsPage';
 import MarketCard from '../../components/app/agents/MarketCard';
 import MarketHomeBanner from '../../components/app/agents/MarketHomeBanner';
@@ -18,6 +17,7 @@ import { parseMarketCategory } from '../../lib/sidebarNav';
 import { tryUseAgent } from '../../lib/useAgentAccess';
 import { replayPendingIntent } from '../../lib/pendingAgentIntent';
 import { getAgentWorkspacePath } from '../../lib/openAgentWorkspace';
+import WorkflowMarketSection from '../../components/app/workflows/WorkflowMarketSection';
 
 type AgentsPageProps = {
   variant?: 'public' | 'app';
@@ -34,7 +34,6 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
     parseMarketCategory(location.search),
   );
   const [query, setQuery] = useState('');
-  const [publishedAgents, setPublishedAgents] = useState<PublishedMarketAgent[]>([]);
   const { openLogin } = useLoginModal();
   const [showHermesModal, setShowHermesModal] = useState(false);
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
@@ -51,21 +50,6 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
     setCategoryState(parseMarketCategory(location.search));
   }, [location.search]);
 
-  useEffect(() => {
-    let cancelled = false;
-    void getPublishedMarketAgents()
-      .then((data) => {
-        if (cancelled) return;
-        setPublishedAgents(data);
-      })
-      .catch(() => {
-        if (cancelled) return;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const setCategory = (next: AgentCategory) => {
     setCategoryState(next);
     setSearchParams(
@@ -80,10 +64,6 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
   };
 
   const pageData = isPublic ? getGuestAgentsPageData() : getAgentsPageData(activeTab);
-  const marketCards = useMemo(
-    () => mergePublishedMarketAgents(pageData.marketAgents, publishedAgents),
-    [pageData.marketAgents, publishedAgents],
-  );
   const usage = getUsage();
   const lowBalance = isLowBalance(usage);
 
@@ -104,7 +84,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
       return;
     }
     if (result.reason === 'recharge') {
-      navigate('/app/usage/recharge');
+      navigate('/app/usage');
       return;
     }
     if (result.ok) {
@@ -114,7 +94,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
 
   const filteredMarket = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return marketCards.filter((card) => {
+    return pageData.marketAgents.filter((card) => {
       const matchCategory = category === 'all' || card.category === category;
       const matchQuery =
         !q ||
@@ -123,14 +103,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
         card.creator.toLowerCase().includes(q);
       return matchCategory && matchQuery;
     });
-  }, [marketCards, category, query]);
-
-  const handleHeroAction = () => runUseAgent('geo');
-
-  const handleMediumAction = (banner: MarketMediumBannerConfig) => {
-    if (banner.displayStatus === 'coming_soon' || banner.displayStatus === 'beta') return;
-    runUseAgent(banner.agentId);
-  };
+  }, [pageData.marketAgents, category, query]);
 
   const handleProductSpot = (spot: MarketProductSpot) => {
     runUseAgent(spot.agentId);
@@ -143,16 +116,10 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
           <p className="text-xs text-amber-700">Token 余额不足，充值后即可继续发起任务。</p>
         )}
 
-        <MarketHomeBanner
-          marketCards={marketCards}
-          lowBalance={isPublic ? false : lowBalance}
-          guestMode={isPublic}
-          onHeroAction={handleHeroAction}
-          onMediumAction={handleMediumAction}
-        />
+        <MarketHomeBanner guestMode={isPublic} />
 
         <MarketProductSpots
-          marketCards={marketCards}
+          marketCards={pageData.marketAgents}
           guestMode={isPublic}
           onUseSpot={handleProductSpot}
         />
@@ -195,6 +162,13 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
   );
 }
 
+type MarketSection = 'agents' | 'workflows';
+
+const SECTION_TABS: Array<{ id: MarketSection; label: string }> = [
+  { id: 'agents', label: '智能体' },
+  { id: 'workflows', label: '工作流' },
+];
+
 function MarketAgentGrid({
   category,
   setCategory,
@@ -216,8 +190,35 @@ function MarketAgentGrid({
   onUseAgent: (id: string) => void;
   onViewDetail: (id: string) => void;
 }) {
+  const [section, setSection] = useState<MarketSection>('agents');
+
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
+      <div className="flex items-center gap-8 border-b border-black/8">
+        {SECTION_TABS.map((tab) => {
+          const active = section === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSection(tab.id)}
+              className={`relative pb-3 text-lg font-bold transition-colors ${
+                active ? 'text-[#1A1A1A]' : 'text-black/35 hover:text-black/55'
+              }`}
+            >
+              {tab.label}
+              {active ? (
+                <span className="absolute bottom-0 left-0 right-0 h-[3px] rounded-full bg-[#3861FB]" />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {section === 'workflows' ? (
+        <WorkflowMarketSection />
+      ) : (
+        <>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
           {CATEGORIES.map((cat) => {
@@ -265,6 +266,8 @@ function MarketAgentGrid({
             />
           ))}
         </div>
+      )}
+        </>
       )}
     </section>
   );

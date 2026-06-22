@@ -9,9 +9,9 @@ import AppHomePage from './pages/app/AppHomePage';
 import AgentsPage from './pages/app/AgentsPage';
 import AgentsLegacyRedirect from './pages/app/AgentsLegacyRedirect';
 import GeoAgentPage from './pages/app/GeoAgentPage';
-import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
+import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
@@ -20,11 +20,6 @@ import SettingsPage from './pages/app/SettingsPage';
 import SettingsAuthPage from './pages/app/SettingsAuthPage';
 import ResultsPage from './pages/app/ResultsPage';
 import ConnectHermesPage from './pages/ConnectHermesPage';
-import CreatorStudioPage from './pages/app/CreatorStudioPage';
-import CreatorSkillEditorPage from './pages/app/CreatorSkillEditorPage';
-import CreatorSkillDebugPage from './pages/app/CreatorSkillDebugPage';
-import CreatorSkillVersionsPage from './pages/app/CreatorSkillVersionsPage';
-import FrontstageDesignSpecPage from './pages/app/FrontstageDesignSpecPage';
 import AdminProtectedRoute from './components/admin/AdminProtectedRoute';
 import AdminShell from './components/admin/AdminShell';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -83,46 +78,6 @@ export default function App() {
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="results" element={<ResultsPage />} />
-        <Route
-          path="studio"
-          element={
-            <ProtectedRoute requireStudio>
-              <CreatorStudioPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="studio/design-spec"
-          element={
-            <ProtectedRoute requireStudio>
-              <FrontstageDesignSpecPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="studio/skills/:skillId"
-          element={
-            <ProtectedRoute requireStudio>
-              <CreatorSkillEditorPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="studio/skills/:skillId/debug"
-          element={
-            <ProtectedRoute requireStudio>
-              <CreatorSkillDebugPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="studio/skills/:skillId/versions"
-          element={
-            <ProtectedRoute requireStudio>
-              <CreatorSkillVersionsPage />
-            </ProtectedRoute>
-          }
-        />
         <Route path="usage" element={<UsagePage />} />
         <Route path="usage/recharge" element={<UsageRechargePage />} />
         <Route path="settings" element={<SettingsPage />} />

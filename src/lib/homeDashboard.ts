@@ -15,13 +15,7 @@ import type { AgentMarketCard } from '../types/agentsPage';
 
 const AGENT_KEYWORDS: Partial<Record<string, string[]>> = {
   geo: ['geo', '检测', '可见度', '品牌', 'ai', '搜索', '大模型', '优化', 'faq', '提及'],
-  media: ['视频', '样片', 'ugc', '口播', '带货', '广告', '产品图', '模特图'],
-  'media-seeding': ['视频', '样片', 'ugc', '种草', '口播', '广告', '产品图', '模特图'],
-  'media-review': ['视频', '样片', 'ugc', '测评', '讲解', '开箱', '产品图', '模特图'],
-  'media-conversion': ['视频', '样片', 'ugc', '带货', '转化', '成交', '下单', '口播'],
-  'media-showcase': ['视频', '样片', '宣传', '品牌', '门店', '空间', '氛围', '展示'],
-  'media-demo': ['视频', '样片', '演示', '设备', '功能', '流程', '讲解', '工厂'],
-  'media-proposal': ['视频', '样片', '提案', '客户', '方案', '展示', '汇报', '沟通'],
+  'media-seeding': ['视频', '种草', '抖音', '短视频', 'ugc', '样片', '新品'],
   sales: ['销售', '客户', '私信', '邮件', '获客', '外联', '跟进', '话术'],
   'faq-generator': ['faq', '问答', 'llms', '语料', '召回', '结构化', '批量'],
 };
@@ -34,32 +28,8 @@ export const AGENT_TASK_TEMPLATES: Partial<
     { id: 'geo-suggest', title: '生成 GEO 优化建议', prompt: '生成 GEO 优化建议' },
   ],
   media: [
-    { id: 'media-ugc', title: '生成 UGC 样片', prompt: '生成一条 UGC 样片视频' },
-    { id: 'media-cover', title: '生成首帧脚本', prompt: '先生成样片脚本与首帧' },
-  ],
-  'media-seeding': [
-    { id: 'media-seeding-ugc', title: '生成真人种草样片', prompt: '生成一条真人种草 UGC 样片视频' },
-    { id: 'media-seeding-script', title: '生成种草脚本', prompt: '先生成种草样片脚本与首帧' },
-  ],
-  'media-review': [
-    { id: 'media-review-ugc', title: '生成测评讲解样片', prompt: '生成一条测评讲解 UGC 样片视频' },
-    { id: 'media-review-script', title: '生成测评脚本', prompt: '先生成测评讲解脚本与首帧' },
-  ],
-  'media-conversion': [
-    { id: 'media-conversion-ugc', title: '生成带货转化样片', prompt: '生成一条带货转化 UGC 样片视频' },
-    { id: 'media-conversion-script', title: '生成转化脚本', prompt: '先生成带货转化脚本与首帧' },
-  ],
-  'media-showcase': [
-    { id: 'media-showcase-ugc', title: '生成品牌宣传样片', prompt: '生成一条品牌宣传视频样片' },
-    { id: 'media-showcase-script', title: '生成宣传脚本', prompt: '先生成品牌宣传视频脚本与首帧' },
-  ],
-  'media-demo': [
-    { id: 'media-demo-ugc', title: '生成产品演示样片', prompt: '生成一条产品演示视频样片' },
-    { id: 'media-demo-script', title: '生成演示脚本', prompt: '先生成产品演示视频脚本与首帧' },
-  ],
-  'media-proposal': [
-    { id: 'media-proposal-ugc', title: '生成客户提案样片', prompt: '生成一条客户提案视频样片' },
-    { id: 'media-proposal-script', title: '生成提案脚本', prompt: '先生成客户提案视频脚本与首帧' },
+    { id: 'media-article', title: '写公众号文章', prompt: '写一篇公众号文章' },
+    { id: 'media-xhs', title: '小红书改写', prompt: '把内容改成小红书风格' },
   ],
   sales: [
     { id: 'sales-analyze', title: '分析客户网站', prompt: '分析客户网站' },
@@ -71,16 +41,17 @@ export const AGENT_TASK_TEMPLATES: Partial<
   ],
 };
 
-const ONBOARDING_AGENT_IDS = [
+const ONBOARDING_AGENT_IDS = ['geo', 'media-seeding', 'sales', 'faq-generator'] as const;
+
+const HOME_EMPTY_AGENT_IDS = [
   'geo',
   'media-seeding',
-  'media-review',
-  'media-conversion',
-  'media-showcase',
-  'media-demo',
-  'media-proposal',
   'sales',
   'faq-generator',
+  'schema-optimizer',
+  'competitor-scan',
+  'ppt-outline',
+  'prompt-lab',
 ] as const;
 
 function scoreAgent(prompt: string, agentId: string): number {
@@ -193,7 +164,7 @@ function buildRecommendedActions(): RecommendedAction[] {
   if (lastContent) {
     actions.push({
       id: 'rec-media-xhs',
-      title: '基于上次卖点，继续生成真人种草样片',
+      title: '基于上次内容，继续生成小红书改写版',
       agentId: 'media-seeding',
       sourceTaskId: lastContent.id,
       estimatedTokenMin: 2000,
@@ -246,6 +217,15 @@ export function getOnboardingAgents() {
 export function getOnboardingMarketCards(): AgentMarketCard[] {
   const ids = new Set<string>(ONBOARDING_AGENT_IDS);
   return getAgentsPageData('market').marketAgents.filter((card) => ids.has(card.id));
+}
+
+export function getHomeEmptyMarketCards(): AgentMarketCard[] {
+  const byId = new Map(
+    getAgentsPageData('market').marketAgents.map((card) => [card.id, card]),
+  );
+  return HOME_EMPTY_AGENT_IDS.map((id) => byId.get(id)).filter(
+    (card): card is AgentMarketCard => Boolean(card),
+  );
 }
 
 export function statusLabel(status: TaskStatus): string {

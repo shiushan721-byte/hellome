@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Trash2, Eye, Copy, RefreshCw } from 'lucide-react';
 import { deleteTask, duplicateTask, getTasks, subscribeTasks } from '../../lib/taskStore';
 import { runGeoTask } from '../../lib/geoTaskRunner';
 import { isAgentActive } from '../../lib/agentSlotStore';
-import { deleteRemoteTask, listRemoteTasks, retryRemoteTask } from '../../lib/taskApi';
 import { getAgentById } from '../../data/agentsCatalog';
 import TaskStatusBadge, {
   agentLabel,
@@ -12,11 +11,10 @@ import TaskStatusBadge, {
   formatTime,
 } from '../../components/app/tasks/TaskStatusBadge';
 import { formatTokenRange } from '../../lib/tokenBilling';
-import type { Task, TaskStatus } from '../../types/workbench';
+import type { TaskStatus } from '../../types/workbench';
 
 const filters: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: '全部' },
-  { value: 'queued', label: '排队中' },
   { value: 'running', label: '执行中' },
   { value: 'waiting_confirmation', label: '等待确认' },
   { value: 'completed', label: '已完成' },
@@ -29,92 +27,32 @@ export default function TasksPage() {
   const agentFilter = searchParams.get('agent');
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
   const [actionError, setActionError] = useState('');
-  const localTasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
-  const [remoteTasks, setRemoteTasks] = useState<Task[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const data = await listRemoteTasks();
-        if (!cancelled) {
-          setRemoteTasks(data);
-        }
-      } catch {
-        if (!cancelled) {
-          setRemoteTasks([]);
-        }
-      }
-    };
-
-    void load();
-    const timer = window.setInterval(() => {
-      void load();
-    }, 3000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  const tasks = useMemo(() => {
-    const merged = [...remoteTasks, ...localTasks.filter((task) => task.agentType !== 'media')];
-    return merged.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [localTasks, remoteTasks]);
+  const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
 
   const filtered = useMemo(() => {
     let list = tasks;
     if (agentFilter) {
-      list = list.filter((task) => task.agentType === agentFilter);
+      list = list.filter((t) => t.agentType === agentFilter);
     }
     if (filter !== 'all') {
-      list = list.filter((task) => task.status === filter);
+      list = list.filter((t) => t.status === filter);
     }
     return list;
   }, [tasks, agentFilter, filter]);
 
   const agentName = agentFilter ? getAgentById(agentFilter)?.name : null;
 
-  const handleRerun = async (id: string) => {
-    const original = tasks.find((task) => task.id === id);
-    if (!original) return;
-
-    try {
-      if (original.agentType === 'media') {
-        setActionError('');
-        await retryRemoteTask(id);
-        navigate(`/app/tasks/${id}`);
-        return;
-      }
-
-      if (original.agentType === 'geo' && !isAgentActive('geo')) {
-        setActionError('GEO 智能体未启用，请先在智能体市场启用后再重新运行');
-        return;
-      }
-
-      setActionError('');
-      const dup = duplicateTask(id);
-      if (dup) {
-        runGeoTask(dup.id);
-        navigate(`/app/tasks/${dup.id}`);
-      }
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : '重新运行失败');
+  const handleRerun = (id: string) => {
+    const original = tasks.find((t) => t.id === id);
+    if (original?.agentType === 'geo' && !isAgentActive('geo')) {
+      setActionError('GEO 智能体未启用，请先在智能体市场启用后再重新运行');
+      return;
     }
-  };
-
-  const handleDelete = async (task: Task) => {
-    try {
-      if (task.agentType === 'media') {
-        await deleteRemoteTask(task.id);
-        setRemoteTasks((current) => current.filter((item) => item.id !== task.id));
-        return;
-      }
-      deleteTask(task.id);
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : '删除任务失败');
+    setActionError('');
+    const dup = duplicateTask(id);
+    if (dup) {
+      runGeoTask(dup.id);
+      navigate(`/app/tasks/${dup.id}`);
     }
   };
 
@@ -122,7 +60,6 @@ export default function TasksPage() {
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-display">任务中心</h1>
-        {agentName ? <p className="mt-2 text-sm text-black/40">当前筛选：{agentName}</p> : null}
       </div>
 
       {actionError && (
@@ -132,18 +69,16 @@ export default function TasksPage() {
       )}
 
       <div className="flex flex-wrap gap-2">
-        {filters.map((item) => (
+        {filters.map((f) => (
           <button
-            key={item.value}
+            key={f.value}
             type="button"
-            onClick={() => setFilter(item.value)}
+            onClick={() => setFilter(f.value)}
             className={`px-3 py-1.5 text-xs font-bold transition-colors ${
-              filter === item.value
-                ? 'bg-black text-white'
-                : 'bg-[#F2F0ED] text-black/60 hover:text-black'
+              filter === f.value ? 'bg-black text-white' : 'bg-[#F2F0ED] text-black/60 hover:text-black'
             }`}
           >
-            {item.label}
+            {f.label}
           </button>
         ))}
       </div>
@@ -160,7 +95,7 @@ export default function TasksPage() {
                 <th className="pb-3 pr-4">状态</th>
                 <th className="pb-3 pr-4 hidden md:table-cell">创建时间</th>
                 <th className="pb-3 pr-4 hidden lg:table-cell">耗时</th>
-                <th className="pb-3 pr-4 hidden lg:table-cell">Token 消耗</th>
+                  <th className="pb-3 pr-4 hidden lg:table-cell">Token 消耗</th>
                 <th className="pb-3">操作</th>
               </tr>
             </thead>
@@ -190,30 +125,20 @@ export default function TasksPage() {
                         title="查看"
                         onClick={() => navigate(`/app/tasks/${task.id}`)}
                       />
-                      {(task.agentType === 'geo' || task.agentType === 'media') && (
-                        <IconBtn
-                          icon={RefreshCw}
-                          title="重新运行"
-                          onClick={() => {
-                            void handleRerun(task.id);
-                          }}
-                        />
+                      {task.agentType === 'geo' && (
+                        <IconBtn icon={RefreshCw} title="重新运行" onClick={() => handleRerun(task.id)} />
                       )}
-                      {task.input && task.agentType === 'geo' && (
+                      {task.input && (
                         <IconBtn
                           icon={Copy}
                           title="复制任务"
-                          onClick={() => {
-                            void handleRerun(task.id);
-                          }}
+                          onClick={() => handleRerun(task.id)}
                         />
                       )}
                       <IconBtn
                         icon={Trash2}
                         title="删除"
-                        onClick={() => {
-                          void handleDelete(task);
-                        }}
+                        onClick={() => deleteTask(task.id)}
                       />
                     </div>
                   </td>

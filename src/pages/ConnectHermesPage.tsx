@@ -6,16 +6,15 @@ import {
   ChevronDown,
   Cloud,
   Download,
+  ExternalLink,
   Laptop,
-  LoaderCircle,
   RefreshCw,
-  Sparkles,
 } from 'lucide-react';
 import {
   getCurrentAccountId,
   getHermesConnection,
-  pairHermesLocallyWithCurrentAccount,
-  syncHermesConnection,
+  pairHermesWithCurrentAccount,
+  refreshHermesConnection,
   subscribeHermesConnection,
 } from '../lib/hermesConnection';
 import {
@@ -50,50 +49,36 @@ const STATUS_COPY: Record<
   { title: string; desc: string; tone: 'neutral' | 'warn' | 'success' }
 > = {
   not_connected: {
-    title: '尚未安装 Hermes',
-    desc: '首次使用需要先安装 Hermes。安装完成后会继续当前智能体任务。',
+    title: '尚未连接 Hz-Hermes',
+    desc: '请先下载并安装 Hz-Hermes，然后使用同一个账号登录。',
     tone: 'neutral',
   },
   waiting_pairing: {
-    title: '等待连接当前账号',
-    desc: 'Hermes 已准备好，下一步只需要连接到当前 HelloMe 账号。',
+    title: '等待 Hz-Hermes 配对',
+    desc: '请在 Hz-Hermes 中点击“一键配对 HelloMe”。',
     tone: 'neutral',
   },
   account_mismatch: {
-    title: '账号不一致，暂时无法连接',
-    desc: '请确认 HelloMe 和 Hermes 登录的是同一个账号。',
-    tone: 'warn',
-  },
-  service_unavailable: {
-    title: 'Hermes 检测服务暂时不可用',
-    desc: '当前无法确认本机 Hermes 状态，这不等于未安装。请先重新检测。',
+    title: '账号不一致，无法配对',
+    desc: '请确认 HelloMe 和 Hz-Hermes 登录的是同一个账号。',
     tone: 'warn',
   },
   offline: {
-    title: 'Hermes 当前未启动',
-    desc: '已检测到 Hermes，但它现在没有在线。启动后会继续当前任务。',
+    title: 'Hz-Hermes 当前未在线',
+    desc: '请打开 Hz-Hermes，确认已登录当前账号。',
     tone: 'warn',
   },
   connected: {
-    title: 'Hermes 已连接',
+    title: 'Hz-Hermes 已连接',
     desc: '现在可以开始使用智能体。',
     tone: 'success',
   },
 };
 
-function getPrepareActionCopy(status: FirstRunHermesStatus): string {
-  if (status === 'not_connected') return '安装 Hermes 并继续';
-  if (status === 'service_unavailable') return '重新检测 Hermes';
-  if (status === 'offline') return '启动智能体';
-  if (status === 'connected') return '进入工作台';
-  return '连接智能体';
-}
-
 export default function ConnectHermesPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [checking, setChecking] = useState(false);
-  const [preparing, setPreparing] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const snapshot = useSyncExternalStore(
@@ -111,13 +96,8 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
 
   const status = onboarding.hermesStatus;
   const forceOffline = searchParams.get('status') === 'offline';
-  const forceServiceUnavailable = searchParams.get('status') === 'service_unavailable';
   const displayStatus: FirstRunHermesStatus =
-    forceServiceUnavailable && status !== 'connected'
-      ? 'service_unavailable'
-      : forceOffline && status !== 'connected'
-        ? 'offline'
-        : status;
+    forceOffline && status !== 'connected' ? 'offline' : status;
 
   useEffect(() => {
     const intent = parseIntentFromSearchParams(searchParams);
@@ -126,65 +106,33 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    void syncHermesConnection();
-  }, [account]);
-
   const finishPairing = () => {
     navigate(replayPendingIntent(), { replace: true });
   };
 
   useEffect(() => {
-    if (snapshot.status === 'connected' && !forceOffline && !forceServiceUnavailable) {
+    if (snapshot.status === 'connected' && !forceOffline) {
       if (!embedded) {
         finishPairing();
       }
     }
-  }, [snapshot.status, forceOffline, forceServiceUnavailable, embedded]);
+  }, [snapshot.status, forceOffline, embedded]);
 
   const handleRefresh = async () => {
     setChecking(true);
-    const next = await syncHermesConnection();
-    setChecking(false);
-    if (next.status === 'connected') {
-      finishPairing();
-    }
-  };
-
-  const handlePrepare = async () => {
-    setPreparing(true);
-    try {
-      if (displayStatus === 'service_unavailable') {
-        const next = await syncHermesConnection();
-        if (next.status === 'connected') {
-          finishPairing();
-        }
-        return;
-      }
-
-      if (displayStatus === 'not_connected') {
-        window.open(HERMES_DOWNLOAD_URL, '_blank', 'noopener,noreferrer');
-        const next = await syncHermesConnection();
-        if (next.status === 'connected') {
-          finishPairing();
-        }
-        return;
-      }
-
-      if (displayStatus === 'offline') {
-        const next = await syncHermesConnection();
-        if (next.status === 'connected') {
-          finishPairing();
-        }
-        return;
-      }
-
-      const next = await pairHermesLocallyWithCurrentAccount(profile.nickname);
+    window.setTimeout(() => {
+      const next = refreshHermesConnection();
+      setChecking(false);
       if (next.status === 'connected') {
         finishPairing();
       }
-    } finally {
-      setPreparing(false);
+    }, 600);
+  };
+
+  const handlePair = () => {
+    const next = pairHermesWithCurrentAccount();
+    if (next.status === 'connected') {
+      finishPairing();
     }
   };
 
@@ -203,24 +151,21 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
       <div className="max-w-5xl mx-auto space-y-6">
         <header className="space-y-3">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-black/40">HelloMe</p>
-          <h1 className="text-3xl sm:text-4xl font-bold font-display">启动你的个人智能体环境</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold font-display">连接你的个人智能引擎</h1>
           <p className="text-sm sm:text-base text-black/55 max-w-2xl">
-            登录即注册。首次使用时，HelloMe 会引导你准备 Hermes 环境，并尽量把下载、启动、连接这些动作合并成一次完成。
+            HelloMe 负责发起任务，Hz-Hermes 负责在你的电脑上执行任务。
           </p>
         </header>
 
         <section className="bg-white border border-black/10 rounded-2xl p-6 sm:p-8 space-y-6">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#F5F6F8] px-3 py-1 text-[11px] font-semibold text-black/55">
-              <Sparkles className="w-3.5 h-3.5" />
-              自动准备模式
-            </div>
-            <h2 className="text-lg font-semibold">HelloMe 与 Hermes 的关系</h2>
+            <h2 className="text-lg font-semibold">HelloMe 与 Hz-Hermes</h2>
             <p className="text-sm text-black/60 leading-relaxed">
-              HelloMe 负责理解你的目标、组织任务和展示结果，Hermes 负责在你的电脑上执行需要本地权限的动作。
+              HelloMe 的 Me，代表你的个人执行引擎 Hz-Hermes。安装并配对后，你可以在 HelloMe
+              里选择智能体、发起任务、查看过程和结果。
             </p>
             <p className="text-sm text-black/55 leading-relaxed">
-              你只需要点一次“启动智能体”。如果这是第一次使用，系统会先带你完成环境准备，再自动回到当前任务。
+              你在 HelloMe 里告诉智能体要做什么，Hz-Hermes 会在你的电脑上帮你把任务跑起来。
             </p>
           </div>
 
@@ -247,14 +192,13 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
           </div>
 
           <div className="border-t border-black/8 pt-6 space-y-4">
-            <h2 className="text-sm font-semibold">系统会自动完成这些准备</h2>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <StepCard step="1" title="准备 Hermes 客户端" desc="首次使用时自动引导下载安装。" />
-              <StepCard step="2" title="连接当前账号" desc="尽量静默完成账号识别与配对。" />
-              <StepCard step="3" title="恢复任务上下文" desc="准备完成后自动回到你的智能体任务。" />
-              <StepCard step="4" title="开始执行" desc="进入工作台后直接开始使用智能体。" />
+            <h2 className="text-sm font-semibold">三步开始</h2>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <StepCard step="1" title="下载 Hz-Hermes" desc="下载 Windows 版并安装。" />
+              <StepCard step="2" title="登录同一个账号" desc="使用当前 HelloMe 账号登录 Hz-Hermes。" />
+              <StepCard step="3" title="一键配对" desc="在 Hz-Hermes 中点击一键配对。" />
             </div>
-            <p className="text-[11px] text-black/40">早期阶段仍要求本机安装 Hermes，但不再要求你先理解整套流程。</p>
+            <p className="text-[11px] text-black/40">macOS 和 Linux 版本即将推出</p>
           </div>
         </section>
 
@@ -291,46 +235,58 @@ export default function ConnectHermesPage({ embedded = false }: { embedded?: boo
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {displayStatus !== 'connected' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  void handlePrepare();
-                }}
-                disabled={preparing}
-                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-black text-white text-sm font-medium disabled:opacity-70"
-              >
-                {preparing ? (
-                  <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3.5 h-3.5" />
-                )}
-                {preparing ? '准备中…' : getPrepareActionCopy(displayStatus)}
-              </button>
-            ) : null}
+            {(displayStatus === 'not_connected' || displayStatus === 'waiting_pairing') && (
+              <>
+                <a
+                  href={HERMES_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-black text-white text-sm font-medium"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  下载 Hz-Hermes
+                </a>
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg border border-black/12 bg-white text-sm font-medium"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
+                  {displayStatus === 'not_connected' ? '我已安装，重新检测' : '重新检测'}
+                </button>
+                {displayStatus === 'waiting_pairing' ? (
+                  <button
+                    type="button"
+                    onClick={handlePair}
+                    className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg border border-black/12 bg-white text-sm font-medium"
+                  >
+                    我已完成一键配对
+                  </button>
+                ) : null}
+              </>
+            )}
 
-            {displayStatus !== 'connected' ? (
+            {(displayStatus === 'waiting_pairing' || displayStatus === 'offline') && (
               <button
                 type="button"
                 onClick={handleRefresh}
                 className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg border border-black/12 bg-white text-sm font-medium"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
-                重新检测
+                <ExternalLink className="w-3.5 h-3.5" />
+                打开 Hz-Hermes
               </button>
-            ) : null}
+            )}
 
-            {displayStatus !== 'connected' ? (
-              <a
-                href={HERMES_DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg border border-black/12 bg-white text-sm font-medium"
+            {displayStatus === 'account_mismatch' && (
+              <button
+                type="button"
+                onClick={handleRefresh}
+                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg bg-black text-white text-sm font-medium"
               >
-                <Download className="w-3.5 h-3.5" />
-                单独下载 Hermes
-              </a>
-            ) : null}
+                <RefreshCw className="w-3.5 h-3.5" />
+                我已切换账号，重新检测
+              </button>
+            )}
 
             {displayStatus === 'connected' && (
               <button

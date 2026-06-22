@@ -1,7 +1,6 @@
 import { Flame, Heart } from 'lucide-react';
 import type { AgentMarketCard } from '../../../types/agentsPage';
 import AgentIcon from './AgentIcon';
-import { getVideoAgentProfile } from '../../../config/videoAgentProfiles';
 
 interface MarketCardProps {
   card: AgentMarketCard;
@@ -15,8 +14,6 @@ function primaryCtaLabel(card: AgentMarketCard, lowBalance: boolean): string {
   if (card.status === 'coming_soon') return '即将开放';
   if (card.badge === 'beta' || card.badge === '内测') return '申请内测';
   if (lowBalance) return '充值算力';
-  const profile = getVideoAgentProfile(card.id);
-  if (profile) return profile.marketEntryLabel;
   return '使用智能体';
 }
 

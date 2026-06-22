@@ -113,7 +113,7 @@ export default function WorkbenchTabsBar({ variant = 'chrome' }: WorkbenchTabsBa
       return;
     }
     if (result.reason === 'recharge') {
-      navigate('/app/usage/recharge');
+      navigate('/app/usage');
       return;
     }
     if (result.ok) {

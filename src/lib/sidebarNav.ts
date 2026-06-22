@@ -9,8 +9,6 @@ import {
   ListChecks,
   LogIn,
   Settings,
-  ShieldCheck,
-  WandSparkles,
 } from 'lucide-react';
 import { CATEGORIES, type AgentCategory } from '../data/agentsCatalog';
 
@@ -23,8 +21,6 @@ export type AppNavId =
   | 'market'
   | 'tasks'
   | 'results'
-  | 'studio'
-  | 'admin'
   | 'usage'
   | 'tutorial'
   | 'api'
@@ -78,18 +74,6 @@ export const APP_NAV_PRIMARY: AppNavItem[] = [
     label: '成果中心',
     icon: Folder,
     to: '/app/results',
-  },
-  {
-    id: 'studio',
-    label: 'Creator Studio',
-    icon: WandSparkles,
-    to: '/app/studio',
-  },
-  {
-    id: 'admin',
-    label: 'Boss Admin',
-    icon: ShieldCheck,
-    to: '/admin',
   },
   {
     id: 'usage',
@@ -157,10 +141,6 @@ export function isAppNavActive(id: AppNavId, pathname: string): boolean {
       return pathname === '/app/tasks' || pathname.startsWith('/app/tasks/');
     case 'results':
       return pathname === '/app/results' || pathname.startsWith('/app/results/');
-    case 'studio':
-      return pathname === '/app/studio' || pathname.startsWith('/app/studio/');
-    case 'admin':
-      return pathname === '/admin' || pathname.startsWith('/admin/');
     case 'usage':
       return pathname === '/app/usage' || pathname.startsWith('/app/usage/');
     case 'tutorial':
