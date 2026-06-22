@@ -1,6 +1,8 @@
 import { ExternalLink } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
+import { canAccessAdmin } from '../../lib/auth';
 
 const MORE_LINKS = [
   { label: '用户协议', href: '#' },
@@ -95,6 +97,16 @@ export default function SidebarMoreMenu({
       }}
     >
       <div className="space-y-1">
+        {canAccessAdmin() ? (
+          <Link
+            to="/admin/dashboard"
+            className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm text-[#444444] hover:bg-[#f7f7f8] hover:text-[#111111] transition-colors font-semibold"
+            onClick={onClose}
+          >
+            <span>Boss Admin 后台</span>
+            <ExternalLink className="h-4 w-4 opacity-40" />
+          </Link>
+        ) : null}
         {MORE_LINKS.map((item) => (
           <a
             key={item.label}

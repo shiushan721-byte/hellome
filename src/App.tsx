@@ -12,7 +12,6 @@ import GeoAgentPage from './pages/app/GeoAgentPage';
 import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
-import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
@@ -26,7 +25,20 @@ import CreatorSkillEditorPage from './pages/app/CreatorSkillEditorPage';
 import CreatorSkillDebugPage from './pages/app/CreatorSkillDebugPage';
 import CreatorSkillVersionsPage from './pages/app/CreatorSkillVersionsPage';
 import FrontstageDesignSpecPage from './pages/app/FrontstageDesignSpecPage';
+import AdminProtectedRoute from './components/admin/AdminProtectedRoute';
+import AdminShell from './components/admin/AdminShell';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminUserDetailPage from './pages/admin/AdminUserDetailPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminTasksPage from './pages/admin/AdminTasksPage';
+import AdminResultsPage from './pages/admin/AdminResultsPage';
+import AdminFrontendPage from './pages/admin/AdminFrontendPage';
+import AdminWorkflowsPage from './pages/admin/AdminWorkflowsPage';
+import AdminIntegrationsPage from './pages/admin/AdminIntegrationsPage';
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
+import AdminSkillsPage from './pages/admin/AdminSkillsPage';
+import AdminSkillDetailPage from './pages/admin/AdminSkillDetailPage';
 
 export default function App() {
   return (
@@ -121,11 +133,25 @@ export default function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requireAdmin>
-            <AdminDashboardPage />
-          </ProtectedRoute>
+          <AdminProtectedRoute>
+            <AdminShell />
+          </AdminProtectedRoute>
         }
-      />
+      >
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboardPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:id" element={<AdminUserDetailPage />} />
+        <Route path="orders" element={<AdminOrdersPage />} />
+        <Route path="tasks" element={<AdminTasksPage />} />
+        <Route path="results" element={<AdminResultsPage />} />
+        <Route path="frontend" element={<AdminFrontendPage />} />
+        <Route path="workflows" element={<AdminWorkflowsPage />} />
+        <Route path="integrations" element={<AdminIntegrationsPage />} />
+        <Route path="audit-logs" element={<AdminAuditLogsPage />} />
+        <Route path="skills" element={<AdminSkillsPage />} />
+        <Route path="skills/:skillId" element={<AdminSkillDetailPage />} />
+      </Route>
 
       <Route path="*" element={<HomeRedirect />} />
       </Routes>

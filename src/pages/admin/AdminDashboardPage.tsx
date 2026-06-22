@@ -1,39 +1,38 @@
-import { AlertTriangle, BarChart3, Coins, Users } from 'lucide-react';
-
-const cards = [
-  { label: '活跃用户', value: '128', icon: Users },
-  { label: '本周视频任务', value: '42', icon: BarChart3 },
-  { label: '本周消耗 Token', value: '286,000', icon: Coins },
-  { label: '待协助异常', value: '3', icon: AlertTriangle },
-] as const;
+import { useEffect, useState } from 'react';
+import { adminApi } from '../../lib/adminApi';
+import { AdminCard, AdminPageHeader } from '../../components/admin/AdminUi';
 
 export default function AdminDashboardPage() {
-  return (
-    <div className="min-h-screen bg-[#F7F7F8] text-[#1A1A1A] p-4 sm:p-6 lg:p-8 space-y-6">
-      <header className="bg-white border border-black/8 rounded-[28px] p-6 sm:p-8 space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-black/40">Boss Admin</p>
-        <h1 className="text-2xl sm:text-3xl font-bold font-display">HelloMe 管理后台</h1>
-        <p className="text-sm text-black/55 max-w-3xl">
-          这里负责数据、审核、异常协助和成本管理，不承担创作者日常交付配置与调试。
-        </p>
-      </header>
+  const [stats, setStats] = useState<Record<string, number | boolean> | null>(null);
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div key={card.label} className="bg-white border border-black/8 rounded-[24px] p-5 space-y-3">
-              <div className="w-11 h-11 rounded-2xl bg-[#F2F0ED] flex items-center justify-center">
-                <Icon className="w-5 h-5 text-black/65" />
-              </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-black/40">{card.label}</p>
-                <p className="text-2xl font-bold mt-2">{card.value}</p>
-              </div>
-            </div>
-          );
-        })}
-      </section>
+  useEffect(() => {
+    void adminApi.dashboard().then(setStats).catch(() => setStats(null));
+  }, []);
+
+  const cards = [
+    { label: '用户数', key: 'users' },
+    { label: '任务数', key: 'tasks' },
+    { label: '已完成任务', key: 'completedTasks' },
+    { label: '充值记录', key: 'topups' },
+    { label: 'Gnomic 绑定', key: 'gnomicBindings' },
+    { label: '已发布配置', key: 'publishedConfigs' },
+  ];
+
+  return (
+    <div>
+      <AdminPageHeader title="仪表盘" desc="平台运营概览与关键指标" />
+      <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+        {cards.map((card) => (
+          <AdminCard key={card.key} className="p-4">
+            <p className="text-xs text-black/45">{card.label}</p>
+            <p className="text-2xl font-bold mt-2">{stats ? String(stats[card.key] ?? 0) : '—'}</p>
+          </AdminCard>
+        ))}
+        <AdminCard className="p-4">
+          <p className="text-xs text-black/45">数据库连接</p>
+          <p className="text-2xl font-bold mt-2">{stats?.dbConnected ? '已连接' : '离线/演示'}</p>
+        </AdminCard>
+      </div>
     </div>
   );
 }

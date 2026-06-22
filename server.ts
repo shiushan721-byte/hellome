@@ -28,7 +28,7 @@ import {
   runSkillDebug,
   updateSkill,
 } from './src/server/skillStudioService';
-import { listAllSkills } from './src/server/adminSkillService';
+import { registerAdminRoutes } from './src/server/admin/adminRoutes';
 import { getPublishedMarketAgent, listPublishedMarketAgents } from './src/server/publishedMarketService';
 import {
   createAgentFromSpec,
@@ -130,6 +130,7 @@ if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
   console.log('No valid GEMINI_API_KEY found. Using high-fidelity local simulator fallback.');
 }
 authKit.registerRoutes(app);
+registerAdminRoutes(app, authKit);
 registerDbHealthRoute(app);
 
 app.get('/api/billing/usage', async (req, res) => {
@@ -511,53 +512,6 @@ app.patch('/api/studio/orchestrator/agents/:agentId/business', async (req, res) 
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'updateAgentBusinessFrame failed',
-    });
-  }
-});
-
-/**
- * GET /api/admin/skills
- *   Aggregate inventory of every skill this project exposes across all
- *   three layers (engineering / business / generation). Introspection-only
- *   endpoint — no DB writes, no auth required. Powering ops/dev tooling
- *   and a future admin dashboard.
- *
- * Query params:
- *   layer  filter to one of: engineering | business | generation
- *   q      substring match against id / name / description
- */
-app.get('/api/admin/skills', async (req, res) => {
-  try {
-    const data = await listAllSkills();
-    let skills = data.skills;
-    const layer = String(req.query.layer ?? '').trim();
-    if (layer && ['engineering', 'business', 'generation'].includes(layer)) {
-      skills = skills.filter((s) => s.layer === layer);
-    }
-    const q = String(req.query.q ?? '').trim().toLowerCase();
-    if (q) {
-      skills = skills.filter((s) =>
-        s.id.toLowerCase().includes(q)
-        || s.name.toLowerCase().includes(q)
-        || s.description.toLowerCase().includes(q),
-      );
-    }
-    res.json({
-      success: true,
-      data: {
-        total: skills.length,
-        byLayer: {
-          engineering: skills.filter((s) => s.layer === 'engineering').length,
-          business: skills.filter((s) => s.layer === 'business').length,
-          generation: skills.filter((s) => s.layer === 'generation').length,
-        },
-        skills,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'skill inventory failed',
     });
   }
 });

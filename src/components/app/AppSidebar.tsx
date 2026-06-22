@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -9,6 +10,7 @@ import {
   ExternalLink,
   Menu,
   Moon,
+  Sun,
   PanelLeftClose,
   PanelLeftOpen,
   Zap,
@@ -25,6 +27,7 @@ import {
   APP_NAV_PRIMARY,
   APP_NAV_SECONDARY,
   GUEST_NAV_ITEMS,
+  isAgentSessionPath,
   isAppNavActive,
   isGuestNavActive,
   type GuestNavId,
@@ -155,6 +158,8 @@ function SidebarFooter({
   onMoreMouseLeave,
   moreButtonRef,
   showDebug,
+  themeMode,
+  onToggleTheme,
 }: {
   collapsed: boolean;
   moreOpen: boolean;
@@ -163,13 +168,23 @@ function SidebarFooter({
   onMoreMouseLeave: () => void;
   moreButtonRef: RefObject<HTMLButtonElement | null>;
   showDebug?: boolean;
+  themeMode: 'light' | 'dark';
+  onToggleTheme: () => void;
 }) {
   const iconBtn =
-    'flex items-center justify-center rounded-xl text-[#444444] hover:bg-[#f7f7f8] hover:text-[#111111] transition-colors';
+    themeMode === 'dark'
+      ? 'flex items-center justify-center rounded-xl text-[#E7EAEE] hover:bg-[#111827] hover:text-white transition-colors'
+      : 'flex items-center justify-center rounded-xl text-[#444444] hover:bg-[#f7f7f8] hover:text-[#111111] transition-colors';
   const iconSize = collapsed ? 'w-11 h-11 mx-auto' : 'w-10 h-10';
 
   return (
-    <div className={`shrink-0 border-t border-[#f0f0f0] bg-white ${collapsed ? 'p-2 space-y-1.5' : 'p-3 space-y-2'}`}>
+    <div
+      className={`shrink-0 border-t ${
+        themeMode === 'dark' ? 'border-white/10' : 'border-[#f0f0f0]'
+      } ${themeMode === 'dark' ? 'bg-[#0f172a]' : 'bg-white'} ${
+        collapsed ? 'p-2 space-y-1.5' : 'p-3 space-y-2'
+      }`}
+    >
       {showDebug ? <HermesDebugDock collapsed={collapsed} /> : null}
       {!collapsed ? (
         <button
@@ -195,11 +210,12 @@ function SidebarFooter({
       <div className={collapsed ? 'space-y-2' : 'flex items-center gap-2'}>
         <button
           type="button"
+          onClick={onToggleTheme}
           className={`${iconBtn} ${iconSize} ${!collapsed ? 'flex-1' : ''}`}
           title="主题切换"
           aria-label="主题切换"
         >
-          <Moon className="w-6 h-6" />
+          {themeMode === 'dark' ? <Sun className="w-6 h-6" /> : <Moon className="w-6 h-6" />}
         </button>
         <button
           ref={moreButtonRef}
@@ -240,6 +256,28 @@ function SidebarInner({
     getHermesConnection,
     getHermesConnection,
   );
+
+  const THEME_KEY = 'hellome_theme_mode';
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const saved = window.localStorage.getItem(THEME_KEY);
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;
+    return saved === 'dark' || saved === 'light' ? saved : prefersDark ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', themeMode === 'dark');
+  }, [themeMode]);
+
+  const onToggleTheme = () => {
+    setThemeMode((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      window.localStorage.setItem(THEME_KEY, next);
+      document.documentElement.classList.toggle('dark', next === 'dark');
+      return next;
+    });
+  };
+
   const [moreOpen, setMoreOpen] = useState(false);
   const [hermesModal, setHermesModal] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
@@ -422,6 +460,8 @@ function SidebarInner({
           onMoreMouseLeave={scheduleCloseMoreMenu}
           moreButtonRef={moreButtonRef}
           showDebug={mode === 'app'}
+          themeMode={themeMode}
+          onToggleTheme={onToggleTheme}
         />
         <SidebarMoreMenu
           open={moreOpen}
@@ -482,12 +522,41 @@ export function MobileNavBar({
 
 export default function AppSidebar({ mode, mobileOpen = false, onMobileClose }: AppSidebarProps) {
   const collapsed = useSidebarCollapsed();
+  const location = useLocation();
+  const savedBeforeAgentRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    if (mode !== 'app') return;
+
+    if (isAgentSessionPath(location.pathname)) {
+      if (savedBeforeAgentRef.current === null) {
+        savedBeforeAgentRef.current = getSidebarCollapsed();
+      }
+      if (!getSidebarCollapsed()) {
+        setSidebarCollapsed(true);
+      }
+      return;
+    }
+
+    if (savedBeforeAgentRef.current !== null) {
+      setSidebarCollapsed(savedBeforeAgentRef.current);
+      savedBeforeAgentRef.current = null;
+    }
+  }, [location.pathname, mode]);
+
+  const handleToggleCollapse = () => {
+    const next = !collapsed;
+    setSidebarCollapsed(next);
+    if (isAgentSessionPath(location.pathname)) {
+      savedBeforeAgentRef.current = next;
+    }
+  };
 
   const sidebarContent = (
     <SidebarInner
       mode={mode}
       collapsed={collapsed}
-      onToggleCollapse={() => setSidebarCollapsed(!collapsed)}
+      onToggleCollapse={handleToggleCollapse}
       onMobileClose={onMobileClose}
     />
   );

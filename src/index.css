@@ -8,11 +8,38 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Theme tokens */
+:root {
+  color-scheme: light;
+  --bg: #FDFCFB;
+  --fg: #1A1A1A;
+  --surface: #ffffff;
+  --surface2: #eceff3;
+  --border: rgba(0, 0, 0, 0.08);
+
+  --scroll-track: #F2F0ED;
+  --scroll-thumb: rgba(26, 26, 26, 0.2);
+  --scroll-thumb-hover: rgba(26, 26, 26, 0.4);
+}
+
+html.dark {
+  color-scheme: dark;
+  --bg: #0b0f17;
+  --fg: #E7EAEE;
+  --surface: #0f172a;
+  --surface2: #111827;
+  --border: rgba(255, 255, 255, 0.12);
+
+  --scroll-track: rgba(255, 255, 255, 0.08);
+  --scroll-thumb: rgba(231, 234, 238, 0.22);
+  --scroll-thumb-hover: rgba(231, 234, 238, 0.35);
+}
+
 @layer base {
   body {
     font-family: var(--font-sans);
-    background-color: #FDFCFB; /* Warm off-white paper background */
-    color: #1A1A1A; /* Charcoal / deep ink black */
+    background-color: var(--bg);
+    color: var(--fg);
     overflow-x: hidden;
   }
 }
@@ -23,15 +50,75 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #F2F0ED;
+  background: var(--scroll-track);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(26, 26, 26, 0.2);
+  background: var(--scroll-thumb);
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 26, 26, 0.4);
+  background: var(--scroll-thumb-hover);
+}
+
+/* Dark mode surface overrides (keep scope broad but controlled) */
+html.dark body {
+  background-color: var(--bg);
+  color: var(--fg);
+}
+
+html.dark header {
+  background: var(--surface2) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark aside {
+  background: var(--surface) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark [class*='bg-white'] {
+  background-color: var(--surface) !important;
+}
+
+html.dark [class*='bg-[#FDFCFB]'] {
+  background-color: var(--bg) !important;
+}
+
+html.dark [class*='bg-[#eceff3]'] {
+  background-color: var(--surface2) !important;
+}
+
+html.dark [class*='bg-[#dee1e6]'] {
+  background-color: #111827 !important;
+}
+
+html.dark [class*='bg-[#F5F5F7]'] {
+  background-color: #0b1220 !important;
+}
+
+html.dark [class*='text-[#1A1A1A]'] {
+  color: var(--fg) !important;
+}
+
+html.dark [class*='text-[#444444]'] {
+  color: var(--fg) !important;
+}
+
+html.dark [class*='text-black/'] {
+  color: var(--fg) !important;
+}
+
+html.dark [class*='text-black'] {
+  color: var(--fg) !important;
+}
+
+html.dark [class*='border-black'] {
+  border-color: var(--border) !important;
+}
+
+html.dark button {
+  color: inherit;
 }
 

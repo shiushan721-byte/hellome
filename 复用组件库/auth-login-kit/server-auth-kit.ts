@@ -363,5 +363,17 @@ export function createAuthKit() {
       }
       return session;
     },
+    requireAdminSession(req: express.Request, res: express.Response): DemoSession | null {
+      const session = currentSession(req);
+      if (!session) {
+        res.status(401).json({ success: false, error: '请先登录' });
+        return null;
+      }
+      if (session.user.role !== 'admin') {
+        res.status(403).json({ success: false, error: '当前账号没有后台管理权限' });
+        return null;
+      }
+      return session;
+    },
   };
 }

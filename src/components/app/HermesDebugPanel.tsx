@@ -1,6 +1,8 @@
 import { useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bug, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bug, ChevronDown, ChevronUp, LayoutDashboard } from 'lucide-react';
+import { canAccessAdmin } from '../../lib/auth';
+import { useLoginModal } from '../../context/LoginModalProvider';
 import {
   applyHermesDebugPreset,
   getHermesConnection,
@@ -111,6 +113,39 @@ function DisplayOptionList({
   );
 }
 
+function AdminEntryButton({ onDone }: { onDone?: () => void }) {
+  const navigate = useNavigate();
+  const { openLogin } = useLoginModal();
+  const isAdmin = canAccessAdmin();
+
+  const handleOpenAdmin = () => {
+    if (isAdmin) {
+      navigate('/admin/dashboard');
+      onDone?.();
+      return;
+    }
+    openLogin({ redirect: '/admin/dashboard' });
+    onDone?.();
+  };
+
+  return (
+    <div className="pt-2 border-t border-[#f0f0f0] space-y-1.5">
+      <p className="text-[10px] text-black/40">开发工具</p>
+      <button
+        type="button"
+        onClick={handleOpenAdmin}
+        className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-violet-100 text-violet-900 hover:bg-violet-200 transition-colors"
+      >
+        <LayoutDashboard className="w-3.5 h-3.5 shrink-0" />
+        进入 Boss Admin
+      </button>
+      {!isAdmin ? (
+        <p className="text-[10px] text-black/35 leading-relaxed">管理员账号：13800138000</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function HermesDebugDock({ collapsed = false }: { collapsed?: boolean }) {
   const [open, setOpen] = useState(false);
   const snapshot = useSyncExternalStore(
@@ -135,11 +170,12 @@ export function HermesDebugDock({ collapsed = false }: { collapsed?: boolean }) 
           <Bug className="w-5 h-5 text-sky-600" />
         </button>
         {open ? (
-          <div className="absolute bottom-full left-1/2 z-20 mb-2 w-44 -translate-x-1/2 rounded-xl border border-[#f0f0f0] bg-white p-2 shadow-lg">
+          <div className="absolute bottom-full left-1/2 z-20 mb-2 w-44 -translate-x-1/2 rounded-xl border border-[#f0f0f0] bg-white p-2 shadow-lg space-y-2">
             <DisplayOptionList activeId={activeId} onSelect={(preset) => {
               applyPreset(preset);
               setOpen(false);
             }} />
+            <AdminEntryButton onDone={() => setOpen(false)} />
           </div>
         ) : null}
       </div>
@@ -171,6 +207,7 @@ export function HermesDebugDock({ collapsed = false }: { collapsed?: boolean }) 
             仅本地调试，不会连接真实 Hz-Hermes。
           </p>
           <DisplayOptionList activeId={activeId} onSelect={applyPreset} />
+          <AdminEntryButton />
         </div>
       ) : null}
     </div>

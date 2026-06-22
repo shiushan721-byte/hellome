@@ -366,3 +366,81 @@ model GnomicSsoTicket {
   @@index([hellomeUserId])
   @@index([expiresAt])
 }
+
+model FrontendConfig {
+  id          String    @id @default(cuid())
+  key         String
+  name        String
+  scope       String
+  version     Int       @default(1)
+  status      String    @default("draft")
+  payload     Json
+  publishedAt DateTime?
+  createdBy   String?
+  updatedBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([key, version])
+  @@index([scope, status])
+}
+
+model PublishRecord {
+  id          String   @id @default(cuid())
+  module      String
+  targetKey   String
+  version     Int
+  title       String
+  diff        Json?
+  snapshot    Json
+  publishedBy String
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorName  String?
+  module     String
+  action     String
+  targetType String
+  targetId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([module, createdAt])
+}
+
+model RechargePack {
+  id          String   @id @default(cuid())
+  name        String
+  tokenAmount Int
+  bonusTokens Int      @default(0)
+  priceCents  Int
+  status      String   @default("draft")
+  recommended Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkflowTemplate {
+  id          String   @id @default(cuid())
+  templateId  String   @unique
+  title       String
+  category    String
+  coverUrl    String?
+  authorName  String?
+  pricePerRun Int?
+  gnomicPath  String
+  status      String   @default("draft")
+  sortOrder   Int      @default(0)
+  recommended Boolean  @default(false)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

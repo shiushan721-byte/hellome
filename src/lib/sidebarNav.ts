@@ -196,3 +196,8 @@ export function parseMarketCategory(search: string): AgentCategory {
   }
   return 'all';
 }
+
+/** 用户已进入某个智能体工作台（非智能体市场列表页） */
+export function isAgentSessionPath(pathname: string): boolean {
+  return pathname.startsWith('/app/agents/') && pathname.length > '/app/agents/'.length;
+}
