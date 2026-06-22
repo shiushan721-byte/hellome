@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import LoginModalCore from '../../复用组件库/auth-login-kit/login-modal-core';
+import { replayPendingAgentsyunIntent } from '../lib/agentsyunSso';
+import { replayPendingGnomicIntent } from '../lib/gnomicSso';
 import { resolvePostLoginPath, type PendingAgentIntent } from '../lib/pendingAgentIntent';
 
 interface LoginModalProps {
@@ -9,7 +11,40 @@ interface LoginModalProps {
 
 export default function LoginModal({ intent = {}, onClose }: LoginModalProps) {
   const navigate = useNavigate();
-  const contextual = Boolean(intent.agentId || intent.action === 'use' || intent.action === 'enter');
+  const contextual = Boolean(
+    intent.gnomic ||
+      intent.agentsyun ||
+      intent.agentId ||
+      intent.action === 'use' ||
+      intent.action === 'enter',
+  );
+
+  const handleSuccess = async () => {
+    if (intent.gnomic) {
+      try {
+        await replayPendingGnomicIntent();
+      } catch {
+        // fall through to market
+      }
+      navigate('/app/agents', { replace: true });
+      return;
+    }
+
+    if (intent.agentsyun) {
+      try {
+        await replayPendingAgentsyunIntent();
+      } catch {
+        // fall through to redirect
+      }
+      navigate(
+        intent.redirect ? intent.redirect.replace(/^\/agents/, '/app/agents') : '/app/agents',
+        { replace: true },
+      );
+      return;
+    }
+
+    navigate(resolvePostLoginPath(intent), { replace: true });
+  };
 
   return (
     <LoginModalCore
@@ -22,7 +57,7 @@ export default function LoginModal({ intent = {}, onClose }: LoginModalProps) {
       helperText="当前是测试环境登录：验证码由服务端动态生成，并会自动填入输入框；注册、会话和角色分流按真实线上结构执行。"
       onClose={onClose}
       onSuccess={() => {
-        navigate(resolvePostLoginPath(intent), { replace: true });
+        void handleSuccess();
       }}
     />
   );

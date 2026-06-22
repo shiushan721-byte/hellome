@@ -42,6 +42,11 @@ enum SkillStatus {
   archived
 }
 
+enum GnomicBindingStatus {
+  active
+  disabled
+}
+
 model User {
   id          String      @id @default(cuid())
   externalId  String      @unique
@@ -334,4 +339,30 @@ model SkillDebugRun {
   updatedAt       DateTime     @updatedAt
   skill           Skill        @relation(fields: [skillId], references: [id], onDelete: Cascade)
   skillVersion    SkillVersion? @relation(fields: [skillVersionId], references: [id], onDelete: SetNull)
+}
+
+model GnomicAccountBinding {
+  id            String              @id @default(cuid())
+  hellomeUserId String              @unique
+  gnomicUserId  String              @unique
+  phone         String?
+  status        GnomicBindingStatus @default(active)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([phone])
+}
+
+model GnomicSsoTicket {
+  id            String   @id @default(cuid())
+  ticket        String   @unique
+  hellomeUserId String
+  gnomicUserId  String
+  redirectPath  String
+  used          Boolean  @default(false)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([hellomeUserId])
+  @@index([expiresAt])
 }

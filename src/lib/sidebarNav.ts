@@ -26,6 +26,8 @@ export type AppNavId =
   | 'studio'
   | 'admin'
   | 'usage'
+  | 'tutorial'
+  | 'api'
   | 'settings';
 
 export type GuestNavId = 'market' | 'tutorial' | 'api' | 'login';
@@ -34,9 +36,10 @@ export interface AppNavItem {
   id: AppNavId;
   label: string;
   icon: LucideIcon;
-  to: string;
+  to?: string;
   end?: boolean;
   hasSubmenu?: boolean;
+  action?: 'agentsyun';
 }
 
 export interface GuestNavItem {
@@ -44,7 +47,7 @@ export interface GuestNavItem {
   label: string;
   icon: LucideIcon;
   to?: string;
-  action?: 'login';
+  action?: 'login' | 'agentsyun';
   hasSubmenu?: boolean;
   requiresLogin?: boolean;
 }
@@ -76,9 +79,6 @@ export const APP_NAV_PRIMARY: AppNavItem[] = [
     icon: Folder,
     to: '/app/results',
   },
-];
-
-export const APP_NAV_SECONDARY: AppNavItem[] = [
   {
     id: 'studio',
     label: 'Creator Studio',
@@ -96,6 +96,21 @@ export const APP_NAV_SECONDARY: AppNavItem[] = [
     label: '算力中心',
     icon: Gauge,
     to: '/app/usage',
+  },
+];
+
+export const APP_NAV_SECONDARY: AppNavItem[] = [
+  {
+    id: 'tutorial',
+    label: '教程',
+    icon: BookOpen,
+    to: '/app/agents',
+  },
+  {
+    id: 'api',
+    label: 'API',
+    icon: Code2,
+    action: 'agentsyun',
   },
   {
     id: 'settings',
@@ -122,7 +137,7 @@ export const GUEST_NAV_ITEMS: GuestNavItem[] = [
     id: 'api',
     label: 'API',
     icon: Code2,
-    to: '/agents',
+    action: 'agentsyun',
   },
   {
     id: 'login',
@@ -148,6 +163,9 @@ export function isAppNavActive(id: AppNavId, pathname: string): boolean {
       return pathname === '/admin' || pathname.startsWith('/admin/');
     case 'usage':
       return pathname === '/app/usage' || pathname.startsWith('/app/usage/');
+    case 'tutorial':
+    case 'api':
+      return false;
     case 'settings':
       return pathname === '/app/settings' || pathname.startsWith('/app/settings/');
     default:

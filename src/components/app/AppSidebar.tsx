@@ -6,7 +6,6 @@ import {
 } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Download,
   ExternalLink,
   Menu,
   Moon,
@@ -15,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { HERMES_DOWNLOAD_URL, isHermesConnected } from '../../lib/firstRunOnboarding';
+import { isHermesConnected } from '../../lib/firstRunOnboarding';
 import { replayPendingIntent } from '../../lib/pendingAgentIntent';
 import {
   getHermesConnection,
@@ -31,15 +30,16 @@ import {
   type GuestNavId,
   type SidebarMode,
 } from '../../lib/sidebarNav';
-import { canAccessAdmin, canAccessStudio } from '../../lib/auth';
 import {
   getSidebarCollapsed,
   setSidebarCollapsed,
   subscribeSidebarCollapsed,
 } from '../../lib/sidebarState';
 import HermesActionModal from './HermesActionModal';
+import { HermesDebugDock } from './HermesDebugPanel';
 import SidebarMoreMenu from './SidebarMoreMenu';
 import { useLoginModal } from '../../context/LoginModalProvider';
+import { openAgentsyunHub } from '../../lib/agentsyunSso';
 
 interface AppSidebarProps {
   mode: SidebarMode;
@@ -112,7 +112,7 @@ function BrandMark({
   onExpand?: () => void;
 }) {
   const logo = (
-    <div className="w-9 h-9 bg-black flex items-center justify-center shrink-0 rounded-lg">
+    <div className="w-8 h-8 bg-black flex items-center justify-center shrink-0 rounded-lg">
       <Zap className="w-4 h-4 text-white fill-white" />
     </div>
   );
@@ -151,14 +151,18 @@ function SidebarFooter({
   collapsed,
   moreOpen,
   onHermesClick,
-  onMoreClick,
+  onMoreMouseEnter,
+  onMoreMouseLeave,
   moreButtonRef,
+  showDebug,
 }: {
   collapsed: boolean;
   moreOpen: boolean;
   onHermesClick: () => void;
-  onMoreClick: () => void;
+  onMoreMouseEnter: () => void;
+  onMoreMouseLeave: () => void;
   moreButtonRef: RefObject<HTMLButtonElement | null>;
+  showDebug?: boolean;
 }) {
   const iconBtn =
     'flex items-center justify-center rounded-xl text-[#444444] hover:bg-[#f7f7f8] hover:text-[#111111] transition-colors';
@@ -166,13 +170,14 @@ function SidebarFooter({
 
   return (
     <div className={`shrink-0 border-t border-[#f0f0f0] bg-white ${collapsed ? 'p-2 space-y-1.5' : 'p-3 space-y-2'}`}>
+      {showDebug ? <HermesDebugDock collapsed={collapsed} /> : null}
       {!collapsed ? (
         <button
           type="button"
           onClick={onHermesClick}
           className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-[#f0f1f3] text-sm font-semibold text-[#111111] hover:bg-[#e8e9ec] transition-colors"
         >
-          打开 Hz-Hermes
+          链接 Me
           <ExternalLink className="w-4 h-4 opacity-60" />
         </button>
       ) : (
@@ -180,8 +185,8 @@ function SidebarFooter({
           type="button"
           onClick={onHermesClick}
           className={`${iconBtn} ${iconSize}`}
-          title="打开 Hz-Hermes"
-          aria-label="打开 Hz-Hermes"
+          title="链接 Me"
+          aria-label="链接 Me"
         >
           <ExternalLink className="w-6 h-6" />
         </button>
@@ -196,20 +201,11 @@ function SidebarFooter({
         >
           <Moon className="w-6 h-6" />
         </button>
-        <a
-          href={HERMES_DOWNLOAD_URL}
-          target="_blank"
-          rel="noreferrer"
-          className={`${iconBtn} ${iconSize} ${!collapsed ? 'flex-1' : ''}`}
-          title="客户端下载"
-          aria-label="客户端下载"
-        >
-          <Download className="w-6 h-6" />
-        </a>
         <button
           ref={moreButtonRef}
           type="button"
-          onClick={onMoreClick}
+          onMouseEnter={onMoreMouseEnter}
+          onMouseLeave={onMoreMouseLeave}
           aria-expanded={moreOpen}
           aria-haspopup="dialog"
           className={`${iconBtn} ${iconSize} ${!collapsed ? 'flex-1' : ''} ${
@@ -247,15 +243,25 @@ function SidebarInner({
   const [moreOpen, setMoreOpen] = useState(false);
   const [hermesModal, setHermesModal] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const moreCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openMoreMenu = () => {
+    if (moreCloseTimeoutRef.current) {
+      clearTimeout(moreCloseTimeoutRef.current);
+      moreCloseTimeoutRef.current = null;
+    }
+    setMoreOpen(true);
+  };
+
+  const scheduleCloseMoreMenu = () => {
+    if (moreCloseTimeoutRef.current) clearTimeout(moreCloseTimeoutRef.current);
+    moreCloseTimeoutRef.current = setTimeout(() => {
+      setMoreOpen(false);
+      moreCloseTimeoutRef.current = null;
+    }, 120);
+  };
 
   const handleNavigate = () => onMobileClose?.();
-  const canSeeStudio = mode === 'app' ? canAccessStudio() : false;
-  const canSeeAdmin = mode === 'app' ? canAccessAdmin() : false;
-  const secondaryNavItems = APP_NAV_SECONDARY.filter((item) => {
-    if (item.id === 'studio' && !canSeeStudio) return false;
-    if (item.id === 'admin' && !canSeeAdmin) return false;
-    return true;
-  });
 
   const handleHermes = () => {
     if (hermes.status === 'connected') {
@@ -287,17 +293,37 @@ function SidebarInner({
       {!collapsed && <div className="my-3 border-t border-[#f0f0f0]" />}
       {collapsed && <div className="my-2 border-t border-[#f0f0f0] mx-2" />}
 
-            {secondaryNavItems.map((item) => (
-              <SimpleNavLink
-                key={item.id}
-                to={item.to}
-          label={item.label}
-          icon={item.icon}
-          active={isAppNavActive(item.id, location.pathname)}
-          collapsed={collapsed}
-          onClick={handleNavigate}
-        />
-      ))}
+      {APP_NAV_SECONDARY.map((item) =>
+        item.action === 'agentsyun' ? (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              openAgentsyunHub({}, openLogin);
+              handleNavigate();
+            }}
+            aria-label={collapsed ? item.label : undefined}
+            title={collapsed ? item.label : undefined}
+            className={NavItemStyles(false, collapsed)}
+          >
+            <item.icon
+              className={`shrink-0 ${collapsed ? 'w-6 h-6' : 'w-[22px] h-[22px]'}`}
+              strokeWidth={2}
+            />
+            {!collapsed && <span className="text-base truncate">{item.label}</span>}
+          </button>
+        ) : (
+          <SimpleNavLink
+            key={item.id}
+            to={item.to!}
+            label={item.label}
+            icon={item.icon}
+            active={isAppNavActive(item.id, location.pathname)}
+            collapsed={collapsed}
+            onClick={handleNavigate}
+          />
+        ),
+      )}
     </>
   );
 
@@ -310,6 +336,24 @@ function SidebarInner({
             type="button"
             onClick={() => {
               openLogin({ redirect: '/agents' });
+              handleNavigate();
+            }}
+            aria-label={collapsed ? item.label : undefined}
+            title={collapsed ? item.label : undefined}
+            className={NavItemStyles(false, collapsed)}
+          >
+            <item.icon
+              className={`shrink-0 ${collapsed ? 'w-6 h-6' : 'w-[22px] h-[22px]'}`}
+              strokeWidth={2}
+            />
+            {!collapsed && <span className="text-base truncate">{item.label}</span>}
+          </button>
+        ) : item.action === 'agentsyun' ? (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              openAgentsyunHub({ loginRedirect: '/agents' }, openLogin);
               handleNavigate();
             }}
             aria-label={collapsed ? item.label : undefined}
@@ -341,7 +385,7 @@ function SidebarInner({
     <div className="flex flex-col h-full min-h-0">
       <div
         className={`shrink-0 border-b border-[#f0f0f0] flex items-center ${
-          collapsed ? 'justify-center h-16 px-2' : 'justify-between h-16 px-4'
+          collapsed ? 'justify-center h-14 px-2' : 'justify-between h-14 px-3'
         }`}
       >
         <BrandMark
@@ -353,7 +397,7 @@ function SidebarInner({
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-black/45 hover:bg-[#f7f7f8] hover:text-black transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-black/45 hover:bg-[#f7f7f8] hover:text-black transition-colors"
             aria-label="收起侧边栏"
           >
             <PanelLeftClose className="w-5 h-5" />
@@ -374,12 +418,16 @@ function SidebarInner({
           collapsed={collapsed}
           moreOpen={moreOpen}
           onHermesClick={handleHermes}
-          onMoreClick={() => setMoreOpen((v) => !v)}
+          onMoreMouseEnter={openMoreMenu}
+          onMoreMouseLeave={scheduleCloseMoreMenu}
           moreButtonRef={moreButtonRef}
+          showDebug={mode === 'app'}
         />
         <SidebarMoreMenu
           open={moreOpen}
           onClose={() => setMoreOpen(false)}
+          onMouseEnter={openMoreMenu}
+          onMouseLeave={scheduleCloseMoreMenu}
           anchorRef={moreButtonRef}
         />
       </div>

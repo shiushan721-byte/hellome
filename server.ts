@@ -66,6 +66,10 @@ import {
   revokeHermesPairing,
 } from './src/server/hermesPairingService';
 import { createAuthKit } from './复用组件库/auth-login-kit/server-auth-kit';
+import { GnomicSsoError } from './src/server/gnomic/gnomicTypes';
+import { startGnomicSso } from './src/server/gnomic/gnomicSsoService';
+import { AgentsyunSsoError } from './src/server/agentsyun/agentsyunTypes';
+import { startAgentsyunSso } from './src/server/agentsyun/agentsyunSsoService';
 import { registerDbHealthRoute } from './src/server/bootstrap/dbHealth';
 import { assertDatabaseReady, isFallbackAllowed } from './src/server/db/runtime';
 
@@ -173,6 +177,94 @@ app.post('/api/billing/topups', async (req, res) => {
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : '充值失败',
+    });
+  }
+});
+
+app.post('/api/gnomic/sso/start', async (req, res) => {
+  const session = authKit.currentSession(req);
+  if (!session) {
+    res.status(401).json({
+      ok: false,
+      code: 'UNAUTHENTICATED',
+      message: '请先登录',
+    });
+    return;
+  }
+
+  try {
+    const result = await startGnomicSso({
+      hellomeUserId: session.user.phone,
+      phone: session.user.phone,
+      nickname: session.user.name,
+      templateId: typeof req.body?.templateId === 'string' ? req.body.templateId : undefined,
+      action: req.body?.action,
+      redirectPath: typeof req.body?.redirectPath === 'string' ? req.body.redirectPath : undefined,
+    });
+    res.json({ ok: true, redirectUrl: result.redirectUrl });
+  } catch (error) {
+    if (error instanceof GnomicSsoError) {
+      const status =
+        error.code === 'UNAUTHENTICATED'
+          ? 401
+          : error.code === 'INVALID_REDIRECT'
+            ? 400
+            : 502;
+      res.status(status).json({
+        ok: false,
+        code: error.code,
+        message: error.message,
+      });
+      return;
+    }
+
+    res.status(502).json({
+      ok: false,
+      code: 'GNOMIC_SERVICE_UNAVAILABLE',
+      message: 'Gnomic 服务暂时不可用，请稍后再试。',
+    });
+  }
+});
+
+app.post('/api/agentsyun/sso/start', async (req, res) => {
+  const session = authKit.currentSession(req);
+  if (!session) {
+    res.status(401).json({
+      ok: false,
+      code: 'UNAUTHENTICATED',
+      message: '请先登录',
+    });
+    return;
+  }
+
+  try {
+    const result = await startAgentsyunSso({
+      hellomeUserId: session.user.phone,
+      phone: session.user.phone,
+      nickname: session.user.name,
+      redirectPath: typeof req.body?.redirectPath === 'string' ? req.body.redirectPath : undefined,
+    });
+    res.json({ ok: true, redirectUrl: result.redirectUrl });
+  } catch (error) {
+    if (error instanceof AgentsyunSsoError) {
+      const status =
+        error.code === 'UNAUTHENTICATED'
+          ? 401
+          : error.code === 'INVALID_REDIRECT'
+            ? 400
+            : 502;
+      res.status(status).json({
+        ok: false,
+        code: error.code,
+        message: error.message,
+      });
+      return;
+    }
+
+    res.status(502).json({
+      ok: false,
+      code: 'AGENTSYUN_SERVICE_UNAVAILABLE',
+      message: 'Agent云 服务暂时不可用，请稍后再试。',
     });
   }
 });

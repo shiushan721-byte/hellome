@@ -1,21 +1,41 @@
 import { Zap } from 'lucide-react';
+import { useState } from 'react';
 import type { WorkflowMarketItem } from '../../../data/workflowMarket';
+import { useLoginModal } from '../../../context/LoginModalProvider';
+import { openGnomicTemplate } from '../../../lib/gnomicSso';
 
 interface WorkflowMarketCardProps {
   item: WorkflowMarketItem;
 }
 
-function openExternal(url: string) {
-  window.open(url, '_blank', 'noopener,noreferrer');
-}
-
 export default function WorkflowMarketCard({ item }: WorkflowMarketCardProps) {
+  const { openLogin } = useLoginModal();
+  const [opening, setOpening] = useState(false);
+
+  const handleOpen = async (action: 'experience' | 'clone') => {
+    if (opening) return;
+    setOpening(true);
+    try {
+      await openGnomicTemplate(
+        {
+          templateId: item.templateId,
+          action,
+          redirectPath: item.actionPath[action],
+        },
+        openLogin,
+      );
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
     <article className="group relative bg-white rounded-2xl border border-black/[0.04] shadow-sm overflow-hidden flex flex-col h-full">
       <button
         type="button"
-        onClick={() => openExternal(item.href)}
-        className="block w-full text-left"
+        onClick={() => void handleOpen('experience')}
+        disabled={opening}
+        className="block w-full text-left disabled:opacity-70"
       >
         <div
           className={`relative aspect-[4/3] bg-gradient-to-br ${item.coverGradient} flex items-center justify-center overflow-hidden`}
@@ -29,8 +49,9 @@ export default function WorkflowMarketCard({ item }: WorkflowMarketCardProps) {
       <div className="p-3.5 flex flex-col flex-1">
         <button
           type="button"
-          onClick={() => openExternal(item.href)}
-          className="text-left"
+          onClick={() => void handleOpen('experience')}
+          disabled={opening}
+          className="text-left disabled:opacity-70"
         >
           <h3 className="text-sm font-bold text-[#1A1A1A] leading-snug line-clamp-2 min-h-[2.5rem]">
             {item.title}
@@ -59,21 +80,23 @@ export default function WorkflowMarketCard({ item }: WorkflowMarketCardProps) {
       <div className="absolute inset-x-0 bottom-0 p-3 flex gap-2 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all pointer-events-none group-hover:pointer-events-auto">
         <button
           type="button"
+          disabled={opening}
           onClick={(e) => {
             e.stopPropagation();
-            openExternal(item.cloneHref);
+            void handleOpen('clone');
           }}
-          className="flex-1 h-9 rounded-full bg-[#3861FB] text-white text-xs font-bold hover:bg-[#2f52d9]"
+          className="flex-1 h-9 rounded-full bg-[#3861FB] text-white text-xs font-bold hover:bg-[#2f52d9] disabled:opacity-70"
         >
           制作同款
         </button>
         <button
           type="button"
+          disabled={opening}
           onClick={(e) => {
             e.stopPropagation();
-            openExternal(item.href);
+            void handleOpen('experience');
           }}
-          className="flex-1 h-9 rounded-full bg-[#3861FB] text-white text-xs font-bold hover:bg-[#2f52d9]"
+          className="flex-1 h-9 rounded-full bg-[#3861FB] text-white text-xs font-bold hover:bg-[#2f52d9] disabled:opacity-70"
         >
           体验
         </button>

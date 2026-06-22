@@ -1,6 +1,8 @@
 import { isAuthenticated } from './auth';
 import { isHermesConnected } from './firstRunOnboarding';
 import { openAgentWorkspace, getAgentWorkspacePath } from './openAgentWorkspace';
+import type { PendingGnomicIntent } from './gnomicSso';
+import type { PendingAgentsyunIntent } from './agentsyunSso';
 
 export type AgentIntentAction = 'use' | 'view' | 'enter';
 export type UserAccessLevel = 'visitor' | 'logged_in_unpaired' | 'logged_in_paired';
@@ -9,6 +11,8 @@ export interface PendingAgentIntent {
   redirect?: string;
   agentId?: string;
   action?: AgentIntentAction;
+  gnomic?: PendingGnomicIntent;
+  agentsyun?: PendingAgentsyunIntent;
 }
 
 const STORAGE_KEY = 'hellome_pending_agent_intent';
@@ -47,6 +51,8 @@ export function mergeIntent(base: PendingAgentIntent, extra: PendingAgentIntent)
     redirect: extra.redirect ?? base.redirect,
     agentId: extra.agentId ?? base.agentId,
     action: extra.action ?? base.action,
+    gnomic: extra.gnomic ?? base.gnomic,
+    agentsyun: extra.agentsyun ?? base.agentsyun,
   };
 }
 

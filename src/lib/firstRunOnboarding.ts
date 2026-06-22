@@ -23,6 +23,7 @@ export interface FirstRunOnboardingState {
 export function mapToFirstRunStatus(snapshot: HermesConnectionSnapshot): FirstRunHermesStatus {
   switch (snapshot.status) {
     case 'connected':
+    case 'me_running':
       return 'connected';
     case 'offline':
       return 'offline';
@@ -55,7 +56,8 @@ export function buildOnboardingState(
 }
 
 export function isHermesConnected(): boolean {
-  return getHermesConnection().status === 'connected';
+  const status = getHermesConnection().status;
+  return status === 'connected' || status === 'me_running';
 }
 
 export function isWorkbenchNavRestricted(): boolean {

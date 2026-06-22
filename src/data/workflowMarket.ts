@@ -1,4 +1,4 @@
-/** Gnomic 工作流模板市场数据 — 跳转至 https://www.gnomic.cn/workspace */
+/** Gnomic 工作流模板市场数据 — 点击后走 HelloMe SSO 跳转 */
 
 export type WorkflowCategory =
   | 'all'
@@ -10,6 +10,8 @@ export type WorkflowCategory =
   | 'dev'
   | 'life';
 
+export type WorkflowGnomicAction = 'view' | 'experience' | 'clone';
+
 export interface WorkflowMarketAuthor {
   name: string;
   avatarLabel: string;
@@ -19,19 +21,19 @@ export interface WorkflowMarketAuthor {
 export interface WorkflowMarketItem {
   id: string;
   title: string;
+  templateId: string;
   category: Exclude<WorkflowCategory, 'all'>;
   coverGradient: string;
   coverLabel: string;
   author: WorkflowMarketAuthor;
   publishedAt: string;
   pricePerRun: number;
-  /** Gnomic 模板详情 / 体验页 */
-  href: string;
-  /** 制作同款 */
-  cloneHref: string;
+  actionPath: {
+    view: string;
+    experience: string;
+    clone: string;
+  };
 }
-
-export const WORKFLOW_MARKET_BASE = 'https://www.gnomic.cn/workspace';
 
 export const WORKFLOW_CATEGORIES: Array<{ id: WorkflowCategory; label: string }> = [
   { id: 'all', label: '全部' },
@@ -44,13 +46,30 @@ export const WORKFLOW_CATEGORIES: Array<{ id: WorkflowCategory; label: string }>
   { id: 'life', label: '生活服务' },
 ];
 
-function gnomicWorkflowUrl(templateKey: string, action: 'view' | 'experience' | 'clone' = 'view'): string {
-  const params = new URLSearchParams({ template: templateKey, action });
-  return `${WORKFLOW_MARKET_BASE}?${params.toString()}`;
+function buildActionPath(templateId: string): WorkflowMarketItem['actionPath'] {
+  const viewParams = new URLSearchParams({ template: templateId, action: 'view' });
+  const experienceParams = new URLSearchParams({ template: templateId, action: 'experience' });
+  const cloneParams = new URLSearchParams({ template: templateId, action: 'clone' });
+  return {
+    view: `/workspace?${viewParams.toString()}`,
+    experience: `/workspace?${experienceParams.toString()}`,
+    clone: `/workspace?${cloneParams.toString()}`,
+  };
+}
+
+function createWorkflowItem(
+  item: Omit<WorkflowMarketItem, 'templateId' | 'actionPath'> & { id: string },
+): WorkflowMarketItem {
+  const templateId = item.id;
+  return {
+    ...item,
+    templateId,
+    actionPath: buildActionPath(templateId),
+  };
 }
 
 export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
-  {
+  createWorkflowItem({
     id: 'smart-matting',
     title: '一键智能抠图',
     category: 'design',
@@ -59,10 +78,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.03.23',
     pricePerRun: 23,
-    href: gnomicWorkflowUrl('smart-matting', 'experience'),
-    cloneHref: gnomicWorkflowUrl('smart-matting', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'festival-poster',
     title: '节日海报生成工作流',
     category: 'marketing',
@@ -71,10 +88,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.03.23',
     pricePerRun: 23,
-    href: gnomicWorkflowUrl('festival-poster', 'experience'),
-    cloneHref: gnomicWorkflowUrl('festival-poster', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'photo-restore',
     title: '老照片修复工作流',
     category: 'design',
@@ -83,10 +98,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.03.23',
     pricePerRun: 28,
-    href: gnomicWorkflowUrl('photo-restore', 'experience'),
-    cloneHref: gnomicWorkflowUrl('photo-restore', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'province-ai-report',
     title: '省份AI产业新闻检索与政府报告生成',
     category: 'data',
@@ -95,10 +108,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.03.23',
     pricePerRun: 75,
-    href: gnomicWorkflowUrl('province-ai-report', 'experience'),
-    cloneHref: gnomicWorkflowUrl('province-ai-report', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'news-daily-email',
     title: '新闻日报生成与邮件发布',
     category: 'office',
@@ -107,10 +118,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.03.23',
     pricePerRun: 45,
-    href: gnomicWorkflowUrl('news-daily-email', 'experience'),
-    cloneHref: gnomicWorkflowUrl('news-daily-email', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'hot-poster',
     title: '热点海报生成工作流',
     category: 'marketing',
@@ -119,10 +128,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.03.23',
     pricePerRun: 38,
-    href: gnomicWorkflowUrl('hot-poster', 'experience'),
-    cloneHref: gnomicWorkflowUrl('hot-poster', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'wechat-layout',
     title: '公众号智能排版工作流',
     category: 'content',
@@ -131,10 +138,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: '月醉', avatarLabel: '月', avatarBg: '#7C6AE8' },
     publishedAt: '2025.12.04',
     pricePerRun: 12,
-    href: gnomicWorkflowUrl('wechat-layout', 'experience'),
-    cloneHref: gnomicWorkflowUrl('wechat-layout', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'taobao-pick',
     title: '淘宝选品工作流',
     category: 'marketing',
@@ -143,10 +148,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: '好运连连', avatarLabel: '运', avatarBg: '#F59E0B' },
     publishedAt: '2025.09.22',
     pricePerRun: 16,
-    href: gnomicWorkflowUrl('taobao-pick', 'experience'),
-    cloneHref: gnomicWorkflowUrl('taobao-pick', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'doc-summary',
     title: '长文档智能摘要工作流',
     category: 'office',
@@ -155,10 +158,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.02.18',
     pricePerRun: 18,
-    href: gnomicWorkflowUrl('doc-summary', 'experience'),
-    cloneHref: gnomicWorkflowUrl('doc-summary', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'meeting-minutes',
     title: '会议纪要自动生成',
     category: 'office',
@@ -167,10 +168,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2026.01.12',
     pricePerRun: 20,
-    href: gnomicWorkflowUrl('meeting-minutes', 'experience'),
-    cloneHref: gnomicWorkflowUrl('meeting-minutes', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'data-clean',
     title: '表格数据清洗与标准化',
     category: 'data',
@@ -179,10 +178,8 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: 'Gnomic官方', avatarLabel: 'G', avatarBg: '#3861FB' },
     publishedAt: '2025.11.08',
     pricePerRun: 32,
-    href: gnomicWorkflowUrl('data-clean', 'experience'),
-    cloneHref: gnomicWorkflowUrl('data-clean', 'clone'),
-  },
-  {
+  }),
+  createWorkflowItem({
     id: 'travel-plan',
     title: '旅行攻略一键生成',
     category: 'life',
@@ -191,9 +188,7 @@ export const WORKFLOW_MARKET_ITEMS: WorkflowMarketItem[] = [
     author: { name: '小鹿', avatarLabel: '鹿', avatarBg: '#10B981' },
     publishedAt: '2025.10.15',
     pricePerRun: 14,
-    href: gnomicWorkflowUrl('travel-plan', 'experience'),
-    cloneHref: gnomicWorkflowUrl('travel-plan', 'clone'),
-  },
+  }),
 ];
 
 export function filterWorkflowMarketItems(

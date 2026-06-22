@@ -81,6 +81,28 @@ export function getTask(id: string): Task | undefined {
   return getTasks().find((t) => t.id === id);
 }
 
+function taskFinishedAt(task: Task): string {
+  return task.completedAt ?? task.updatedAt ?? task.createdAt;
+}
+
+/** 至少完整运行过一次（任务状态为 completed）的智能体，按最近完成时间倒序 */
+export function getFullyRunAgentIds(): string[] {
+  const latestByAgent = new Map<string, string>();
+
+  for (const task of getTasks()) {
+    if (task.status !== 'completed') continue;
+    const finishedAt = taskFinishedAt(task);
+    const previous = latestByAgent.get(task.agentType);
+    if (!previous || new Date(finishedAt).getTime() > new Date(previous).getTime()) {
+      latestByAgent.set(task.agentType, finishedAt);
+    }
+  }
+
+  return [...latestByAgent.entries()]
+    .sort((a, b) => new Date(b[1]).getTime() - new Date(a[1]).getTime())
+    .map(([agentId]) => agentId);
+}
+
 export function saveTask(task: Task): void {
   const tasks = [...getTasks()];
   const idx = tasks.findIndex((t) => t.id === task.id);

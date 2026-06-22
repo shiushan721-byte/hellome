@@ -1,9 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, X } from 'lucide-react';
 import AgentIcon from './agents/AgentIcon';
 import { CATEGORIES, getAgentById, type AgentCategory } from '../../data/agentsCatalog';
+import { getFullyRunAgentIds, getTasks, subscribeTasks } from '../../lib/taskStore';
 import { isAgentTabOpen } from '../../lib/workbenchTabs';
 import type { EnabledAgentSummary } from '../../types/homeDashboard';
+
+type OpenAgentFilter = AgentCategory | 'recent';
+
+const FILTER_TABS: Array<{ id: OpenAgentFilter; label: string }> = [
+  { id: 'all', label: '全部' },
+  { id: 'recent', label: '最近使用' },
+  ...CATEGORIES.filter((cat) => cat.id !== 'all'),
+];
 
 const CARD_MIN_HEIGHT = 180;
 const GRID_GAP = 12;
@@ -59,16 +69,26 @@ export default function WorkbenchOpenAgentModal({
   onOpen,
   onClose,
 }: WorkbenchOpenAgentModalProps) {
-  const [category, setCategory] = useState<AgentCategory>('all');
+  const [category, setCategory] = useState<OpenAgentFilter>('all');
   const [query, setQuery] = useState('');
+  const taskRevision = useSyncExternalStore(
+    subscribeTasks,
+    () => getTasks().map((task) => `${task.id}:${task.status}:${task.updatedAt}`).join(','),
+    () => '',
+  );
 
-  const listHeight = useMemo(() => gridContentHeight(agents.length), [agents.length]);
+  const fullyRunAgentIds = useMemo(() => getFullyRunAgentIds(), [taskRevision]);
 
   const filteredAgents = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return agents.filter((agent) => {
+    const filtered = agents.filter((agent) => {
       const catalog = getAgentById(agent.agentId);
-      const matchCategory = category === 'all' || catalog?.category === category;
+      const matchCategory =
+        category === 'all'
+          ? true
+          : category === 'recent'
+            ? fullyRunAgentIds.includes(agent.agentId)
+            : catalog?.category === category;
       const matchQuery =
         !q ||
         agent.name.toLowerCase().includes(q) ||
@@ -76,10 +96,21 @@ export default function WorkbenchOpenAgentModal({
         catalog?.creator.toLowerCase().includes(q);
       return matchCategory && matchQuery;
     });
-  }, [agents, category, query]);
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/25 flex items-center justify-center p-4" onClick={onClose}>
+    if (category !== 'recent') return filtered;
+
+    return filtered.sort(
+      (a, b) => fullyRunAgentIds.indexOf(a.agentId) - fullyRunAgentIds.indexOf(b.agentId),
+    );
+  }, [agents, category, fullyRunAgentIds, query]);
+
+  const listHeight = useMemo(
+    () => gridContentHeight(filteredAgents.length),
+    [filteredAgents.length],
+  );
+
+  const modal = (
+    <div className="fixed inset-0 z-[100] bg-black/25 flex items-center justify-center p-4" onClick={onClose}>
       <div
         className="w-full max-w-5xl bg-white border border-black/10 rounded-2xl shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -108,7 +139,7 @@ export default function WorkbenchOpenAgentModal({
 
         <div className="px-4 py-3 bg-[#F5F5F7] border-b border-black/6">
           <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1">
-            {CATEGORIES.map((cat) => (
+            {FILTER_TABS.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
@@ -127,10 +158,12 @@ export default function WorkbenchOpenAgentModal({
 
         <div
           className="p-4 overflow-y-auto bg-[#F5F5F7]"
-          style={{ height: `min(${listHeight + 32}px, 60vh)` }}
+          style={{ maxHeight: `min(${listHeight + 32}px, 60vh)` }}
         >
           {filteredAgents.length === 0 ? (
-            <p className="py-8 text-center text-xs text-black/45">未找到匹配的智能体</p>
+            <p className="py-8 text-center text-xs text-black/45">
+              {category === 'recent' ? '暂无完整运行过的智能体' : '未找到匹配的智能体'}
+            </p>
           ) : (
             <div className="grid grid-cols-3 gap-3">
               {filteredAgents.map((agent) => (
@@ -147,4 +180,6 @@ export default function WorkbenchOpenAgentModal({
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

@@ -219,21 +219,24 @@ function MarketAgentGrid({
   return (
     <section className="space-y-4">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1">
-          {CATEGORIES.map((cat) => (
+        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
+          {CATEGORIES.map((cat) => {
+            const active = category === cat.id;
+            return (
             <button
               key={cat.id}
               type="button"
               onClick={() => setCategory(cat.id)}
-              className={`shrink-0 px-4 py-2 text-sm rounded-xl transition-colors ${
-                category === cat.id
-                  ? 'bg-white text-[#1A1A1A] font-medium shadow-sm'
-                  : 'text-black/45 hover:text-black/70'
+              className={`shrink-0 px-4 py-2 text-sm rounded-full transition-colors ${
+                active
+                  ? 'bg-[#1A1A1A] text-white font-medium'
+                  : 'bg-white text-black/55 hover:text-black/75 border border-black/[0.04]'
               }`}
             >
               {cat.label}
             </button>
-          ))}
+            );
+          })}
         </div>
         <div className="relative w-full lg:w-72 shrink-0">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black/30" />

@@ -6,6 +6,7 @@ export type HermesConnectionStatus =
   | 'not_paired'
   | 'pairing'
   | 'connected'
+  | 'me_running'
   | 'offline'
   | 'account_mismatch'
   | 'version_unsupported'
@@ -41,7 +42,8 @@ export type HermesDebugPreset =
   | 'not_paired'
   | 'account_mismatch'
   | 'offline'
-  | 'paired';
+  | 'paired'
+  | 'me_running';
 
 const DEFAULT_SNAPSHOT: HermesConnectionSnapshot = {
   status: 'not_paired',
@@ -288,6 +290,25 @@ export function applyHermesDebugPreset(preset: HermesDebugPreset): HermesConnect
   if (preset === 'offline') {
     pairHermesWithCurrentAccount();
     return markHermesOffline();
+  }
+
+  if (preset === 'me_running') {
+    const next: HermesConnectionSnapshot = {
+      status: 'me_running',
+      device: {
+        id: 'Hz-Hermes',
+        deviceName: 'Shiushan 的电脑',
+        os: 'macos',
+        version: 'v0.2.3',
+        accountEmail: account || 'debug@example.com',
+        pairedAt: now,
+        lastSeenAt: now,
+        status: 'me_running',
+        capabilities: ['browser_automation', 'webchat_bridge', 'file_access', 'message_platforms'],
+      },
+    };
+    setHermesConnection(next);
+    return next;
   }
 
   const next: HermesConnectionSnapshot = {

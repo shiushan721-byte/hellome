@@ -20,6 +20,8 @@ const SOCIAL_LINKS = [
 interface SidebarMoreMenuProps {
   open: boolean;
   onClose: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
   anchorRef: RefObject<HTMLElement | null>;
 }
 
@@ -57,6 +59,8 @@ function useMenuPosition(anchorRef: RefObject<HTMLElement | null>, open: boolean
 export default function SidebarMoreMenu({
   open,
   onClose,
+  onMouseEnter,
+  onMouseLeave,
   anchorRef,
 }: SidebarMoreMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -65,24 +69,15 @@ export default function SidebarMoreMenu({
   useEffect(() => {
     if (!open) return;
 
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if (anchorRef.current?.contains(target)) return;
-      onClose();
-    };
-
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
     };
 
-    document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleEscape);
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [open, onClose, anchorRef]);
+  }, [open, onClose]);
 
   if (!open || !position) return null;
 
@@ -91,6 +86,8 @@ export default function SidebarMoreMenu({
       ref={panelRef}
       role="dialog"
       aria-label="更多菜单"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className="fixed z-[80] w-[340px] rounded-2xl border border-black/[0.06] bg-white p-6 shadow-[0_12px_32px_rgba(0,0,0,0.12)]"
       style={{
         left: position.left,

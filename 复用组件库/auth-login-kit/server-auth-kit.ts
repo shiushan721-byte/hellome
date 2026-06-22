@@ -140,8 +140,27 @@ function currentSession(req: express.Request): DemoSession | null {
   return session;
 }
 
+function getDemoVerificationCodeForPhone(phone: string): string | null {
+  if (process.env.NODE_ENV === 'production') return null;
+  const account = findDemoAccount(phone);
+  if (!account) return null;
+
+  if (account.role === 'admin') {
+    return process.env.DEMO_ADMIN_CODE?.trim() || '123456';
+  }
+  if (account.role === 'creator') {
+    return process.env.DEMO_CREATOR_CODE?.trim() || '123456';
+  }
+  return process.env.DEMO_USER_CODE?.trim() || '123456';
+}
+
 function isVerificationCodeValid(phone: string, code: string): boolean {
   const normalizedPhone = phone.replace(/\D/g, '');
+  const demoCode = getDemoVerificationCodeForPhone(normalizedPhone);
+  if (demoCode && demoCode === code.trim()) {
+    return true;
+  }
+
   const record = verificationCodes.get(normalizedPhone);
   if (!record) return false;
   if (Date.now() > record.expiresAt) {
@@ -261,39 +280,44 @@ export function createAuthKit() {
       });
 
       app.post('/api/auth/login', async (req, res) => {
-        const phone = String(req.body?.phone ?? '').replace(/\D/g, '');
-        const code = String(req.body?.code ?? '').trim();
+        try {
+          const phone = String(req.body?.phone ?? '').replace(/\D/g, '');
+          const code = String(req.body?.code ?? '').trim();
 
-        if (phone.length !== 11) {
-          res.status(400).json({ success: false, error: '请输入 11 位手机号' });
-          return;
+          if (phone.length !== 11) {
+            res.status(400).json({ success: false, error: '请输入 11 位手机号' });
+            return;
+          }
+
+          if (!isVerificationCodeValid(phone, code)) {
+            res.status(401).json({ success: false, error: '手机号或验证码错误' });
+            return;
+          }
+
+          verificationCodes.delete(phone);
+          const user = await ensureUserRecord(buildUserProfile(phone));
+
+          const sessionId = crypto.randomUUID();
+          const session: DemoSession = {
+            id: sessionId,
+            user,
+            createdAt: Date.now(),
+          };
+
+          demoSessions.set(sessionId, session);
+          setSessionCookie(res, sessionId);
+
+          res.json({
+            success: true,
+            data: {
+              authenticated: true,
+              user: session.user,
+            },
+          });
+        } catch (error) {
+          console.error('[auth/login]', error);
+          res.status(500).json({ success: false, error: '登录失败，请稍后重试' });
         }
-
-        if (!isVerificationCodeValid(phone, code)) {
-          res.status(401).json({ success: false, error: '手机号或验证码错误' });
-          return;
-        }
-
-        verificationCodes.delete(phone);
-        const user = await ensureUserRecord(buildUserProfile(phone));
-
-        const sessionId = crypto.randomUUID();
-        const session: DemoSession = {
-          id: sessionId,
-          user,
-          createdAt: Date.now(),
-        };
-
-        demoSessions.set(sessionId, session);
-        setSessionCookie(res, sessionId);
-
-        res.json({
-          success: true,
-          data: {
-            authenticated: true,
-            user: session.user,
-          },
-        });
       });
 
       app.get('/api/auth/me', (req, res) => {

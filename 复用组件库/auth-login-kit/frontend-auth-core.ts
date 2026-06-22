@@ -9,6 +9,7 @@ const AUTH_KEY = 'hellome_auth';
 const USER_KEY = 'hellome_user';
 
 export const DEFAULT_LOGIN_PHONE = '13800138000';
+export const DEMO_VERIFICATION_CODE = '123456';
 
 export const DEMO_ACCOUNT_PRESETS: DemoAccountPreset[] = [
   {
@@ -88,20 +89,74 @@ export function canAccessAdmin(): boolean {
   return getUserRole() === 'admin';
 }
 
+export function isDemoVerificationCode(phone: string, code: string): boolean {
+  const normalizedPhone = phone.replace(/\D/g, '');
+  const matched = DEMO_ACCOUNT_PRESETS.some(
+    (preset) => preset.phone.replace(/\D/g, '') === normalizedPhone,
+  );
+  return matched && code.trim() === DEMO_VERIFICATION_CODE;
+}
+
+export function buildOfflineDemoUser(phone: string): UserProfile | null {
+  const normalizedPhone = phone.replace(/\D/g, '');
+  const preset = DEMO_ACCOUNT_PRESETS.find(
+    (item) => item.phone.replace(/\D/g, '') === normalizedPhone,
+  );
+  if (!preset) return null;
+
+  const workspaceByRole: Record<UserRole, string> = {
+    user: '个人空间',
+    creator: 'Creator Studio',
+    admin: 'HelloMe Demo Workspace',
+  };
+  const nameByRole: Record<UserRole, string> = {
+    user: 'HelloMe 普通用户',
+    creator: 'HelloMe 创作者',
+    admin: 'HelloMe 演示管理员',
+  };
+  const emailByRole: Record<UserRole, string> = {
+    user: 'user@hellome.ai',
+    creator: 'creator@hellome.ai',
+    admin: 'admin@hellome.ai',
+  };
+
+  return {
+    name: nameByRole[preset.role],
+    phone: normalizedPhone,
+    email: emailByRole[preset.role],
+    workspace: workspaceByRole[preset.role],
+    role: preset.role,
+  };
+}
+
+async function readJsonResponse<T>(response: Response, emptyMessage: string): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new Error(emptyMessage);
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error('服务响应异常，请确认 HelloMe 开发服务已启动后重试');
+  }
+}
+
 export async function requestLoginCode(phone: string): Promise<SendCodeResult> {
   const response = await fetch('/api/auth/send-code', {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ phone }),
   });
 
-  const json = (await response.json()) as {
+  const json = await readJsonResponse<{
     success: boolean;
     data?: SendCodeResult;
     error?: string;
-  };
+  }>(response, '验证码服务无响应，请重启 HelloMe 开发服务后重试');
 
   if (!response.ok || !json.success || !json.data) {
     throw new Error(json.error || '验证码发送失败');
@@ -111,26 +166,38 @@ export async function requestLoginCode(phone: string): Promise<SendCodeResult> {
 }
 
 export async function loginWithPhone(phone: string, code: string): Promise<UserProfile> {
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ phone, code }),
-  });
+  try {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone, code }),
+    });
 
-  const json = (await response.json()) as {
-    success: boolean;
-    data?: { user: UserProfile };
-    error?: string;
-  };
+    const json = await readJsonResponse<{
+      success: boolean;
+      data?: { user: UserProfile };
+      error?: string;
+    }>(response, '登录服务无响应，请重启 HelloMe 开发服务后重试');
 
-  if (!response.ok || !json.success || !json.data?.user) {
-    throw new Error(json.error || '登录失败');
+    if (!response.ok || !json.success || !json.data?.user) {
+      throw new Error(json.error || '登录失败');
+    }
+
+    persistAuthState(true, json.data.user);
+    return json.data.user;
+  } catch (error) {
+    if (isDemoVerificationCode(phone, code)) {
+      const user = buildOfflineDemoUser(phone);
+      if (user) {
+        persistAuthState(true, user);
+        return user;
+      }
+    }
+    throw error;
   }
-
-  persistAuthState(true, json.data.user);
-  return json.data.user;
 }
 
 export async function syncAuthSession(): Promise<UserProfile | null> {
@@ -138,10 +205,10 @@ export async function syncAuthSession(): Promise<UserProfile | null> {
     const response = await fetch('/api/auth/me', {
       credentials: 'include',
     });
-    const json = (await response.json()) as {
+    const json = await readJsonResponse<{
       success: boolean;
       data?: { authenticated: boolean; user?: UserProfile };
-    };
+    }>(response, '会话服务无响应');
 
     if (!response.ok || !json.success || !json.data?.authenticated || !json.data.user) {
       persistAuthState(false, null);
