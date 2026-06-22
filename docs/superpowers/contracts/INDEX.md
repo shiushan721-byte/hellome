@@ -16,6 +16,7 @@
 | **[integration-checklist.md](./integration-checklist.md)** | 集成 / 测试 | 集成清单 + 测试模板 + 失败回退 |
 | **[admin-skills.md](./admin-skills.md)** | 前端 / ops | `/api/admin/skills` 跨三层 skill 总览契约 |
 | **[audio-extension.md](./audio-extension.md)** | 后端 / 第三方 | **音频 / 配音 / 唇同步 扩展契约（Phase A1 TTS ✅ 完成）** |
+| **[video-quality-troubleshooting.md](./video-quality-troubleshooting.md)** | 前端 / 测试 | **Wan 2.2 画屏 / 闪烁 / 撕裂 排查**（降分辨率/步数是 90% 修法）|
 
 ---
 

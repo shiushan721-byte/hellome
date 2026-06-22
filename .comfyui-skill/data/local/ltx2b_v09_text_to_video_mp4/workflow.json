@@ -1,0 +1,166 @@
+{
+  "10": {
+    "inputs": {
+      "ckpt_name": "ltx-video-2b-v0.9.5.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load LTX 2B v0.9.5 (unet only)"
+    }
+  },
+  "15": {
+    "inputs": {
+      "clip_name": "t5xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "ltxv",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load T5XXL text encoder"
+    }
+  },
+  "20": {
+    "inputs": {
+      "vae_name": "LTX23_video_vae_bf16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load LTX VAE (compatible with 1.x + 2.3)"
+    }
+  },
+  "30": {
+    "inputs": {
+      "text": "a cute red fox walking in a misty forest at dawn, cinematic lighting, smooth motion",
+      "clip": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "35": {
+    "inputs": {
+      "text": "blurry, ugly, deformed, low quality, static, jittery",
+      "clip": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative Prompt"
+    }
+  },
+  "40": {
+    "inputs": {
+      "width": 768,
+      "height": 512,
+      "batch_size": 1,
+      "length": 97
+    },
+    "class_type": "EmptyLTXVLatentVideo",
+    "_meta": {
+      "title": "Empty Latent (97 frames @ 768x512)"
+    }
+  },
+  "45": {
+    "inputs": {
+      "model": [
+        "10",
+        0
+      ],
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "latent": [
+        "40",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingLTXV",
+    "_meta": {
+      "title": "Model Sampling LTXV (shift)"
+    }
+  },
+  "50": {
+    "inputs": {
+      "steps": 20,
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "stretch": true,
+      "terminal": 0.1
+    },
+    "class_type": "LTXVScheduler",
+    "_meta": {
+      "title": "LTX Scheduler (1.x required)"
+    }
+  },
+  "55": {
+    "inputs": {
+      "seed": 42,
+      "steps": 20,
+      "cfg": 4.0,
+      "sampler_name": "euler",
+      "scheduler": "ltxv_scheduler",
+      "denoise": 1.0,
+      "model": [
+        "45",
+        0
+      ],
+      "positive": [
+        "30",
+        0
+      ],
+      "negative": [
+        "35",
+        0
+      ],
+      "latent_image": [
+        "40",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (LTX 2B with LTXVScheduler)"
+    }
+  },
+  "60": {
+    "inputs": {
+      "samples": [
+        "55",
+        0
+      ],
+      "vae": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode (LTX 2B)"
+    }
+  },
+  "70": {
+    "inputs": {
+      "images": [
+        "60",
+        0
+      ],
+      "frame_rate": 25,
+      "loop_count": 0,
+      "filename_prefix": "ltx2b_v4",
+      "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": true,
+      "crf": 19,
+      "pix_fmt": "yuv420p"
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Save MP4"
+    }
+  }
+}

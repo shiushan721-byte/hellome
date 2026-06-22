@@ -386,9 +386,9 @@
         "Node name for S&R": "Wan22ImageToVideoLatent"
       },
       "widgets_values": [
-        1280,
         704,
-        41,
+        1280,
+        241,
         1
       ]
     },

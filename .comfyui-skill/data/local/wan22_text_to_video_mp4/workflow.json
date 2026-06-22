@@ -121,9 +121,9 @@
         0
       ],
       "start_image": null,
-      "width": 1280,
-      "height": 704,
-      "length": 41,
+      "width": 704,
+      "height": 1280,
+      "length": 241,
       "batch_size": 1
     },
     "class_type": "Wan22ImageToVideoLatent",

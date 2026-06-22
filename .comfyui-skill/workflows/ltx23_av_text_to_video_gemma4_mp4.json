@@ -5,7 +5,7 @@
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
-    "_meta": {"title": "Load LTX 2.3 Diffusion Model"}
+    "_meta": {"title": "Load LTX 2.3 Diffusion Model (fp8 scaled)"}
   },
   "15": {
     "inputs": {
@@ -19,12 +19,12 @@
   },
   "20": {
     "inputs": {
-      "text_encoder": "qwen_3_4b_fp8_mixed.safetensors",
-      "ckpt_name": "ltx-2.3_text_projection_bf16.safetensors",
-      "device": "default"
+      "clip_name1": "gemma-3-12b-it-Q4_K_M.gguf",
+      "clip_name2": "gemma-3-12b-it-Q4_K_M.gguf",
+      "type": "ltxv"
     },
-    "class_type": "LTXAVTextEncoderLoader",
-    "_meta": {"title": "Load LTX 2.3 AV Text Encoder"}
+    "class_type": "DualCLIPLoaderGGUF",
+    "_meta": {"title": "Load gemma-3 12B GGUF (dual CLIP)"}
   },
   "30": {
     "inputs": {
@@ -133,7 +133,7 @@
       "images": ["120", 0],
       "frame_rate": 25,
       "loop_count": 0,
-      "filename_prefix": "ltx23_v",
+      "filename_prefix": "ltx23_gemma4",
       "format": "video/h264-mp4",
       "pingpong": false,
       "save_output": true,

@@ -1,14 +1,36 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronDown, ImagePlus, Link2, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  Clock3,
+  ImagePlus,
+  Link2,
+  ListTodo,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import { getAgentById } from '../../data/agentsCatalog';
 import { getVideoAgentProfile } from '../../config/videoAgentProfiles';
 import type { AgentEntryState } from '../../types/agentNavigation';
-import { createRemoteUgcTask, uploadTaskFile } from '../../lib/taskApi';
+import {
+  cancelRemoteTask,
+  confirmRemoteTask,
+  createRemoteUgcTask,
+  getRemoteTask,
+  retryRemoteTask,
+  uploadTaskFile,
+} from '../../lib/taskApi';
 import { getSkillExperienceConfig } from '../../lib/skillStudioApi';
 import type { SkillExperienceConfig } from '../../types/skills';
 import { buildWorkbenchShowcaseVideo } from '../../lib/publishedMarketModel';
-import type { UgcTaskInput } from '../../types/ugc';
+import type { UgcTaskEvent, UgcTaskInput } from '../../types/ugc';
+import type { Task, TaskStatus } from '../../types/workbench';
+import ConfirmationNode from '../../components/app/tasks/ConfirmationNode';
+import HermesLogPanel from '../../components/app/tasks/HermesLogPanel';
+import TaskStatusBadge from '../../components/app/tasks/TaskStatusBadge';
+import UgcDeliveryPanel from '../../components/app/tasks/UgcDeliveryPanel';
 
 type ExecutionPreset = {
   platform: string;
@@ -39,6 +61,10 @@ type BusinessBlueprint = {
   defaultShowcaseCopy: string;
   examples: string[];
   stageHints: [string, string, string];
+};
+
+type LiveRemoteTask = Task & {
+  events: UgcTaskEvent[];
 };
 
 const ALLOWED_UPLOAD_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -168,9 +194,8 @@ export default function UgcVideoAgentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showOptionalSettings, setShowOptionalSettings] = useState(false);
-  const [showTaskNotes, setShowTaskNotes] = useState(false);
-  const [showBudgetNotes, setShowBudgetNotes] = useState(false);
-  const [showDeliveryNotes, setShowDeliveryNotes] = useState(false);
+  const [activeTask, setActiveTask] = useState<LiveRemoteTask | null>(null);
+  const [taskError, setTaskError] = useState('');
 
   const title = skillExperience?.title ?? profile?.title ?? '视频智能体';
   const promiseLine =
@@ -221,8 +246,21 @@ export default function UgcVideoAgentPage() {
 
   const selectionReady = businessBlueprint.groups.every((group) => Boolean(selectedOptions[group.id]));
   const hasCoreInput = Boolean(productAsset && selectionReady && businessDescription.trim());
-  const stage: 'default' | 'prepared' = hasCoreInput ? 'prepared' : 'default';
-  const primaryActionLabel = isSubmitting ? '创建任务中…' : '确认并开始样片生成';
+  const taskStatus = activeTask?.status;
+  const taskIsTerminal = taskStatus ? isTerminalTaskStatus(taskStatus) : false;
+  const formLocked = Boolean(activeTask && !taskIsTerminal);
+  const stage: 'default' | 'prepared' | 'live' = activeTask ? 'live' : hasCoreInput ? 'prepared' : 'default';
+  const primaryActionLabel = resolvePrimaryActionLabel({
+    isSubmitting,
+    activeTask,
+    hasCoreInput,
+  });
+  const materialStatus = productAsset
+    ? talentAsset
+      ? '已上传产品图与人物图'
+      : '已上传产品图，可直接开始'
+    : '待上传至少一张产品图';
+  const conciseSpec = `${executionPreset.platform} · ${executionPreset.formatLabel}`;
   const stageHeadline =
     stage === 'prepared' ? `系统将按这次内容生成${businessBlueprint.draftLabel}` : businessBlueprint.defaultShowcaseTitle;
   const stageDescription =
@@ -230,8 +268,39 @@ export default function UgcVideoAgentPage() {
       ? businessDescription.trim()
       : businessBlueprint.defaultShowcaseCopy;
 
+  useEffect(() => {
+    if (!activeTask?.id || !activeTask.status || isTerminalTaskStatus(activeTask.status)) return;
+    let cancelled = false;
+    const taskId = activeTask.id;
+
+    const load = async () => {
+      try {
+        const next = await getRemoteTask(taskId);
+        if (!cancelled) {
+          setActiveTask(next);
+          setTaskError('');
+        }
+      } catch (fetchError) {
+        if (!cancelled) {
+          setTaskError(fetchError instanceof Error ? fetchError.message : '读取任务状态失败');
+        }
+      }
+    };
+
+    void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [activeTask?.id, activeTask?.status]);
+
   const handleUpload = async (file: File | undefined, kind: UploadKind) => {
     if (!file) return;
+    if (formLocked) return;
     setError('');
     const validationError = validateUploadFile(file);
     if (validationError) {
@@ -264,6 +333,7 @@ export default function UgcVideoAgentPage() {
   };
 
   const handleRemoveAsset = (kind: UploadKind) => {
+    if (formLocked) return;
     setUploadErrors((current) => ({
       ...current,
       [kind]: undefined,
@@ -278,13 +348,14 @@ export default function UgcVideoAgentPage() {
   };
 
   const handleSelectOption = (groupId: string, value: string) => {
+    if (formLocked) return;
     setSelectedOptions((current) => ({
       ...current,
       [groupId]: value,
     }));
   };
 
-  const handleSubmit = async () => {
+  const handleCreateTask = async () => {
     if (!productAsset) {
       setError('请先上传产品图或素材图。');
       return;
@@ -317,12 +388,62 @@ export default function UgcVideoAgentPage() {
 
     try {
       const task = await createRemoteUgcTask(payload);
-      navigate(`/app/tasks/${task.id}`);
+      setActiveTask({
+        ...task,
+        events: [],
+      });
+      setTaskError('');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '创建任务失败');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handlePrimaryAction = async () => {
+    if (isSubmitting) return;
+
+    if (!activeTask) {
+      await handleCreateTask();
+      return;
+    }
+
+    setTaskError('');
+    try {
+      if (activeTask.status === 'waiting_confirmation') {
+        const next = await confirmRemoteTask(activeTask.id);
+        setActiveTask({ ...next, events: activeTask.events });
+        return;
+      }
+
+      if (
+        activeTask.recoveryState?.runState === 'interrupted' &&
+        (activeTask.recoveryState.resumeMode === 'continue' ||
+          activeTask.recoveryState.resumeMode === 'retry_step')
+      ) {
+        const next = await retryRemoteTask(activeTask.id);
+        setActiveTask({ ...next, events: activeTask.events });
+      }
+    } catch (actionError) {
+      setTaskError(actionError instanceof Error ? actionError.message : '任务操作失败');
+    }
+  };
+
+  const handleCancelLiveTask = async () => {
+    if (!activeTask) return;
+    try {
+      const next = await cancelRemoteTask(activeTask.id);
+      setActiveTask({ ...next, events: activeTask.events });
+      setTaskError('');
+    } catch (cancelError) {
+      setTaskError(cancelError instanceof Error ? cancelError.message : '取消任务失败');
+    }
+  };
+
+  const handleResetWorkbench = () => {
+    setActiveTask(null);
+    setTaskError('');
+    setError('');
   };
 
   return (
@@ -370,9 +491,9 @@ export default function UgcVideoAgentPage() {
           }}
         />
 
-        <div className="grid grid-cols-1 items-start gap-5 2xl:grid-cols-[360px_minmax(0,1fr)_320px]">
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)]">
           <aside className="space-y-4">
-            <WorkbenchPanel title="输入需求">
+            <WorkbenchPanel title="配置与结算">
               <div className="space-y-5">
                 <ReadonlyDirectionCard
                   title="当前智能体方向"
@@ -390,6 +511,7 @@ export default function UgcVideoAgentPage() {
                       title={group.title}
                       options={group.options}
                       selectedValue={selectedOptions[group.id]}
+                      disabled={formLocked}
                       onSelect={(value) => handleSelectOption(group.id, value)}
                     />
                   ))}
@@ -412,6 +534,7 @@ export default function UgcVideoAgentPage() {
                     previewUrl={productAsset?.url}
                     uploading={uploadingKind === 'product'}
                     error={uploadErrors.product}
+                    disabled={formLocked}
                     onClick={() => productInputRef.current?.click()}
                     onRemove={() => handleRemoveAsset('product')}
                   />
@@ -427,13 +550,13 @@ export default function UgcVideoAgentPage() {
                     previewUrl={talentAsset?.url}
                     uploading={uploadingKind === 'talent'}
                     error={uploadErrors.talent}
+                    disabled={formLocked}
                     onClick={() => talentInputRef.current?.click()}
                     onRemove={() => handleRemoveAsset('talent')}
                   />
-                </div>
-
-                <div className="rounded-2xl border border-black/[0.05] bg-[#FCFCFD] px-4 py-3 text-xs leading-6 text-black/42">
-                  支持 {ALLOWED_UPLOAD_LABEL}，单张图片不超过 10MB。
+                  <p className="px-1 text-xs leading-5 text-black/36">
+                    支持 {ALLOWED_UPLOAD_LABEL}，单张图片不超过 10MB。
+                  </p>
                 </div>
 
                 {selectionReady ? (
@@ -441,11 +564,13 @@ export default function UgcVideoAgentPage() {
                     label="系统整理的业务描述"
                     value={businessDescription}
                     onChange={(value) => {
+                      if (formLocked) return;
                       setBusinessDescriptionTouched(true);
                       setBusinessDescription(value);
                     }}
                     placeholder="系统会根据上面的选择自动整理，也可以在这里微调。"
                     rows={4}
+                    disabled={formLocked}
                   />
                 ) : (
                   <DescriptionPreviewCard
@@ -455,157 +580,166 @@ export default function UgcVideoAgentPage() {
                 )}
 
                 <ExpandableCard
-                  title={referenceUrl.trim() ? '补充材料（已填写）' : '补充材料（选填）'}
+                  title={referenceUrl.trim() ? '高级选项（已填写）' : '高级选项（选填）'}
                   open={showOptionalSettings}
-                  onToggle={() => setShowOptionalSettings((value) => !value)}
+                  onToggle={() => {
+                    if (formLocked) return;
+                    setShowOptionalSettings((value) => !value);
+                  }}
+                  disabled={formLocked}
                 >
                   <div className="space-y-4">
                     <InputField
                       label="参考链接 / 历史材料"
                       value={referenceUrl}
-                      onChange={setReferenceUrl}
+                      onChange={(value) => {
+                        if (formLocked) return;
+                        setReferenceUrl(value);
+                      }}
                       icon={Link2}
                       placeholder={skillExperience?.inputConfig.referenceUrlHint}
+                      disabled={formLocked}
                     />
                     <PresetNotice text={`固定规格：${executionPreset.formatLabel} · ${executionPreset.effectGoal} · ${executionPreset.platform}`} />
                   </div>
                 </ExpandableCard>
 
-                {error ? (
+                {error || taskError ? (
                   <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                    {error}
+                    {error || taskError}
                   </p>
                 ) : null}
 
-                <div className="sticky bottom-0 rounded-[20px] border border-black/[0.06] bg-white/96 p-3 backdrop-blur">
-                  <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl bg-[#F7F7F8] px-4 py-3">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.08em] text-black/35">样片预算</p>
-                      <p className="mt-1 text-sm font-medium text-[#1A1A1A]">{costEstimateLabel}</p>
+                <div className="sticky bottom-0 rounded-[20px] border border-[#F2C078] bg-white/96 p-3 backdrop-blur">
+                  <div className="mb-3 rounded-2xl border border-[#F6D7A4] bg-[#FFF4DF] px-4 py-3">
+                    <p className="text-[11px] font-semibold tracking-[0.08em] text-[#B45309]">预估消耗</p>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <p className="text-base font-semibold text-[#1A1A1A]">{costEstimateLabel}</p>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#B45309]">
+                        {hasCoreInput ? '已可开始' : '待补齐'}
+                      </span>
                     </div>
-                    <span className="rounded-full bg-[#F1F6F4] px-3 py-1 text-xs font-semibold text-[#0F766E]">
-                      {hasCoreInput ? '已可开始' : '补齐业务项后开始'}
-                    </span>
+                    <p className="mt-2 text-xs leading-5 text-[#9A5B12]">样片确认后才进入正式生成。</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      void handleSubmit();
+                      void handlePrimaryAction();
                     }}
-                    disabled={isSubmitting || !hasCoreInput}
+                    disabled={isPrimaryActionDisabled({ isSubmitting, activeTask, hasCoreInput })}
                     className="h-12 w-full rounded-xl bg-black text-sm font-semibold text-white transition-colors hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {primaryActionLabel}
                   </button>
+                  {taskIsTerminal ? (
+                    <button
+                      type="button"
+                      onClick={handleResetWorkbench}
+                      className="mt-2 h-10 w-full rounded-xl border border-black/10 bg-white text-sm font-medium text-black/62 transition-colors hover:bg-[#F7F7F8]"
+                    >
+                      开始新一轮配置
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </WorkbenchPanel>
           </aside>
 
           <section className="space-y-4">
-            <WorkbenchPanel title="结果预览">
-              <div className="space-y-5">
+            <WorkbenchPanel title="工作台">
+              <div className="space-y-6">
                 <PreparationTimeline
                   steps={businessBlueprint.stageHints}
-                  activeIndex={stage === 'prepared' ? 1 : 0}
+                  activeIndex={resolveWorkbenchStepIndex(stage, activeTask)}
                 />
 
-                <ShowcaseStageCard
-                  title={stageHeadline}
-                  subtitle={
-                    stage === 'prepared'
-                      ? '这还是任务开始前的内部任务预览，确认后才真正开始生成样片。'
-                      : '先看一个默认案例，帮助你理解这个智能体更适合做什么类型的视频。'
-                  }
-                  eyebrow={stage === 'prepared' ? '内部参数预览' : '默认案例'}
-                  headline={
-                    stage === 'prepared'
-                      ? summarizeHeadline(businessDescription)
-                      : businessBlueprint.defaultShowcaseTitle
-                  }
-                  detail={stageDescription}
-                  badge={stage === 'prepared' ? '待开始' : '示例预演'}
-                  tags={orientationTags}
-                />
+                {activeTask ? (
+                  <LiveTaskWorkbench
+                    task={activeTask}
+                    onPrimaryAction={() => {
+                      void handlePrimaryAction();
+                    }}
+                    onCancel={() => {
+                      void handleCancelLiveTask();
+                    }}
+                    onOpenTaskCenter={() => navigate(`/app/tasks/${activeTask.id}`)}
+                  />
+                ) : stage === 'prepared' ? (
+                  <div className="space-y-5">
+                    <ShowcaseStageCard
+                      title={stageHeadline}
+                      subtitle="左侧配置已经整理完成，确认后这里会进入真实样片生成与结果展示。"
+                      eyebrow="开始前确认"
+                      headline={summarizeHeadline(businessDescription)}
+                      detail={stageDescription}
+                      badge="待开始"
+                      tags={orientationTags}
+                    />
 
-                <InternalParameterCard
-                  title="系统将这样开始这次任务"
-                  status={stage === 'prepared' ? '已整理完成' : '等待补齐输入'}
-                  fields={[
-                    { label: '业务目标', value: businessDescription || businessBlueprint.objective },
-                    { label: '本次场景', value: `${selectedOptions[businessBlueprint.groups[0]?.id] ?? businessBlueprint.groups[0]?.options[0]} · ${selectedOptions[businessBlueprint.groups[1]?.id] ?? businessBlueprint.groups[1]?.options[0]}` },
-                    { label: '表达重点', value: selectedOptions[businessBlueprint.groups[2]?.id] ?? businessBlueprint.groups[2]?.options[0] },
-                    { label: '输出规格', value: `${executionPreset.platform} · ${executionPreset.formatLabel} · ${businessBlueprint.draftLabel}` },
-                    { label: '样片策略', value: resolveTaskStrategy(skillExperience) },
-                  ]}
-                  primaryActionLabel={primaryActionLabel}
-                  disabled={!hasCoreInput || isSubmitting}
-                  onPrimaryAction={() => {
-                    void handleSubmit();
-                  }}
-                />
+                    <InternalParameterCard
+                      title="即将开始的任务摘要"
+                      status="已整理完成"
+                      fields={[
+                        { label: '业务目标', value: businessDescription || businessBlueprint.objective },
+                        { label: '当前场景', value: `${selectedOptions[businessBlueprint.groups[0]?.id] ?? businessBlueprint.groups[0]?.options[0]} · ${selectedOptions[businessBlueprint.groups[1]?.id] ?? businessBlueprint.groups[1]?.options[0]}` },
+                        { label: '输出规格', value: `${conciseSpec} · ${businessBlueprint.draftLabel}` },
+                        { label: '素材状态', value: materialStatus },
+                        { label: '样片策略', value: resolveTaskStrategy(skillExperience) },
+                      ]}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    <WorkbenchEmptyState
+                      title="请先在左侧完成业务配置"
+                      description="样片大纲、系统整理结果和后续视频草稿，会在这个区域统一展示。"
+                    />
+                    <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
+                      <div className="space-y-4">
+                        {showcaseVideo ? (
+                          <div className="overflow-hidden rounded-[24px] border border-black/[0.06] bg-white">
+                            <video
+                              src={showcaseVideo.videoUrl}
+                              poster={showcaseVideo.coverUrl}
+                              controls
+                              playsInline
+                              className="aspect-[9/16] w-full bg-black object-cover"
+                            />
+                            <div className="space-y-2 px-4 py-4">
+                              <p className="text-sm font-semibold text-[#1A1A1A]">{showcaseVideo.title}</p>
+                              <p className="text-sm leading-6 text-black/55">{showcaseVideo.summary}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <ShowcaseStageCard
+                            title={stageHeadline}
+                            subtitle="先看一个默认案例，帮助你理解这个智能体更适合做什么类型的视频。"
+                            eyebrow="默认案例"
+                            headline={businessBlueprint.defaultShowcaseTitle}
+                            detail={stageDescription}
+                            badge="示例预演"
+                            tags={orientationTags}
+                          />
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <ExampleGallery title="案例参考" items={businessBlueprint.examples} />
+                        <div className="rounded-2xl border border-black/[0.05] bg-[#FCFCFD] p-4">
+                          <p className="text-sm font-medium text-[#1A1A1A]">补充说明</p>
+                          <div className="mt-3 space-y-3">
+                            <StrategyRow label="适合场景" value={promiseLine} />
+                            <StrategyRow label="本次产出" value="视频样片、封面首帧、交付说明" />
+                            <StrategyRow label="预算策略" value="先生成样片草案，确认后才进入正式生成。" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </WorkbenchPanel>
           </section>
-
-          <aside className="space-y-4">
-            <WorkbenchPanel title="案例与说明">
-              <div className="space-y-3">
-                {showcaseVideo ? (
-                  <div className="overflow-hidden rounded-[24px] border border-black/[0.06] bg-white">
-                    <video
-                      src={showcaseVideo.videoUrl}
-                      poster={showcaseVideo.coverUrl}
-                      controls
-                      playsInline
-                      className="aspect-[9/16] w-full bg-black object-cover"
-                    />
-                    <div className="space-y-2 px-4 py-4">
-                      <p className="text-sm font-semibold text-[#1A1A1A]">{showcaseVideo.title}</p>
-                      <p className="text-sm leading-6 text-black/55">{showcaseVideo.summary}</p>
-                    </div>
-                  </div>
-                ) : null}
-                <ExampleGallery title="智能体案例" items={businessBlueprint.examples} />
-
-                <ExpandableCard
-                  title="本次将产出"
-                  open={showDeliveryNotes}
-                  onToggle={() => setShowDeliveryNotes((value) => !value)}
-                >
-                  <div className="space-y-3">
-                    <ChecklistItem label="视频样片" />
-                    <ChecklistItem label="封面首帧" />
-                    <ChecklistItem label="交付说明" />
-                  </div>
-                </ExpandableCard>
-
-                <ExpandableCard
-                  title="任务说明"
-                  open={showTaskNotes}
-                  onToggle={() => setShowTaskNotes((value) => !value)}
-                >
-                  <div className="space-y-3">
-                    <StrategyRow label="适合场景" value={promiseLine} />
-                    <StrategyRow label="当前场景" value={businessBlueprint.scenarioLabel} />
-                    <StrategyRow label="样片策略" value={resolveTaskStrategy(skillExperience)} />
-                  </div>
-                </ExpandableCard>
-
-                <ExpandableCard
-                  title="预算与说明"
-                  open={showBudgetNotes}
-                  onToggle={() => setShowBudgetNotes((value) => !value)}
-                >
-                  <div className="space-y-3">
-                    <CostHeroCard headline={costEstimateLabel} />
-                    <StrategyRow label="预算策略" value="先生成样片草案，确认后才进入正式生成。" />
-                    <StrategyRow label="异常处理" value="如果生成中断，会保留当前进度并支持继续处理。" />
-                  </div>
-                </ExpandableCard>
-              </div>
-            </WorkbenchPanel>
-          </aside>
         </div>
       </div>
     </div>
@@ -752,11 +886,13 @@ function OptionGroup({
   title,
   options,
   selectedValue,
+  disabled,
   onSelect,
 }: {
   title: string;
   options: string[];
   selectedValue?: string;
+  disabled?: boolean;
   onSelect: (value: string) => void;
 }) {
   return (
@@ -769,12 +905,13 @@ function OptionGroup({
             <button
               key={option}
               type="button"
+              disabled={disabled}
               onClick={() => onSelect(option)}
               className={`rounded-2xl border px-3 py-3 text-left text-sm transition-colors ${
                 active
                   ? 'border-[#B9D8D2] bg-[#F1F8F6] text-[#12433E]'
                   : 'border-black/[0.07] bg-[#FCFCFD] text-black/60 hover:border-black/14'
-              }`}
+              } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
             >
               {option}
             </button>
@@ -793,6 +930,7 @@ function UploadCard({
   previewUrl,
   uploading,
   error,
+  disabled,
   onClick,
   onRemove,
 }: {
@@ -803,16 +941,20 @@ function UploadCard({
   previewUrl?: string;
   uploading?: boolean;
   error?: string;
+  disabled?: boolean;
   onClick: () => void;
   onRemove: () => void;
 }) {
   return (
     <div
       role="button"
-      tabIndex={uploading ? -1 : 0}
-      onClick={onClick}
+      tabIndex={uploading || disabled ? -1 : 0}
+      onClick={() => {
+        if (disabled) return;
+        onClick();
+      }}
       onKeyDown={(event) => {
-        if (uploading) return;
+        if (uploading || disabled) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onClick();
@@ -825,7 +967,7 @@ function UploadCard({
         uploaded
           ? 'border-[#D5E7E3] bg-[#F7FBFA] hover:border-[#B9D8D2]'
           : 'border-dashed border-black/12 bg-gradient-to-br from-[#FDF7F2] to-[#FFFDF9] hover:border-black/20'
-      } ${uploading ? 'cursor-wait opacity-80' : 'cursor-pointer'}`}
+      } ${uploading ? 'cursor-wait opacity-80' : disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer'}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white text-black/65 shadow-sm">
@@ -841,6 +983,7 @@ function UploadCard({
           {uploaded && !uploading ? (
             <button
               type="button"
+              disabled={disabled}
               onClick={(event) => {
                 event.stopPropagation();
                 onRemove();
@@ -879,12 +1022,14 @@ function TextAreaField({
   onChange,
   placeholder,
   rows,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   rows: number;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -892,10 +1037,11 @@ function TextAreaField({
       <div className="rounded-2xl border border-[#DDE3E2] bg-[#F9FBFA] p-3">
         <textarea
           value={value}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full resize-none bg-transparent px-1 py-1 text-sm leading-7 text-black/78 outline-none"
+          className="w-full resize-none bg-transparent px-1 py-1 text-sm leading-7 text-black/78 outline-none disabled:cursor-not-allowed disabled:opacity-55"
         />
       </div>
     </div>
@@ -919,12 +1065,14 @@ function InputField({
   onChange,
   icon: Icon,
   placeholder,
+  disabled,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   icon: typeof Link2;
   placeholder?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="space-y-2">
@@ -933,9 +1081,10 @@ function InputField({
         <Icon className="mt-0.5 h-4 w-4 shrink-0 text-black/30" />
         <input
           value={value}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className="w-full bg-transparent text-sm text-black/60 outline-none"
+          className="w-full bg-transparent text-sm text-black/60 outline-none disabled:cursor-not-allowed disabled:opacity-55"
         />
       </div>
     </div>
@@ -954,19 +1103,22 @@ function ExpandableCard({
   title,
   open,
   onToggle,
+  disabled,
   children,
 }: {
   title: string;
   open: boolean;
   onToggle: () => void;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-black/[0.05] bg-[#FCFCFD]">
       <button
         type="button"
+        disabled={disabled}
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left disabled:cursor-not-allowed disabled:opacity-55"
       >
         <span className="text-sm font-medium text-[#1A1A1A]">{title}</span>
         <ChevronDown
@@ -1077,23 +1229,17 @@ function InternalParameterCard({
   title,
   status,
   fields,
-  primaryActionLabel,
-  disabled,
-  onPrimaryAction,
 }: {
   title: string;
   status: string;
   fields: Array<{ label: string; value: string }>;
-  primaryActionLabel: string;
-  disabled: boolean;
-  onPrimaryAction: () => void;
 }) {
   return (
     <section className="rounded-[24px] border border-black/[0.06] bg-[#FCFCFD] p-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-base font-semibold text-[#1A1A1A]">{title}</p>
-          <p className="mt-1 text-sm text-black/45">这一步只是系统整理后的任务预览，还没真正开始执行。</p>
+          <p className="mt-1 text-sm text-black/45">这里只保留开始前真正需要确认的关键信息。</p>
         </div>
         <span className="rounded-full bg-[#F1F6F4] px-3 py-1 text-xs font-semibold text-[#0F766E]">
           {status}
@@ -1115,20 +1261,166 @@ function InternalParameterCard({
             <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-medium text-[#1A1A1A]">如果业务表达还不够准，可以继续微调左侧描述。</p>
-            <p className="mt-1 text-xs leading-5 text-black/42">确认后才真正开始样片生成。</p>
+            <p className="text-sm font-medium text-[#1A1A1A]">如果这版业务表达还不够准，可以继续调整左侧输入。</p>
+            <p className="mt-1 text-xs leading-5 text-black/42">全页只有左侧一个开始按钮，确认后才真正进入样片生成。</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onPrimaryAction}
-          disabled={disabled}
-          className="h-11 rounded-xl bg-black px-5 text-sm font-semibold text-white transition-colors hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          {primaryActionLabel}
-        </button>
+        <span className="rounded-full bg-[#F5F8F7] px-3 py-1 text-xs font-semibold text-[#0F766E]">返回左侧发起</span>
       </div>
     </section>
+  );
+}
+
+function WorkbenchEmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[28px] border border-dashed border-black/10 bg-[linear-gradient(180deg,#FCFCFD_0%,#F7F7F9_100%)] px-6 py-10 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#0F766E] shadow-sm">
+        <Sparkles className="h-5 w-5" />
+      </div>
+      <p className="mt-4 text-lg font-semibold text-[#1A1A1A]">{title}</p>
+      <p className="mx-auto mt-2 max-w-[36rem] text-sm leading-6 text-black/48">{description}</p>
+    </div>
+  );
+}
+
+function LiveTaskWorkbench({
+  task,
+  onPrimaryAction,
+  onCancel,
+  onOpenTaskCenter,
+}: {
+  task: LiveRemoteTask;
+  onPrimaryAction: () => void;
+  onCancel: () => void;
+  onOpenTaskCenter: () => void;
+}) {
+  const taskEvents = task.events.slice(0, 6);
+  const isWaitingConfirmation = task.status === 'waiting_confirmation';
+  const canResume =
+    task.recoveryState?.runState === 'interrupted' &&
+    (task.recoveryState.resumeMode === 'continue' || task.recoveryState.resumeMode === 'retry_step');
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="rounded-[24px] border border-black/[0.06] bg-[#FCFCFD] p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.08em] text-black/35">当前任务</p>
+              <p className="mt-2 text-lg font-semibold text-[#1A1A1A]">{task.name}</p>
+              <p className="mt-1 text-sm text-black/45">这个区域会持续承接执行过程、样片结果和交付物。</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <TaskStatusBadge status={task.status} />
+              <span className="rounded-full bg-[#F2F0ED] px-3 py-1 text-[11px] text-black/45">{task.id}</span>
+            </div>
+          </div>
+          <UgcDeliveryPanel task={task} onPrimaryAction={onPrimaryAction} />
+        </div>
+
+        <div className="space-y-4">
+          <div className="rounded-[24px] border border-black/[0.06] bg-[#FCFCFD] p-4">
+            <p className="text-sm font-semibold text-[#1A1A1A]">执行状态</p>
+            <div className="mt-4 space-y-3">
+              <LiveMetaRow icon={Clock3} label="当前状态" value={describeTaskStatus(task.status)} />
+              <LiveMetaRow icon={ListTodo} label="产物数量" value={`${task.artifacts?.length ?? 0} 个`} />
+              <LiveMetaRow
+                icon={RefreshCw}
+                label="恢复策略"
+                value={task.recoveryState?.pauseReasonMessage ?? '任务推进中，系统会持续刷新'}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onOpenTaskCenter}
+              className="mt-4 h-10 w-full rounded-xl border border-black/10 bg-white text-sm font-medium text-black/62 transition-colors hover:bg-[#F7F7F8]"
+            >
+              前往任务详情页
+            </button>
+          </div>
+
+          {isWaitingConfirmation ? (
+            <ConfirmationNode
+              title={task.pendingConfirmation?.title ?? '样片已生成，等待确认'}
+              message={task.pendingConfirmation?.message ?? '确认后继续进入正式生成。'}
+              onConfirm={onPrimaryAction}
+              onCancel={onCancel}
+            />
+          ) : null}
+
+          {canResume ? (
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">执行已中断</p>
+              <p className="mt-2 text-sm leading-6 text-amber-800">
+                {task.recoveryState?.pauseReasonMessage ?? '可以从保留的进度继续。'}
+              </p>
+            </div>
+          ) : null}
+
+          <HermesLogPanel logs={task.logs} />
+
+          <EventFeed events={taskEvents} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LiveMetaRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Clock3;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-black/[0.05] bg-white px-4 py-3">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-2xl bg-[#F5F8F7] text-[#0F766E]">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.08em] text-black/35">{label}</p>
+          <p className="mt-1 text-sm leading-6 text-[#1A1A1A]">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EventFeed({ events }: { events: UgcTaskEvent[] }) {
+  return (
+    <div className="rounded-[24px] border border-black/[0.06] bg-[#FCFCFD] p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-[#1A1A1A]">状态记录</p>
+        <span className="rounded-full bg-white px-3 py-1 text-[11px] text-black/42">{events.length} 条</span>
+      </div>
+      <div className="mt-4 space-y-3">
+        {events.length > 0 ? (
+          events.map((event) => (
+            <div key={event.id} className="rounded-2xl border border-black/[0.05] bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-[#1A1A1A]">{event.message}</p>
+                <span className="text-[11px] text-black/35">{formatEventTime(event.createdAt)}</span>
+              </div>
+              <p className="mt-1 text-xs text-black/42">{event.type}</p>
+            </div>
+          ))
+        ) : (
+          <p className="rounded-2xl border border-dashed border-black/8 bg-white px-4 py-5 text-sm text-black/42">
+            任务启动后，这里会补充关键状态记录。
+          </p>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1157,14 +1449,6 @@ function ExampleGallery({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-function ChecklistItem({ label }: { label: string }) {
-  return (
-    <div className="rounded-xl border border-black/[0.05] bg-white px-4 py-3 text-sm text-[#1A1A1A]">
-      {label}
-    </div>
-  );
-}
-
 function StrategyRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-black/[0.05] bg-white px-4 py-3">
@@ -1174,14 +1458,76 @@ function StrategyRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CostHeroCard({ headline }: { headline: string }) {
-  return (
-    <div className="rounded-2xl border border-[#F4D6A0] bg-[#FFF8EA] p-4">
-      <p className="text-[11px] uppercase tracking-[0.08em] text-[#A16207]">预估成本</p>
-      <p className="mt-2 text-base font-semibold text-[#1A1A1A]">{headline}</p>
-      <div className="mt-3 inline-flex rounded-full bg-[#FCE7B2] px-3 py-1.5 text-xs font-semibold text-[#A16207]">
-        样片确认后再进入正式生成
-      </div>
-    </div>
-  );
+function resolvePrimaryActionLabel({
+  isSubmitting,
+  activeTask,
+  hasCoreInput,
+}: {
+  isSubmitting: boolean;
+  activeTask: LiveRemoteTask | null;
+  hasCoreInput: boolean;
+}) {
+  if (isSubmitting) return '创建任务中…';
+  if (!activeTask) return hasCoreInput ? '开始生成样片阶段' : '补齐左侧配置后开始';
+  if (activeTask.status === 'waiting_confirmation') return '确认并进入正式生成';
+  if (
+    activeTask.recoveryState?.runState === 'interrupted' &&
+    (activeTask.recoveryState.resumeMode === 'continue' ||
+      activeTask.recoveryState.resumeMode === 'retry_step')
+  ) {
+    return '从当前进度继续';
+  }
+  if (isTerminalTaskStatus(activeTask.status)) return '本轮任务已结束';
+  return '样片生成中…';
+}
+
+function isPrimaryActionDisabled({
+  isSubmitting,
+  activeTask,
+  hasCoreInput,
+}: {
+  isSubmitting: boolean;
+  activeTask: LiveRemoteTask | null;
+  hasCoreInput: boolean;
+}) {
+  if (isSubmitting) return true;
+  if (!activeTask) return !hasCoreInput;
+  if (activeTask.status === 'waiting_confirmation') return false;
+  if (
+    activeTask.recoveryState?.runState === 'interrupted' &&
+    (activeTask.recoveryState.resumeMode === 'continue' ||
+      activeTask.recoveryState.resumeMode === 'retry_step')
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function resolveWorkbenchStepIndex(stage: 'default' | 'prepared' | 'live', task: LiveRemoteTask | null) {
+  if (stage === 'default') return 0;
+  if (stage === 'prepared') return 1;
+  if (!task) return 2;
+  if (task.status === 'completed') return 3;
+  return 2;
+}
+
+function isTerminalTaskStatus(status: TaskStatus) {
+  return status === 'completed' || status === 'failed' || status === 'cancelled';
+}
+
+function describeTaskStatus(status: TaskStatus) {
+  if (status === 'queued') return '已进入排队，等待执行';
+  if (status === 'running') return '系统正在生成样片与交付物';
+  if (status === 'waiting_confirmation') return '样片已生成，等待你确认是否继续';
+  if (status === 'completed') return '已完成，可直接查看右侧结果';
+  if (status === 'failed') return '执行失败，建议查看日志后重试';
+  if (status === 'cancelled') return '任务已取消';
+  return '处理中';
+}
+
+function formatEventTime(value: string) {
+  return new Date(value).toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }

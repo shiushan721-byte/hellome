@@ -5,40 +5,56 @@
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
-    "_meta": {"title": "Load LTX 2.3 Diffusion Model"}
+    "_meta": {
+      "title": "Load LTX 2.3 Diffusion Model (fp8 scaled)"
+    }
   },
   "15": {
     "inputs": {
-      "model": ["10", 0],
+      "model": [
+        "10",
+        0
+      ],
       "max_shift": 2.05,
       "base_shift": 0.95,
-      "latent": ["50", 0]
+      "latent": [
+        "50",
+        0
+      ]
     },
     "class_type": "ModelSamplingLTXV",
-    "_meta": {"title": "LTX Model Sampling (auto shift)"}
+    "_meta": {
+      "title": "LTX Model Sampling (auto shift)"
+    }
   },
   "20": {
     "inputs": {
-      "text_encoder": "qwen_3_4b_fp8_mixed.safetensors",
-      "ckpt_name": "ltx-2.3_text_projection_bf16.safetensors",
-      "device": "default"
+      "clip_name1": "gemma-3-12b-it-Q4_K_M.gguf",
+      "clip_name2": "gemma-3-12b-it-Q4_K_M.gguf",
+      "type": "ltxv"
     },
-    "class_type": "LTXAVTextEncoderLoader",
-    "_meta": {"title": "Load LTX 2.3 AV Text Encoder"}
+    "class_type": "DualCLIPLoaderGGUF",
+    "_meta": {
+      "title": "Load gemma-3 12B GGUF (dual CLIP)"
+    }
   },
   "30": {
     "inputs": {
       "vae_name": "LTX23_video_vae_bf16.safetensors"
     },
     "class_type": "VAELoader",
-    "_meta": {"title": "Load LTX 2.3 Video VAE"}
+    "_meta": {
+      "title": "Load LTX 2.3 Video VAE"
+    }
   },
   "40": {
     "inputs": {
       "ckpt_name": "LTX23_audio_vae_bf16.safetensors"
     },
     "class_type": "LTXVAudioVAELoader",
-    "_meta": {"title": "Load LTX 2.3 Audio VAE"}
+    "_meta": {
+      "title": "Load LTX 2.3 Audio VAE"
+    }
   },
   "50": {
     "inputs": {
@@ -48,50 +64,83 @@
       "batch_size": 1
     },
     "class_type": "EmptyLTXVLatentVideo",
-    "_meta": {"title": "Empty Latent Video (2s @ 25fps)"}
+    "_meta": {
+      "title": "Empty Latent Video (2s @ 25fps)"
+    }
   },
   "60": {
     "inputs": {
       "frames_number": 49,
       "frame_rate": 25,
       "batch_size": 1,
-      "audio_vae": ["40", 0]
+      "audio_vae": [
+        "40",
+        0
+      ]
     },
     "class_type": "LTXVEmptyLatentAudio",
-    "_meta": {"title": "Empty Latent Audio (2s @ 25fps)"}
+    "_meta": {
+      "title": "Empty Latent Audio (2s @ 25fps)"
+    }
   },
   "70": {
     "inputs": {
-      "video_latent": ["50", 0],
-      "audio_latent": ["60", 0]
+      "video_latent": [
+        "50",
+        0
+      ],
+      "audio_latent": [
+        "60",
+        0
+      ]
     },
     "class_type": "LTXVConcatAVLatent",
-    "_meta": {"title": "Concat AV Latent"}
+    "_meta": {
+      "title": "Concat AV Latent"
+    }
   },
   "80": {
     "inputs": {
       "text": "a cute red fox walking in a misty forest at dawn, cinematic lighting, gentle breeze",
-      "clip": ["20", 0]
+      "clip": [
+        "20",
+        0
+      ]
     },
     "class_type": "CLIPTextEncode",
-    "_meta": {"title": "Positive Prompt"}
+    "_meta": {
+      "title": "Positive Prompt"
+    }
   },
   "85": {
     "inputs": {
       "text": "blurry, ugly, low quality, static, deformed",
-      "clip": ["20", 0]
+      "clip": [
+        "20",
+        0
+      ]
     },
     "class_type": "CLIPTextEncode",
-    "_meta": {"title": "Negative Prompt"}
+    "_meta": {
+      "title": "Negative Prompt"
+    }
   },
   "90": {
     "inputs": {
-      "positive": ["80", 0],
-      "negative": ["85", 0],
+      "positive": [
+        "80",
+        0
+      ],
+      "negative": [
+        "85",
+        0
+      ],
       "frame_rate": 25.0
     },
     "class_type": "LTXVConditioning",
-    "_meta": {"title": "LTX Conditioning (frame_rate)"}
+    "_meta": {
+      "title": "LTX Conditioning (frame_rate)"
+    }
   },
   "100": {
     "inputs": {
@@ -102,7 +151,9 @@
       "terminal": 0.1
     },
     "class_type": "LTXVScheduler",
-    "_meta": {"title": "LTX Scheduler"}
+    "_meta": {
+      "title": "LTX Scheduler"
+    }
   },
   "110": {
     "inputs": {
@@ -112,28 +163,53 @@
       "sampler_name": "euler",
       "scheduler": "normal",
       "denoise": 1.0,
-      "model": ["15", 0],
-      "positive": ["90", 0],
-      "negative": ["90", 1],
-      "latent_image": ["70", 0]
+      "model": [
+        "15",
+        0
+      ],
+      "positive": [
+        "90",
+        0
+      ],
+      "negative": [
+        "90",
+        1
+      ],
+      "latent_image": [
+        "70",
+        0
+      ]
     },
     "class_type": "KSampler",
-    "_meta": {"title": "KSampler (AV)"}
+    "_meta": {
+      "title": "KSampler (AV)"
+    }
   },
   "120": {
     "inputs": {
-      "samples": ["110", 0],
-      "vae": ["30", 0]
+      "samples": [
+        "110",
+        0
+      ],
+      "vae": [
+        "30",
+        0
+      ]
     },
     "class_type": "VAEDecode",
-    "_meta": {"title": "VAE Decode (Video)"}
+    "_meta": {
+      "title": "VAE Decode (Video)"
+    }
   },
   "150": {
     "inputs": {
-      "images": ["120", 0],
+      "images": [
+        "120",
+        0
+      ],
       "frame_rate": 25,
       "loop_count": 0,
-      "filename_prefix": "ltx23_v",
+      "filename_prefix": "ltx23_gemma4",
       "format": "video/h264-mp4",
       "pingpong": false,
       "save_output": true,
@@ -141,6 +217,8 @@
       "pix_fmt": "yuv420p"
     },
     "class_type": "VHS_VideoCombine",
-    "_meta": {"title": "Save Video MP4"}
+    "_meta": {
+      "title": "Save Video MP4"
+    }
   }
 }

@@ -1,0 +1,90 @@
+{
+  "description": "",
+  "enabled": true,
+  "parameters": {
+    "prompt_positive_prompt": {
+      "node_id": "30",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "prompt_negative_prompt": {
+      "node_id": "35",
+      "field": "text",
+      "required": true,
+      "type": "string",
+      "description": "Text prompt"
+    },
+    "width": {
+      "node_id": "40",
+      "field": "width",
+      "required": false,
+      "type": "int",
+      "description": "Image width"
+    },
+    "height": {
+      "node_id": "40",
+      "field": "height",
+      "required": false,
+      "type": "int",
+      "description": "Image height"
+    },
+    "batch_size": {
+      "node_id": "40",
+      "field": "batch_size",
+      "required": false,
+      "type": "int",
+      "description": "Batch size"
+    },
+    "steps_ltx_scheduler_1_x_required": {
+      "node_id": "50",
+      "field": "steps",
+      "required": false,
+      "type": "int",
+      "description": "Generation steps"
+    },
+    "seed": {
+      "node_id": "55",
+      "field": "seed",
+      "required": false,
+      "type": "int",
+      "description": "Random seed"
+    },
+    "steps_ksampler_ltx_2b_with_ltxvscheduler": {
+      "node_id": "55",
+      "field": "steps",
+      "required": false,
+      "type": "int",
+      "description": "Generation steps"
+    },
+    "cfg": {
+      "node_id": "55",
+      "field": "cfg",
+      "required": false,
+      "type": "float",
+      "description": "Classifier-free guidance scale"
+    },
+    "frame_rate": {
+      "node_id": "70",
+      "field": "frame_rate",
+      "required": false,
+      "type": "int",
+      "description": "Video frame rate"
+    },
+    "filename_prefix": {
+      "node_id": "70",
+      "field": "filename_prefix",
+      "required": false,
+      "type": "string",
+      "description": "Output file prefix"
+    },
+    "format": {
+      "node_id": "70",
+      "field": "format",
+      "required": false,
+      "type": "string",
+      "description": "Output video format"
+    }
+  }
+}
