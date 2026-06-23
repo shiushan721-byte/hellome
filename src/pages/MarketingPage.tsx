@@ -21,7 +21,6 @@ export default function MarketingPage() {
   const navigate = useNavigate();
   const { openLogin } = useLoginModal();
   const [config, setConfig] = useState<HomePageOperationConfig | null>(null);
-  const [selectedAgentId, setSelectedAgentId] = useState('geo');
   const [showHermesModal, setShowHermesModal] = useState(false);
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
   const guestMode = !isAuthenticated();
@@ -30,7 +29,6 @@ export default function MarketingPage() {
   useEffect(() => {
     void fetchHomePageConfig().then((data) => {
       setConfig(data);
-      setSelectedAgentId(data.agentShowcase.defaultAgentId || data.agentShowcase.tabs[0]?.agentId || 'geo');
     });
   }, []);
 
@@ -53,7 +51,7 @@ export default function MarketingPage() {
     updatedAt: new Date().toISOString(),
   };
 
-  const heroAd = pageConfig.heroAds[0] ?? null;
+  const heroAds = pageConfig.heroAds;
 
   return (
     <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] font-sans selection:bg-black/10 selection:text-black relative">
@@ -86,15 +84,10 @@ export default function MarketingPage() {
 
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <section className="relative z-10 min-h-[calc(100dvh-5rem)] flex items-center justify-center">
-          <HeroPortal ad={heroAd} actionContext={actionContext} />
+          <HeroPortal ads={heroAds} actionContext={actionContext} />
         </section>
         <AgentRecommendations items={pageConfig.agentRecommendations} actionContext={actionContext} />
-        <AgentsShowcase
-          config={pageConfig.agentShowcase}
-          activeAgentId={selectedAgentId}
-          onSelectAgent={setSelectedAgentId}
-          actionContext={actionContext}
-        />
+        <AgentsShowcase config={pageConfig.agentShowcase} actionContext={actionContext} />
         <HermesSection />
         <InfoSections />
       </main>

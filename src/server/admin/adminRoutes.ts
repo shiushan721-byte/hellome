@@ -28,6 +28,7 @@ import {
   publishAdminHomeConfig,
   saveAdminHomeConfigDraft,
 } from './homeConfigService';
+import { registerAdminAgentRoutes } from './adminAgentRoutes';
 import {
   getAdminDashboardStats,
   getPublishedConfigByScope,
@@ -612,4 +613,6 @@ export function registerAdminRoutes(app: express.Express, authKit: AuthKit): voi
       res.status(500).json({ success: false, error: error instanceof Error ? error.message : '读取调试信息失败' });
     }
   });
+
+  registerAdminAgentRoutes(app, requireAdmin, authKit);
 }

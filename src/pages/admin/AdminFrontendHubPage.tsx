@@ -5,7 +5,7 @@ const MODULES = [
   {
     to: '/admin/frontend/home',
     title: '首页配置',
-    desc: '首屏广告、智能体推荐位、智能体展示页',
+    desc: '首屏广告、智能体展示页',
   },
   {
     to: '/admin/frontend/generic',

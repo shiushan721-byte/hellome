@@ -458,3 +458,46 @@ model WorkflowTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Agent {
+  id                      String              @id @default(cuid())
+  slug                    String              @unique
+  name                    String
+  description             String
+  iconUrl                 String
+  category                String?
+  tags                    Json?
+  status                  String              @default("offline")
+  currentPackageVersionId String?
+  skillId                 String?
+  sortOrder               Int                 @default(0)
+  createdBy               String?
+  updatedBy               String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  packages                AgentSkillPackage[]
+
+  @@index([status, updatedAt])
+}
+
+model AgentSkillPackage {
+  id               String   @id @default(cuid())
+  agentId          String
+  version          String
+  fileName         String
+  fileUrl          String
+  fileSize         Int
+  checksum         String
+  manifest         Json?
+  validationStatus String   @default("pending")
+  validationErrors Json?
+  releaseNote      String?
+  skillVersionId   String?
+  uploadedBy       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  agent            Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, version])
+  @@index([agentId, createdAt])
+}

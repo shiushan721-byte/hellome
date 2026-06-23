@@ -6,6 +6,7 @@ import type {
   AgentsTab,
 } from '../types/agentsPage';
 import { getUsage } from './usageStore';
+import { mergePublishedMarketAgents } from './publishedMarketModel';
 export { mergePublishedMarketAgents } from './publishedMarketModel';
 
 export function normalizeAgentsTab(tab: string | null): AgentsTab {
@@ -58,6 +59,21 @@ function buildMarketAgents(): AgentMarketCard[] {
       status: agent.available ? 'available' : 'coming_soon',
       badge: agent.badge,
     };
+  });
+}
+
+export function buildFilteredMarketAgents(
+  onlineSlugs: Set<string> | null,
+  publishedAgents: import('./skillStudioApi').PublishedMarketAgent[] = [],
+): AgentMarketCard[] {
+  let cards = buildMarketAgents();
+  if (onlineSlugs !== null) {
+    cards = cards.filter((card) => onlineSlugs.has(card.id));
+  }
+  return mergePublishedMarketAgents(cards, publishedAgents).map((card) => {
+    const published = publishedAgents.find((item) => item.agentId === card.id);
+    if (!published?.iconUrl) return card;
+    return { ...card, iconSrc: published.iconUrl };
   });
 }
 

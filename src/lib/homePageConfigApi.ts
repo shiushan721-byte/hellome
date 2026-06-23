@@ -1,5 +1,6 @@
 import type { HomePageOperationConfig } from '../types/homePageConfig';
 import { getDefaultHomePageConfig } from './homePageConfigDefaults';
+import { normalizeHomePageConfigPayload } from './homePageConfigNormalize';
 
 function toPublicConfig(): HomePageOperationConfig {
   const defaults = getDefaultHomePageConfig();
@@ -20,7 +21,12 @@ export async function fetchHomePageConfig(): Promise<HomePageOperationConfig> {
     if (!response.ok || !payload.success || !payload.data) {
       return toPublicConfig();
     }
-    return payload.data;
+    const normalized = normalizeHomePageConfigPayload(payload.data);
+    return {
+      ...normalized,
+      version: payload.data.version ?? 0,
+      updatedAt: payload.data.updatedAt ?? new Date().toISOString(),
+    };
   } catch {
     return toPublicConfig();
   }

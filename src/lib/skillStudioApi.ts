@@ -33,6 +33,7 @@ export type PublishedMarketAgent = {
   entryLabel: string;
   tokenRange: string;
   category: 'content';
+  iconUrl?: string;
   showcaseVideo?: SkillShowcaseVideo;
 };
 

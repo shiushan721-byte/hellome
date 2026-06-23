@@ -2,15 +2,19 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { CATEGORIES, type AgentCategory } from '../../data/agentsCatalog';
-import type { MarketProductSpot } from '../../data/agentsMarketHome';
 import { getUsage, isLowBalance, subscribeUsage } from '../../lib/usageStore';
 import { isHermesConnected } from '../../lib/firstRunOnboarding';
 import { subscribeHermesConnection, getHermesConnection, refreshHermesConnection } from '../../lib/hermesConnection';
-import { getAgentsPageData, getGuestAgentsPageData, resolveAgentsTabFromPath } from '../../lib/agentsPageData';
+import {
+  buildFilteredMarketAgents,
+  getAgentsPageData,
+  getGuestAgentsPageData,
+  resolveAgentsTabFromPath,
+} from '../../lib/agentsPageData';
+import { getPublishedMarketAgents } from '../../lib/skillStudioApi';
 import type { AgentMarketCard } from '../../types/agentsPage';
 import MarketCard from '../../components/app/agents/MarketCard';
 import MarketHomeBanner from '../../components/app/agents/MarketHomeBanner';
-import MarketProductSpots from '../../components/app/agents/MarketProductSpots';
 import HermesActionModal from '../../components/app/HermesActionModal';
 import { useLoginModal } from '../../context/LoginModalProvider';
 import { parseMarketCategory } from '../../lib/sidebarNav';
@@ -63,7 +67,27 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
     );
   };
 
-  const pageData = isPublic ? getGuestAgentsPageData() : getAgentsPageData(activeTab);
+  const [onlineSlugs, setOnlineSlugs] = useState<Set<string> | null>(null);
+  const [publishedAgents, setPublishedAgents] = useState<
+    Awaited<ReturnType<typeof getPublishedMarketAgents>>
+  >([]);
+
+  useEffect(() => {
+    void getPublishedMarketAgents()
+      .then((agents) => {
+        setPublishedAgents(agents);
+        setOnlineSlugs(new Set(agents.map((agent) => agent.agentId)));
+      })
+      .catch(() => setOnlineSlugs(null));
+  }, []);
+
+  const pageData = useMemo(() => {
+    const base = isPublic ? getGuestAgentsPageData() : getAgentsPageData(activeTab);
+    return {
+      ...base,
+      marketAgents: buildFilteredMarketAgents(onlineSlugs, publishedAgents),
+    };
+  }, [isPublic, activeTab, onlineSlugs, publishedAgents]);
   const usage = getUsage();
   const lowBalance = isLowBalance(usage);
 
@@ -105,10 +129,6 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
     });
   }, [pageData.marketAgents, category, query]);
 
-  const handleProductSpot = (spot: MarketProductSpot) => {
-    runUseAgent(spot.agentId);
-  };
-
   return (
     <div className="min-h-full bg-[#F5F5F7] px-4 sm:px-6 lg:px-8 xl:px-10 pt-4 pb-6 lg:pt-5 lg:pb-8">
       <div className="w-full space-y-8">
@@ -117,12 +137,6 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
         )}
 
         <MarketHomeBanner guestMode={isPublic} />
-
-        <MarketProductSpots
-          marketCards={pageData.marketAgents}
-          guestMode={isPublic}
-          onUseSpot={handleProductSpot}
-        />
 
         <MarketAgentGrid
           category={category}

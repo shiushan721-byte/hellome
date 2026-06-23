@@ -20,7 +20,7 @@ const NAV = [
   { to: '/admin/orders', label: '订单与算力', icon: ShoppingCart },
   { to: '/admin/tasks', label: '任务管理', icon: ClipboardList },
   { to: '/admin/results', label: '成果管理', icon: FileStack },
-  { to: '/admin/frontend/home', label: '前台配置', icon: Settings2 },
+  { to: '/admin/frontend/home', label: '首页配置', icon: Settings2 },
   { to: '/admin/skills', label: '智能体管理', icon: Boxes },
 ];
 

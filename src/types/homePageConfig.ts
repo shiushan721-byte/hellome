@@ -47,6 +47,7 @@ export type HomeAgentRecommendationConfig = {
   description: string;
   badge?: string;
   iconUrl?: string;
+  reason?: string;
   tokenHint?: string;
   status: HomeAgentRecommendationStatus;
   cta: {
@@ -57,36 +58,31 @@ export type HomeAgentRecommendationConfig = {
   endAt?: string;
 };
 
-export type HomeShowcaseTaskAction = 'use_agent' | 'view_agent' | 'open_url';
+export type HomeAgentShowcaseCard = {
+  id: string;
+  agentId: string;
+  buttonLabel: string;
+  visible: boolean;
+  sortOrder: number;
+};
 
 export type HomeAgentShowcaseTab = {
   id: string;
-  agentId: string;
   tabLabel: string;
-  name: string;
-  shortName: string;
-  badge?: string;
-  tagline: string;
-  description: string;
-  coreScenarios: string[];
-  quickTasks: Array<{
-    title: string;
-    action: HomeShowcaseTaskAction;
-    target?: string;
-  }>;
-  cta: {
-    label: string;
-    action: 'use_agent' | 'view_agent';
-  };
+  tabKey: string;
   enabled: boolean;
   sortOrder: number;
+  agents: HomeAgentShowcaseCard[];
 };
 
 export type HomeAgentShowcaseConfig = {
   enabled: boolean;
   title: string;
   subtitle: string;
-  defaultAgentId: string;
+  defaultTabKey: string;
+  /** @deprecated use defaultTabKey */
+  defaultAgentId?: string;
+  defaultButtonLabel?: string;
   footerText?: string;
   tabs: HomeAgentShowcaseTab[];
 };

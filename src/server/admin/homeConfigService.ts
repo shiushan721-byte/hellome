@@ -1,7 +1,18 @@
 import { getDefaultHomePageConfig, HOME_CONFIG_KEY, HOME_CONFIG_SCOPE } from '../../lib/homePageConfigDefaults';
-import type { AdminHomeConfigState, HomePageConfigPayload, HomePageOperationConfig } from '../../types/homePageConfig';
+import { getHeroAdImageSizeHint } from '../../lib/homeHeroAds';
+import { normalizeHomePageConfigPayload } from '../../lib/homePageConfigNormalize';
+import {
+  HOME_RECOMMEND_DESC_MAX,
+  HOME_RECOMMEND_TITLE_MAX,
+} from '../../lib/homePageRecommendLimits';
+import type {
+  AdminHomeConfigState,
+  HomePageConfigPayload,
+  HomePageOperationConfig,
+} from '../../types/homePageConfig';
 import { getPrismaClient } from '../db/prisma';
 import { publishFrontendConfig, upsertFrontendConfig } from './adminService';
+import { listOnlineAgentsForMarket } from './adminAgentService';
 
 let memoryDraft: {
   id: string;
@@ -19,53 +30,53 @@ let memoryPublished: {
 
 const URL_WHITELIST = /^https?:\/\//i;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-export function normalizeHomePageConfigPayload(raw: unknown): HomePageConfigPayload {
-  const fallback = getDefaultHomePageConfig();
-  if (!isRecord(raw)) return fallback;
-
-  const heroAds = Array.isArray(raw.heroAds) ? (raw.heroAds as HomePageConfigPayload['heroAds']) : fallback.heroAds;
-  const agentRecommendations = Array.isArray(raw.agentRecommendations)
-    ? (raw.agentRecommendations as HomePageConfigPayload['agentRecommendations'])
-    : fallback.agentRecommendations;
-  const agentShowcase = isRecord(raw.agentShowcase)
-    ? ({ ...fallback.agentShowcase, ...(raw.agentShowcase as object) } as HomePageConfigPayload['agentShowcase'])
-    : fallback.agentShowcase;
-
-  return { heroAds, agentRecommendations, agentShowcase };
-}
+export { normalizeHomePageConfigPayload } from '../../lib/homePageConfigNormalize';
 
 export function validateHomePageConfig(payload: HomePageConfigPayload): string[] {
   const errors: string[] = [];
 
   const enabledAds = payload.heroAds.filter((ad) => ad.enabled);
   for (const ad of enabledAds) {
-    if (!ad.title?.trim()) errors.push(`广告「${ad.name || ad.id}」缺少主标题`);
-    if (!ad.primaryButton?.label?.trim()) errors.push(`广告「${ad.name || ad.id}」缺少主按钮文案`);
-    if (!ad.primaryButton?.action) errors.push(`广告「${ad.name || ad.id}」缺少主按钮动作`);
+    if (!ad.media?.url?.trim()) {
+      errors.push(`「${ad.name || ad.id}」请上传图片（${getHeroAdImageSizeHint(ad)}）`);
+    }
+    if (!ad.primaryButton?.action) errors.push(`「${ad.name || ad.id}」缺少点击动作`);
     if (ad.primaryButton?.action === 'open_url' && ad.primaryButton.target && !URL_WHITELIST.test(ad.primaryButton.target)) {
-      errors.push(`广告「${ad.name || ad.id}」外链未通过白名单校验`);
+      errors.push(`「${ad.name || ad.id}」外链未通过白名单校验`);
     }
   }
 
   for (const rec of payload.agentRecommendations.filter((item) => item.enabled && item.status !== 'hidden')) {
-    if (!rec.agentId?.trim()) errors.push(`推荐位「${rec.title || rec.id}」未关联智能体`);
-    if (!rec.title?.trim()) errors.push(`推荐位 ${rec.id} 缺少标题`);
+    if (!rec.agentId?.trim()) errors.push(`推荐位 ${rec.id} 未关联智能体`);
+    if (!rec.title?.trim()) errors.push(`推荐位 ${rec.id} 标题不能为空`);
+    if (Array.from(rec.title).length > HOME_RECOMMEND_TITLE_MAX) {
+      errors.push(`推荐位 ${rec.id} 标题不能超过 ${HOME_RECOMMEND_TITLE_MAX} 字`);
+    }
+    if (!rec.description?.trim()) errors.push(`推荐位 ${rec.id} 简介不能为空`);
+    if (Array.from(rec.description).length > HOME_RECOMMEND_DESC_MAX) {
+      errors.push(`推荐位 ${rec.id} 简介不能超过 ${HOME_RECOMMEND_DESC_MAX} 字`);
+    }
   }
 
   const enabledTabs = payload.agentShowcase.tabs.filter((tab) => tab.enabled);
+  const defaultTabKey =
+    payload.agentShowcase.defaultTabKey || payload.agentShowcase.defaultAgentId || 'all';
   if (payload.agentShowcase.enabled && enabledTabs.length === 0) {
     errors.push('智能体展示页至少需要一个启用标签');
   }
   if (
     payload.agentShowcase.enabled &&
     enabledTabs.length > 0 &&
-    !enabledTabs.some((tab) => tab.agentId === payload.agentShowcase.defaultAgentId)
+    !enabledTabs.some((tab) => tab.tabKey === defaultTabKey)
   ) {
     errors.push('默认标签必须在已启用标签中');
+  }
+
+  for (const tab of enabledTabs) {
+    const visibleCards = tab.agents.filter((card) => card.visible && card.agentId?.trim());
+    if (visibleCards.length === 0) {
+      errors.push(`标签「${tab.tabLabel}」至少需要一个展示智能体`);
+    }
   }
 
   return errors;
@@ -74,7 +85,7 @@ export function validateHomePageConfig(payload: HomePageConfigPayload): string[]
 function filterActiveHeroAds(ads: HomePageConfigPayload['heroAds']) {
   const now = Date.now();
   return ads
-    .filter((ad) => ad.enabled)
+    .filter((ad) => ad.enabled && heroAdHasImage(ad))
     .filter((ad) => {
       const start = ad.startAt ? Date.parse(ad.startAt) : null;
       const end = ad.endAt ? Date.parse(ad.endAt) : null;
@@ -99,26 +110,58 @@ function filterActiveRecommendations(items: HomePageConfigPayload['agentRecommen
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+async function resolveOnlineAgentIds(): Promise<Set<string> | null> {
+  try {
+    const online = await listOnlineAgentsForMarket();
+    if (online.length === 0) return null;
+    return new Set(online.map((agent) => agent.slug));
+  } catch {
+    return null;
+  }
+}
+
+function filterShowcaseForPublic(
+  showcase: HomePageConfigPayload['agentShowcase'],
+  onlineIds: Set<string> | null,
+) {
+  const tabs = showcase.enabled
+    ? [...showcase.tabs]
+        .filter((tab) => tab.enabled)
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((tab) => ({
+          ...tab,
+          agents: [...tab.agents]
+            .filter((card) => card.visible && card.agentId.trim())
+            .filter((card) => !onlineIds || onlineIds.has(card.agentId))
+            .sort((a, b) => a.sortOrder - b.sortOrder),
+        }))
+        .filter((tab) => tab.agents.length > 0)
+    : [];
+
+  return { ...showcase, tabs };
+}
+
 function toPublicConfig(
   payload: HomePageConfigPayload,
   version: number,
   updatedAt: string,
+  onlineIds: Set<string> | null,
 ): HomePageOperationConfig {
+  const recommendations = filterActiveRecommendations(payload.agentRecommendations).filter(
+    (item) => !onlineIds || onlineIds.has(item.agentId),
+  );
+
   return {
     heroAds: filterActiveHeroAds(payload.heroAds),
-    agentRecommendations: filterActiveRecommendations(payload.agentRecommendations),
-    agentShowcase: {
-      ...payload.agentShowcase,
-      tabs: payload.agentShowcase.enabled
-        ? [...payload.agentShowcase.tabs].filter((tab) => tab.enabled).sort((a, b) => a.sortOrder - b.sortOrder)
-        : [],
-    },
+    agentRecommendations: recommendations,
+    agentShowcase: filterShowcaseForPublic(payload.agentShowcase, onlineIds),
     version,
     updatedAt,
   };
 }
 
 export async function getPublishedHomePageConfig(): Promise<HomePageOperationConfig> {
+  const onlineIds = await resolveOnlineAgentIds();
   const prisma = getPrismaClient();
   if (prisma) {
     try {
@@ -131,6 +174,7 @@ export async function getPublishedHomePageConfig(): Promise<HomePageOperationCon
           normalizeHomePageConfigPayload(published.payload),
           published.version,
           published.updatedAt.toISOString(),
+          onlineIds,
         );
       }
     } catch {
@@ -139,11 +183,11 @@ export async function getPublishedHomePageConfig(): Promise<HomePageOperationCon
   }
 
   if (memoryPublished) {
-    return toPublicConfig(memoryPublished.payload, memoryPublished.version, memoryPublished.updatedAt);
+    return toPublicConfig(memoryPublished.payload, memoryPublished.version, memoryPublished.updatedAt, onlineIds);
   }
 
   const defaults = getDefaultHomePageConfig();
-  return toPublicConfig(defaults, 0, new Date().toISOString());
+  return toPublicConfig(defaults, 0, new Date().toISOString(), onlineIds);
 }
 
 export async function getAdminHomeConfigState(): Promise<AdminHomeConfigState> {

@@ -79,13 +79,15 @@ export function AdminTable({
 
 export function StatusBadge({ value }: { value: string }) {
   const tone =
-    value === 'published' || value === 'paid' || value === 'completed' || value === 'active'
+    value === 'published' || value === 'paid' || value === 'completed' || value === 'active' || value === '上架'
       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-      : value === 'draft' || value === 'running'
+      : value === 'draft' || value === 'running' || value === '校验中'
         ? 'bg-amber-50 text-amber-700 border-amber-200'
-        : value === 'disabled' || value === 'failed' || value === 'cancelled'
+        : value === 'disabled' || value === 'failed' || value === 'cancelled' || value === '校验失败'
           ? 'bg-rose-50 text-rose-700 border-rose-200'
-          : 'bg-slate-100 text-slate-600 border-slate-200';
+          : value === '下架'
+            ? 'bg-slate-100 text-slate-600 border-slate-200'
+            : 'bg-slate-100 text-slate-600 border-slate-200';
 
   return <span className={`inline-flex px-2 py-0.5 rounded-full border text-xs ${tone}`}>{value}</span>;
 }

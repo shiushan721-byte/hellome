@@ -10,6 +10,7 @@ import {
   buildDemoVideoAgentSeeds,
 } from '../src/server/bootstrap/demoSeedData';
 import { buildAdminUserFixtures } from '../src/server/bootstrap/adminUserFixtures';
+import { seedAdminAgents } from '../src/server/bootstrap/adminAgentSeed';
 
 const prisma = requirePrismaClient();
 
@@ -574,6 +575,7 @@ export async function seedDatabase(): Promise<void> {
   await seedTasks(userIdByExternalId, workspaceIdBySlug, skillBinding);
   await seedLedger(userIdByExternalId);
   await seedAdminUserFixtures(userIdByExternalId, workspaceIdBySlug, skillBinding);
+  await seedAdminAgents();
 }
 
 async function main() {

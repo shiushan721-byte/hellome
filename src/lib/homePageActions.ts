@@ -1,4 +1,4 @@
-import type { HomeButtonAction, HomeShowcaseTaskAction } from '../types/homePageConfig';
+import type { HomeButtonAction } from '../types/homePageConfig';
 import { openAgentsyunHub } from './agentsyunSso';
 import { openGnomicTemplate } from './gnomicSso';
 import { getAgentWorkspacePath } from './openAgentWorkspace';
@@ -82,24 +82,5 @@ export function executeHomeButtonAction(
       return;
     default:
       return;
-  }
-}
-
-export function executeShowcaseTaskAction(
-  action: HomeShowcaseTaskAction,
-  ctx: HomeActionContext,
-  options?: { agentId?: string; target?: string },
-): void {
-  if (action === 'view_agent' && options?.agentId) {
-    const path = ctx.guestMode ? `/agents/${options.agentId}` : `/app/agents/${options.agentId}`;
-    ctx.navigate(path);
-    return;
-  }
-  if (action === 'open_url' && options?.target) {
-    executeHomeButtonAction('open_url', ctx, options);
-    return;
-  }
-  if (options?.agentId) {
-    executeHomeButtonAction('use_agent', ctx, { agentId: options.agentId });
   }
 }

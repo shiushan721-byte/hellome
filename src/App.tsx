@@ -34,7 +34,6 @@ import AdminWorkflowsPage from './pages/admin/AdminWorkflowsPage';
 import AdminIntegrationsPage from './pages/admin/AdminIntegrationsPage';
 import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
 import AdminSkillsPage from './pages/admin/AdminSkillsPage';
-import AdminSkillDetailPage from './pages/admin/AdminSkillDetailPage';
 import MarketingPage from './pages/MarketingPage';
 
 export default function App() {
@@ -110,7 +109,8 @@ export default function App() {
         <Route path="integrations" element={<AdminIntegrationsPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />
         <Route path="skills" element={<AdminSkillsPage />} />
-        <Route path="skills/:skillId" element={<AdminSkillDetailPage />} />
+        <Route path="skills/new" element={<AdminSkillsPage initialDrawer="create" />} />
+        <Route path="skills/:skillId" element={<AdminSkillsPage initialDrawer="detail" />} />
       </Route>
 
       <Route path="*" element={<HomeRedirect />} />

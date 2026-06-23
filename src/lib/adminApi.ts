@@ -27,7 +27,15 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   });
 
   const text = await response.text();
-  const payload = text ? (JSON.parse(text) as { success: boolean; data?: T; error?: string }) : { success: false, error: '空响应' };
+  let payload: { success: boolean; data?: T; error?: string };
+  try {
+    payload = text ? (JSON.parse(text) as { success: boolean; data?: T; error?: string }) : { success: false, error: '空响应' };
+  } catch {
+    const hint = text.trimStart().startsWith('<!')
+      ? '接口返回了 HTML 而非 JSON，请确认开发服务已重启且 API 路由已注册'
+      : '接口返回了无效 JSON';
+    throw new Error(hint);
+  }
 
   if (!response.ok || !payload.success) {
     throw new Error(payload.error ?? `请求失败 (${response.status})`);
@@ -173,4 +181,51 @@ export const adminApi = {
       method: 'PATCH',
       body: JSON.stringify(patch),
     }),
+
+  agents: () => requestJson<import('../types/adminAgent').AdminAgentRecord[]>('/api/admin/agents'),
+  agent: (agentId: string) => requestJson<import('../types/adminAgent').AdminAgentDetail>(`/api/admin/agents/${agentId}`),
+  updateAgent: (
+    agentId: string,
+    body: { name?: string; description?: string; iconUrl?: string; category?: string },
+  ) =>
+    requestJson(`/api/admin/agents/${agentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  agentOnline: (agentId: string) => requestJson(`/api/admin/agents/${agentId}/online`, { method: 'POST' }),
+  agentOffline: (agentId: string) => requestJson(`/api/admin/agents/${agentId}/offline`, { method: 'POST' }),
+  setAgentCurrentPackage: (agentId: string, packageId: string) =>
+    requestJson(`/api/admin/agents/${agentId}/packages/${packageId}/set-current`, { method: 'POST' }),
+  async createAgentUpload(formData: FormData) {
+    const response = await fetch('/api/admin/agents/upload', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+    const json = (await response.json()) as { success: boolean; data?: unknown; error?: string };
+    if (!response.ok || !json.success) throw new Error(json.error ?? '创建智能体失败');
+    return json.data;
+  },
+  async uploadAgentPackage(agentId: string, formData: FormData) {
+    const response = await fetch(`/api/admin/agents/${agentId}/packages`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+    const json = (await response.json()) as { success: boolean; data?: unknown; error?: string };
+    if (!response.ok || !json.success) throw new Error(json.error ?? '上传技能包失败');
+    return json.data;
+  },
+  async uploadAgentIcon(agentId: string, file: File) {
+    const formData = new FormData();
+    formData.append('icon', file);
+    const response = await fetch(`/api/admin/agents/${agentId}/icon`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+    const json = (await response.json()) as { success: boolean; data?: { iconUrl: string }; error?: string };
+    if (!response.ok || !json.success) throw new Error(json.error ?? '上传图标失败');
+    return json.data as { iconUrl: string };
+  },
 };
