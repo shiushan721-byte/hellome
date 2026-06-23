@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { adminApi } from '../../lib/adminApi';
 import { AdminCard, AdminPageHeader, AdminTable, StatusBadge, adminBtnPrimaryClass, adminLinkClass, adminTabClass } from '../../components/admin/AdminUi';
 
 const SCOPES = [
   { id: 'agent_market', label: '智能体市场' },
   { id: 'workflow_market', label: '工作流市场' },
-  { id: 'home', label: '首页' },
 ];
 
 export default function AdminFrontendPage() {
@@ -49,14 +49,18 @@ export default function AdminFrontendPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
-        title="前台配置"
-        desc="管理首页、智能体市场、工作流市场等展示配置"
+        title="通用前台配置"
+        desc="管理智能体市场、工作流市场等 scope 的草稿与发布"
         action={
           <button type="button" onClick={() => void createDraft()} className={adminBtnPrimaryClass}>
             新建草稿
           </button>
         }
       />
+
+      <Link to="/admin/frontend" className={`text-xs ${adminLinkClass}`}>
+        ← 返回前台配置
+      </Link>
 
       <div className="flex gap-2">
         {SCOPES.map((item) => (

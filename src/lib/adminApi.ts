@@ -36,6 +36,25 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload.data as T;
 }
 
+export type AdminUserDetail = {
+  profile: Record<string, unknown>;
+  summary: Record<string, unknown>;
+  topups: Array<Record<string, unknown>>;
+  ledgers: Array<Record<string, unknown>>;
+  tasks: Array<Record<string, unknown>>;
+  artifacts: Array<Record<string, unknown>>;
+  devices: Array<Record<string, unknown>>;
+  gnomicBinding: Record<string, unknown> | null;
+  auditLogs: Array<Record<string, unknown>>;
+};
+
+export type AdminUsersListResult = {
+  total: number;
+  page: number;
+  pageSize: number;
+  users: Array<Record<string, unknown>>;
+};
+
 export const adminApi = {
   dashboard: () => requestJson<{
     users: number;
@@ -47,10 +66,33 @@ export const adminApi = {
     dbConnected: boolean;
   }>('/api/admin/dashboard'),
 
-  users: () => requestJson<Array<Record<string, unknown>>>('/api/admin/users'),
-  user: (id: string) => requestJson<Record<string, unknown>>(`/api/admin/users/${id}`),
-  adjustTokens: (id: string, body: { tokenAmount: number; note?: string }) =>
-    requestJson(`/api/admin/users/${id}/token-adjustments`, { method: 'POST', body: JSON.stringify(body) }),
+  users: (params?: {
+    q?: string;
+    status?: string;
+    hasHermes?: boolean;
+    hasGnomic?: boolean;
+    hasTopup?: boolean;
+    lowBalance?: boolean;
+    page?: number;
+    pageSize?: number;
+  }) => {
+    const search = new URLSearchParams();
+    if (params?.q) search.set('q', params.q);
+    if (params?.status) search.set('status', params.status);
+    if (params?.hasHermes !== undefined) search.set('hasHermes', String(params.hasHermes));
+    if (params?.hasGnomic !== undefined) search.set('hasGnomic', String(params.hasGnomic));
+    if (params?.hasTopup !== undefined) search.set('hasTopup', String(params.hasTopup));
+    if (params?.lowBalance) search.set('lowBalance', 'true');
+    if (params?.page) search.set('page', String(params.page));
+    if (params?.pageSize) search.set('pageSize', String(params.pageSize));
+    const qs = search.toString();
+    return requestJson<AdminUsersListResult>(`/api/admin/users${qs ? `?${qs}` : ''}`);
+  },
+  user: (id: string) => requestJson<AdminUserDetail>(`/api/admin/users/${id}`),
+  adjustTokens: (
+    id: string,
+    body: { type?: string; tokenAmount: number; reason?: string; note?: string },
+  ) => requestJson(`/api/admin/users/${id}/token-adjustments`, { method: 'POST', body: JSON.stringify(body) }),
 
   orders: () => requestJson<Array<Record<string, unknown>>>('/api/admin/orders'),
   rechargePacks: () => requestJson<Array<Record<string, unknown>>>('/api/admin/recharge-packs'),
@@ -65,6 +107,16 @@ export const adminApi = {
     requestJson('/api/admin/frontend-configs', { method: 'POST', body: JSON.stringify(body) }),
   publishFrontendConfig: (id: string) =>
     requestJson(`/api/admin/frontend-configs/${id}/publish`, { method: 'POST' }),
+
+  homeConfig: () => requestJson<import('../types/homePageConfig').AdminHomeConfigState>('/api/admin/home-config'),
+  saveHomeConfig: (body: { draftId?: string | null; config: import('../types/homePageConfig').HomePageConfigPayload }) =>
+    requestJson<{ draftId: string; status: string; version: number; updatedAt: string }>('/api/admin/home-config', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  publishHomeConfig: (draftId: string) =>
+    requestJson('/api/admin/home-config/publish', { method: 'POST', body: JSON.stringify({ draftId }) }),
+  homePublishRecords: () => requestJson<Array<Record<string, unknown>>>('/api/admin/home-config/publish-records'),
 
   workflowTemplates: () => requestJson<Array<Record<string, unknown>>>('/api/admin/workflow-templates'),
   updateWorkflowTemplate: (templateId: string, body: Record<string, unknown>) =>

@@ -28,7 +28,7 @@ export default function AdminSkillsPage() {
   return (
     <div className="space-y-5">
       <AdminPageHeader
-        title="技能管理"
+        title="智能体管理"
         desc="管理可执行业务 Skill（版本 / 发布 / 调试）与工程 Skill 清单"
       />
 

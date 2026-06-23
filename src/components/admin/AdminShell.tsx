@@ -1,17 +1,14 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  Activity,
   Boxes,
   ClipboardList,
   FileStack,
   LayoutDashboard,
-  Link2,
   LogOut,
   Settings2,
   ShoppingCart,
   Users,
-  Workflow,
   Zap,
 } from 'lucide-react';
 import { logout } from '../../lib/auth';
@@ -23,11 +20,8 @@ const NAV = [
   { to: '/admin/orders', label: '订单与算力', icon: ShoppingCart },
   { to: '/admin/tasks', label: '任务管理', icon: ClipboardList },
   { to: '/admin/results', label: '成果管理', icon: FileStack },
-  { to: '/admin/frontend', label: '前台配置', icon: Settings2 },
-  { to: '/admin/workflows', label: '工作流模板', icon: Workflow },
-  { to: '/admin/integrations', label: '第三方打通', icon: Link2 },
-  { to: '/admin/audit-logs', label: '操作日志', icon: Activity },
-  { to: '/admin/skills', label: '技能管理', icon: Boxes },
+  { to: '/admin/frontend/home', label: '前台配置', icon: Settings2 },
+  { to: '/admin/skills', label: '智能体管理', icon: Boxes },
 ];
 
 export default function AdminShell() {

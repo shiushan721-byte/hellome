@@ -1,4 +1,5 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Bug, ChevronDown, ChevronUp, LayoutDashboard } from 'lucide-react';
 import { canAccessAdmin } from '../../lib/auth';
@@ -148,6 +149,8 @@ function AdminEntryButton({ onDone }: { onDone?: () => void }) {
 
 export function HermesDebugDock({ collapsed = false }: { collapsed?: boolean }) {
   const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const snapshot = useSyncExternalStore(
     subscribeHermesConnection,
     getHermesConnection,
@@ -156,10 +159,47 @@ export function HermesDebugDock({ collapsed = false }: { collapsed?: boolean }) 
   const { applyPreset } = useDebugActions();
   const activeId = resolveHermesDisplayPreset(snapshot.status);
 
+  useLayoutEffect(() => {
+    if (!open || !collapsed || !buttonRef.current) return;
+
+    const updatePosition = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setMenuStyle({
+        position: 'fixed',
+        left: rect.right + 8,
+        bottom: window.innerHeight - rect.bottom,
+        zIndex: 60,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [open, collapsed]);
+
+  const menuContent = (
+    <div className="w-44 rounded-xl border border-[#f0f0f0] bg-white p-2 shadow-lg space-y-2">
+      <DisplayOptionList
+        activeId={activeId}
+        onSelect={(preset) => {
+          applyPreset(preset);
+          setOpen(false);
+        }}
+      />
+      <AdminEntryButton onDone={() => setOpen(false)} />
+    </div>
+  );
+
   if (collapsed) {
     return (
       <div className="relative">
         <button
+          ref={buttonRef}
           type="button"
           onClick={() => setOpen((value) => !value)}
           title="Hz-Hermes 调试"
@@ -169,15 +209,7 @@ export function HermesDebugDock({ collapsed = false }: { collapsed?: boolean }) 
         >
           <Bug className="w-5 h-5 text-sky-600" />
         </button>
-        {open ? (
-          <div className="absolute bottom-full left-1/2 z-20 mb-2 w-44 -translate-x-1/2 rounded-xl border border-[#f0f0f0] bg-white p-2 shadow-lg space-y-2">
-            <DisplayOptionList activeId={activeId} onSelect={(preset) => {
-              applyPreset(preset);
-              setOpen(false);
-            }} />
-            <AdminEntryButton onDone={() => setOpen(false)} />
-          </div>
-        ) : null}
+        {open ? createPortal(<div style={menuStyle}>{menuContent}</div>, document.body) : null}
       </div>
     );
   }

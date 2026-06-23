@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { buildDefaultBusinessFrame as buildOrchestratorDefaultBusinessFrame } from '../agentOrchestratorService';
+import { buildAdminFixtureProfiles } from './adminUserFixtures';
 import { buildDemoProfile } from './demoSeedHelpers';
 import { getVideoAgentProfile } from '../../config/videoAgentProfiles';
 
@@ -26,6 +27,7 @@ export function buildDemoUsers() {
       workspace: 'HelloMe Demo Workspace',
       role: 'admin',
     }),
+    ...buildAdminFixtureProfiles(),
   ];
 }
 

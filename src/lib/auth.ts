@@ -64,3 +64,16 @@ export async function syncAuthSession(): Promise<UserProfile | null> {
 export async function logout(): Promise<void> {
   await logoutCore();
 }
+
+/** 确保服务端存在管理员 session（演示环境进入后台时自动登录） */
+export async function ensureAdminServerSession(): Promise<boolean> {
+  const synced = await syncAuthSession();
+  if (synced?.role === 'admin') return true;
+
+  try {
+    const user = await loginWithPhone(DEMO_PHONE, DEMO_CODE);
+    return user.role === 'admin';
+  } catch {
+    return false;
+  }
+}

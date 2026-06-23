@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { adminApi } from '../../lib/adminApi';
+import { uploadTaskFile } from '../../lib/taskApi';
+import { getAgentById } from '../../data/agentsCatalog';
+import AgentIcon from '../../components/app/agents/AgentIcon';
 import type { SkillDebugResult, SkillRecord, SkillVersionRecord } from '../../types/skills';
 import {
   AdminCard,
@@ -25,9 +28,9 @@ export default function AdminSkillDetailPage() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [goalSummary, setGoalSummary] = useState('');
-  const [promiseLine, setPromiseLine] = useState('');
-  const [understandingPrompt, setUnderstandingPrompt] = useState('');
+  const [iconSrc, setIconSrc] = useState('');
+  const [iconUploading, setIconUploading] = useState(false);
+  const [iconUploadError, setIconUploadError] = useState('');
 
   const [debugInput, setDebugInput] = useState({
     sellingPoint: '轻薄防晒，通勤不闷汗',
@@ -47,9 +50,8 @@ export default function AdminSkillDetailPage() {
     setVersions(nextVersions);
     setName(nextSkill.name);
     setDescription(nextSkill.description ?? '');
-    setGoalSummary(nextSkill.latestVersion.businessFrame.goal.summary);
-    setPromiseLine(nextSkill.latestVersion.businessFrame.result.promiseLine);
-    setUnderstandingPrompt(nextSkill.latestVersion.understandingConfig.prompt);
+    const catalogIcon = getAgentById(nextSkill.id)?.iconSrc ?? '';
+    setIconSrc(nextSkill.latestVersion.businessFrame.result.marketIconSrc ?? catalogIcon);
   };
 
   useEffect(() => {
@@ -69,6 +71,40 @@ export default function AdminSkillDetailPage() {
       setMessage(error instanceof Error ? error.message : '操作失败');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const saveBusinessConfig = async () => {
+    if (!skill) return;
+    const currentLatest = skill.latestVersion;
+    const nextLatest: SkillVersionRecord = {
+      ...currentLatest,
+      businessFrame: {
+        ...currentLatest.businessFrame,
+        result: {
+          ...currentLatest.businessFrame.result,
+          marketIconSrc: iconSrc.trim() || undefined,
+        },
+      },
+    };
+    await adminApi.updateStudioSkill(skill.id, {
+      name: name.trim(),
+      description: description.trim() || undefined,
+      latestVersion: nextLatest,
+    });
+  };
+
+  const handleIconUpload = async (file: File | null) => {
+    if (!file) return;
+    setIconUploading(true);
+    setIconUploadError('');
+    try {
+      const uploaded = await uploadTaskFile(file);
+      setIconSrc(uploaded.url);
+    } catch (error) {
+      setIconUploadError(error instanceof Error ? error.message : '上传失败，请重试');
+    } finally {
+      setIconUploading(false);
     }
   };
 
@@ -133,7 +169,7 @@ export default function AdminSkillDetailPage() {
       </div>
 
       {tab === 'overview' ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <AdminCard className="p-4 space-y-3">
             <h3 className="text-sm font-semibold">基础信息</h3>
             <dl className="text-sm space-y-2 text-[#333333]">
@@ -183,79 +219,100 @@ export default function AdminSkillDetailPage() {
 
       {tab === 'business' ? (
         <AdminCard className="p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block text-sm">
-              <span className="text-black/45">名称</span>
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className={`mt-1 ${adminInputClass}`}
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="text-black/45">描述</span>
-              <input
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                className={`mt-1 ${adminInputClass}`}
-              />
-            </label>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold">基础信息</h3>
+            <button
+              type="button"
+              disabled={busy || !name.trim()}
+              onClick={() => void runAction('业务配置已保存', saveBusinessConfig)}
+              className={adminBtnPrimaryClass}
+            >
+              保存配置
+            </button>
           </div>
+
+          <div className="flex items-start gap-4">
+            <label className="relative shrink-0 cursor-pointer group">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={iconUploading || busy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  void handleIconUpload(file);
+                  event.target.value = '';
+                }}
+              />
+              <AgentIcon
+                src={iconSrc || getAgentById(skill.id)?.iconSrc || ''}
+                alt={name || skill.name}
+                size="lg"
+              />
+              <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/45 text-[10px] font-bold text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                {iconUploading ? '上传中…' : '更换图标'}
+              </span>
+            </label>
+            <div className="flex-1 space-y-3 min-w-0">
+              <div className="text-sm">
+                <span className="text-black/45">智能体图标</span>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <label className="inline-flex">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      disabled={iconUploading || busy}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        void handleIconUpload(file);
+                        event.target.value = '';
+                      }}
+                    />
+                    <span
+                      className={`px-3 py-1.5 rounded-lg border border-[#e5e5e5] text-xs font-semibold ${
+                        iconUploading || busy
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'cursor-pointer hover:bg-[#fafafa]'
+                      }`}
+                    >
+                      {iconUploading ? '上传中…' : '上传图标'}
+                    </span>
+                  </label>
+                  {iconSrc ? (
+                    <button
+                      type="button"
+                      disabled={iconUploading || busy}
+                      onClick={() => setIconSrc('')}
+                      className="text-xs text-black/45 hover:text-[#111111] disabled:opacity-40"
+                    >
+                      恢复默认
+                    </button>
+                  ) : null}
+                </div>
+                {iconUploadError ? <p className="text-xs text-rose-600 mt-1">{iconUploadError}</p> : null}
+                <p className="text-[11px] text-black/40 mt-1">支持 JPG、PNG、WebP，最大 10MB</p>
+              </div>
+              <label className="block text-sm">
+                <span className="text-black/45">智能体名称</span>
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  className={`mt-1 ${adminInputClass}`}
+                />
+              </label>
+            </div>
+          </div>
+
           <label className="block text-sm">
-            <span className="text-black/45">目标摘要（goal.summary）</span>
+            <span className="text-black/45">智能体介绍</span>
             <textarea
-              value={goalSummary}
-              onChange={(event) => setGoalSummary(event.target.value)}
-              rows={3}
-              className={`mt-1 ${adminInputClass}`}
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-black/45">交付承诺（result.promiseLine）</span>
-            <textarea
-              value={promiseLine}
-              onChange={(event) => setPromiseLine(event.target.value)}
-              rows={2}
-              className={`mt-1 ${adminInputClass}`}
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-black/45">理解 Prompt</span>
-            <textarea
-              value={understandingPrompt}
-              onChange={(event) => setUnderstandingPrompt(event.target.value)}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
               rows={4}
-              className={`mt-1 ${adminInputClass} font-mono text-xs`}
+              className={`mt-1 ${adminInputClass}`}
             />
           </label>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() =>
-              void runAction('业务配置已保存', async () => {
-                const nextLatest: SkillVersionRecord = {
-                  ...latest,
-                  understandingConfig: {
-                    ...latest.understandingConfig,
-                    prompt: understandingPrompt,
-                  },
-                  businessFrame: {
-                    ...latest.businessFrame,
-                    goal: { ...latest.businessFrame.goal, summary: goalSummary },
-                    result: { ...latest.businessFrame.result, promiseLine },
-                  },
-                };
-                await adminApi.updateStudioSkill(skill.id, {
-                  name: name.trim(),
-                  description: description.trim() || undefined,
-                  latestVersion: nextLatest,
-                });
-              })
-            }
-            className={adminBtnPrimaryClass}
-          >
-            保存配置
-          </button>
         </AdminCard>
       ) : null}
 

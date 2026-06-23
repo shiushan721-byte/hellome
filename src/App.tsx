@@ -29,11 +29,13 @@ import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminTasksPage from './pages/admin/AdminTasksPage';
 import AdminResultsPage from './pages/admin/AdminResultsPage';
 import AdminFrontendPage from './pages/admin/AdminFrontendPage';
+import AdminHomeConfigPage from './pages/admin/AdminHomeConfigPage';
 import AdminWorkflowsPage from './pages/admin/AdminWorkflowsPage';
 import AdminIntegrationsPage from './pages/admin/AdminIntegrationsPage';
 import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
 import AdminSkillsPage from './pages/admin/AdminSkillsPage';
 import AdminSkillDetailPage from './pages/admin/AdminSkillDetailPage';
+import MarketingPage from './pages/MarketingPage';
 
 export default function App() {
   return (
@@ -41,6 +43,7 @@ export default function App() {
       <Routes>
       <Route path="/" element={<HomeRedirect />} />
       <Route path="/login" element={null} />
+      <Route path="/welcome" element={<MarketingPage />} />
       <Route path="/agents" element={<PublicAgentsPage />} />
       <Route path="/agents/:agentId" element={<PublicAgentDetailPage />} />
       <Route
@@ -100,7 +103,9 @@ export default function App() {
         <Route path="orders" element={<AdminOrdersPage />} />
         <Route path="tasks" element={<AdminTasksPage />} />
         <Route path="results" element={<AdminResultsPage />} />
-        <Route path="frontend" element={<AdminFrontendPage />} />
+        <Route path="frontend" element={<Navigate to="/admin/frontend/home" replace />} />
+        <Route path="frontend/home" element={<AdminHomeConfigPage />} />
+        <Route path="frontend/generic" element={<AdminFrontendPage />} />
         <Route path="workflows" element={<AdminWorkflowsPage />} />
         <Route path="integrations" element={<AdminIntegrationsPage />} />
         <Route path="audit-logs" element={<AdminAuditLogsPage />} />

@@ -86,6 +86,8 @@ export interface SkillBusinessFrame {
     /** Tags used by the right-side product bar (1-3 orientation tags, 2-4 delivery tags). */
     orientationTags?: string[];
     showcaseVideo?: SkillShowcaseVideo;
+    /** 市场卡片 / 详情页展示用图标 URL */
+    marketIconSrc?: string;
   };
 }
 

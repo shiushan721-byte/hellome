@@ -9,6 +9,7 @@ import {
   buildDemoUsers,
   buildDemoVideoAgentSeeds,
 } from '../src/server/bootstrap/demoSeedData';
+import { buildAdminUserFixtures } from '../src/server/bootstrap/adminUserFixtures';
 
 const prisma = requirePrismaClient();
 
@@ -347,6 +348,222 @@ async function seedLedger(userIdByExternalId: Map<string, string>) {
   }
 }
 
+async function seedAdminUserFixtures(
+  userIdByExternalId: Map<string, string>,
+  workspaceIdBySlug: Map<string, string>,
+  skillBinding: { skillId: string; skillVersionId: string },
+) {
+  const now = new Date('2026-06-22T12:00:00.000Z');
+
+  for (const fixture of buildAdminUserFixtures()) {
+    const userId = userIdByExternalId.get(fixture.phone);
+    const workspaceSlug = `user-${fixture.phone.replace(/\D/g, '').slice(-6)}`;
+    const workspaceId = workspaceIdBySlug.get(workspaceSlug);
+    if (!userId) continue;
+
+    await prisma.userProfileAdminMeta.upsert({
+      where: { userId },
+      update: {
+        status: fixture.status,
+        tags: fixture.tags ?? undefined,
+        lastLoginAt: fixture.lastLoginAt ? new Date(fixture.lastLoginAt) : null,
+        disabledAt: fixture.status === 'disabled' ? now : null,
+        disabledReason: fixture.disabledReason ?? null,
+      },
+      create: {
+        userId,
+        status: fixture.status,
+        tags: fixture.tags ?? undefined,
+        lastLoginAt: fixture.lastLoginAt ? new Date(fixture.lastLoginAt) : null,
+        disabledAt: fixture.status === 'disabled' ? now : null,
+        disabledReason: fixture.disabledReason ?? null,
+      },
+    });
+
+    if (fixture.hermesDevices?.length) {
+      for (const device of fixture.hermesDevices) {
+        await prisma.hermesDevice.upsert({
+          where: { id: device.id },
+          update: {
+            userId,
+            deviceName: device.deviceName,
+            os: device.os,
+            version: device.version,
+            status: device.status,
+            debugEnabled: device.debugEnabled ?? true,
+            lastSeenAt: device.status === 'connected' ? now : new Date('2026-06-20T08:00:00.000Z'),
+          },
+          create: {
+            id: device.id,
+            userId,
+            deviceName: device.deviceName,
+            os: device.os,
+            version: device.version,
+            status: device.status,
+            debugEnabled: device.debugEnabled ?? true,
+            lastSeenAt: device.status === 'connected' ? now : new Date('2026-06-20T08:00:00.000Z'),
+          },
+        });
+      }
+    }
+
+    if (fixture.gnomic) {
+      await prisma.gnomicAccountBinding.upsert({
+        where: { hellomeUserId: fixture.phone },
+        update: {
+          gnomicUserId: fixture.gnomic.gnomicUserId,
+          phone: fixture.phone,
+          status: fixture.gnomic.status,
+        },
+        create: {
+          hellomeUserId: fixture.phone,
+          gnomicUserId: fixture.gnomic.gnomicUserId,
+          phone: fixture.phone,
+          status: fixture.gnomic.status,
+        },
+      });
+    }
+
+    if (fixture.topups?.length) {
+      for (const [index, topup] of fixture.topups.entries()) {
+        const topupId = `seed-topup-${fixture.phone.slice(-2)}-${index}`;
+        await prisma.billingTopup.upsert({
+          where: { id: topupId },
+          update: {
+            userId,
+            tokenAmount: topup.tokenAmount,
+            note: topup.note,
+          },
+          create: {
+            id: topupId,
+            userId,
+            tokenAmount: topup.tokenAmount,
+            note: topup.note,
+            createdAt: new Date(`2026-06-${10 + index}T10:00:00.000Z`),
+          },
+        });
+      }
+    }
+
+    const taskIdByKey = new Map<string, string>();
+
+    if (fixture.tasks?.length && workspaceId) {
+      for (const [index, task] of fixture.tasks.entries()) {
+        const taskId = task.key;
+        taskIdByKey.set(task.key, taskId);
+        const createdAt = new Date(`2026-06-${12 + index}T09:00:00.000Z`);
+        const completedAt =
+          task.status === 'completed' ? new Date(`2026-06-${12 + index}T09:30:00.000Z`) : null;
+
+        await prisma.task.upsert({
+          where: { id: taskId },
+          update: {
+            name: task.name,
+            agentType: task.agentType,
+            status: task.status,
+            tokenUsed: task.tokenUsed,
+            currentTokenUsed: task.tokenUsed,
+            requiresConfirm: task.requiresConfirm ?? false,
+            userId,
+            workspaceId,
+            skillId: skillBinding.skillId,
+            skillVersionId: skillBinding.skillVersionId,
+            completedAt,
+          },
+          create: {
+            id: taskId,
+            name: task.name,
+            agentType: task.agentType,
+            status: task.status,
+            executionMode: 'backend_silent',
+            createdAt,
+            startedAt: task.status === 'draft' || task.status === 'queued' ? null : createdAt,
+            completedAt,
+            estimatedTokenMin: 8000,
+            estimatedTokenMax: 28000,
+            tokenUsed: task.tokenUsed,
+            currentTokenUsed: task.tokenUsed,
+            requiresConfirm: task.requiresConfirm ?? false,
+            userId,
+            workspaceId,
+            skillId: skillBinding.skillId,
+            skillVersionId: skillBinding.skillVersionId,
+          },
+        });
+
+        await prisma.taskInput.upsert({
+          where: { taskId },
+          update: {
+            sellingPoint: task.sellingPoint,
+            platform: task.platform,
+            effectGoal: task.effectGoal,
+          },
+          create: {
+            taskId,
+            sellingPoint: task.sellingPoint,
+            platform: task.platform,
+            effectGoal: task.effectGoal,
+          },
+        });
+
+        if (task.artifacts?.length) {
+          for (const [artifactIndex, artifact] of task.artifacts.entries()) {
+            const artifactId = `${taskId}-artifact-${artifactIndex}`;
+            await prisma.taskArtifact.upsert({
+              where: { id: artifactId },
+              update: {
+                taskId,
+                type: artifact.type,
+                label: artifact.label,
+                fileName: artifact.fileName,
+                url: artifact.url ?? null,
+                mimeType: artifact.mimeType ?? null,
+                sizeBytes: artifact.sizeBytes ?? null,
+              },
+              create: {
+                id: artifactId,
+                taskId,
+                type: artifact.type,
+                label: artifact.label,
+                fileName: artifact.fileName,
+                url: artifact.url ?? null,
+                mimeType: artifact.mimeType ?? null,
+                sizeBytes: artifact.sizeBytes ?? null,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    if (fixture.ledgers?.length) {
+      for (const [index, ledger] of fixture.ledgers.entries()) {
+        const ledgerId = `seed-ledger-${fixture.phone.slice(-2)}-${index}`;
+        const taskId = ledger.taskKey ? taskIdByKey.get(ledger.taskKey) ?? null : null;
+        await prisma.usageLedger.upsert({
+          where: { id: ledgerId },
+          update: {
+            userId,
+            taskId,
+            tokenUsed: ledger.tokenUsed,
+            videoCost: ledger.videoCost ?? null,
+            status: ledger.status,
+          },
+          create: {
+            id: ledgerId,
+            userId,
+            taskId,
+            tokenUsed: ledger.tokenUsed,
+            videoCost: ledger.videoCost ?? null,
+            status: ledger.status,
+            createdAt: new Date(`2026-06-${15 + index}T08:00:00.000Z`),
+          },
+        });
+      }
+    }
+  }
+}
+
 export async function seedDatabase(): Promise<void> {
   const { userIdByExternalId, workspaceIdBySlug } = await seedUsers();
   const skillBinding =
@@ -356,6 +573,7 @@ export async function seedDatabase(): Promise<void> {
     };
   await seedTasks(userIdByExternalId, workspaceIdBySlug, skillBinding);
   await seedLedger(userIdByExternalId);
+  await seedAdminUserFixtures(userIdByExternalId, workspaceIdBySlug, skillBinding);
 }
 
 async function main() {

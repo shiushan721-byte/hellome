@@ -1,9 +1,4 @@
 import { getPrismaClient } from '../db/prisma';
-import {
-  buildUsageSummary,
-  getUsageSummaryForExternalId,
-  recordBillingTopupForExternalId,
-} from '../billingService';
 import { listUgcTasks } from '../ugcTaskService';
 import { WORKFLOW_MARKET_ITEMS } from '../../data/workflowMarket';
 
@@ -57,139 +52,18 @@ export async function getAdminDashboardStats() {
 }
 
 export async function listAdminUsers() {
-  const prisma = getPrismaClient();
-  if (!prisma) {
-    return [
-      {
-        id: 'demo-user',
-        externalId: '13800138001',
-        displayName: 'HelloMe 普通用户',
-        phone: '13800138001',
-        email: 'user@hellome.ai',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'active',
-        tokenBalance: 20000,
-      },
-      {
-        id: 'demo-admin',
-        externalId: '13800138000',
-        displayName: 'HelloMe 演示管理员',
-        phone: '13800138000',
-        email: 'admin@hellome.ai',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'active',
-        tokenBalance: 50000,
-      },
-    ];
-  }
-
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  });
-
-  const enriched = await Promise.all(
-    users.map(async (user) => {
-      const usage = await getUsageSummaryForExternalId(user.externalId);
-      return {
-        id: user.id,
-        externalId: user.externalId,
-        displayName: user.displayName ?? user.externalId,
-        phone: user.phone,
-        email: user.email,
-        createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString(),
-        status: 'active',
-        tokenBalance: usage.tokenBalance,
-      };
-    }),
-  );
-
-  return enriched;
+  const result = await import('./adminUserService').then((m) => m.listAdminUsersQuery({ pageSize: 200 }));
+  return result.users;
 }
 
-export async function getAdminUserDetail(userId: string) {
-  const prisma = getPrismaClient();
-  if (!prisma) {
-    const list = await listAdminUsers();
-    const user = list.find((u) => u.id === userId);
-    if (!user) return null;
-    return {
-      ...user,
-      usage: buildUsageSummary({ monthlyTokenLimit: 20000, monthlyUsed: 0 }),
-      topups: [],
-      tasks: (await listUgcTasks()).slice(0, 10),
-      ledgers: [],
-      devices: [],
-      gnomicBinding: null,
-    };
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return null;
-
-  const [topups, tasks, ledgers, devices, gnomicBinding, usage] = await Promise.all([
-    prisma.billingTopup.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
-    prisma.task.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
-    prisma.usageLedger.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 50 }),
-    prisma.hermesDevice.findMany({ where: { userId } }),
-    prisma.gnomicAccountBinding.findFirst({ where: { hellomeUserId: user.externalId } }),
-    getUsageSummaryForExternalId(user.externalId),
-  ]);
-
-  return {
-    id: user.id,
-    externalId: user.externalId,
-    displayName: user.displayName ?? user.externalId,
-    phone: user.phone,
-    email: user.email,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-    status: 'active',
-    tokenBalance: usage.tokenBalance,
-    usage,
-    topups: topups.map((row) => ({
-      id: row.id,
-      tokenAmount: row.tokenAmount,
-      note: row.note,
-      createdAt: row.createdAt.toISOString(),
-    })),
-    tasks: tasks.map((task) => ({
-      id: task.id,
-      name: task.name,
-      agentType: task.agentType,
-      status: task.status,
-      tokenUsed: task.tokenUsed,
-      createdAt: task.createdAt.toISOString(),
-    })),
-    ledgers,
-    devices,
-    gnomicBinding,
-  };
-}
-
-export async function adjustUserTokens(
-  userId: string,
-  input: { tokenAmount: number; note?: string },
-  externalId: string,
-) {
-  const prisma = getPrismaClient();
-  if (!prisma) {
-    return { ok: true, tokenAmount: input.tokenAmount };
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) throw new Error('用户不存在');
-
-  await recordBillingTopupForExternalId(user.externalId, {
-    tokenAmount: input.tokenAmount,
-    note: input.note ?? `管理员调整 (${externalId})`,
-  });
-
-  return { ok: true, tokenAmount: input.tokenAmount };
-}
+// User management — see adminUserService.ts
+export {
+  adjustUserTokens,
+  getAdminUserDetail,
+  listAdminUsersQuery,
+  type AdminUserListItem,
+  type ListAdminUsersParams,
+} from './adminUserService';
 
 export async function listAdminOrders() {
   const prisma = getPrismaClient();
