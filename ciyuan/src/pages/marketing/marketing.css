@@ -1,0 +1,826 @@
+/* ── Marketing page scoped styles ── */
+
+html {
+  /* 避免弹窗 body overflow 锁滚动时滚动条消失导致视口宽度跳变，进而误判 IO / 裁切布局 */
+  scrollbar-gutter: stable;
+}
+
+/* 字号规范：根 16px；正文 text-sm(14)/text-base(16)/text-lg(18) */
+.marketing-page {
+  --header-height: 5.75rem;
+  --color-primary: #6673ff;
+  --color-bg: #ffffff;
+  --color-bg-muted: #f9fafb;
+  --color-bg-dark: #111827;
+  --color-code-bg: #1e1e1e;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-placeholder: #9ca3af;
+  --color-text-disabled: #d1d5db;
+  --color-text-inverse: #ffffff;
+  --color-border: #e5e7eb;
+  --color-border-muted: #e2e8f0;
+  --color-border-dark: #374151;
+  --color-border-strong: #d1d5db;
+  --shadow-soft: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+  font-family:
+    Inter,
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    sans-serif;
+  font-size: 16px;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.marketing-page {
+  scroll-behavior: smooth;
+}
+
+.marketing-page *,
+.marketing-page *::before,
+.marketing-page *::after {
+  box-sizing: border-box;
+}
+
+.marketing-page a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.marketing-page button {
+  cursor: pointer;
+}
+
+.marketing-page img,
+.marketing-page svg {
+  display: block;
+  max-width: 100%;
+}
+
+.marketing-page ::selection {
+  background: rgba(102, 115, 255, 0.18);
+  color: var(--color-text-primary);
+}
+
+/* Custom font-size utilities live in tailwind.config.cjs theme.extend.fontSize (TW v3) */
+
+/* Hero 区上下间距按视觉需要放大：把 .space-y-7 默认的 28px 拉到 40px。
+   作用域仅限 #hero，不影响其它区块。specificity 0,1,3,0 高于 Tailwind 原生 0,0,3,0。 */
+#hero .space-y-7 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 2.5rem;
+}
+
+/* 按钮区底部到 HeroMetrics 之间距离单独再放大：
+   第 4 个直接子元素（HeroMetrics）的 margin-top 拉到 4rem = 64px。
+   按钮底 → HeroMetrics 边框 = 64px，到第一行文字 = 64 + pt-16(64px) = 128px。 */
+#hero .space-y-7 > :nth-child(4) {
+  margin-top: 4rem;
+}
+
+/* ── Hero entrance animations ── */
+@keyframes hero-arrow-float {
+  0%,
+  100% {
+    transform: translate3d(0, 3px, 0);
+    opacity: 0.58;
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+    opacity: 1;
+  }
+}
+
+.hero-scroll-arrow {
+  animation: hero-arrow-float 1.45s ease-in-out infinite;
+}
+
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 22px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.hero-enter {
+  opacity: 0;
+  animation: hero-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Hermes 弹窗打开时用这个类「冻结」首屏入场，弹窗关后再切回 hero-enter--N */
+.hero-enter-frozen {
+  opacity: 0;
+  transform: translate3d(0, 22px, 0);
+}
+
+.hero-enter--1 {
+  animation-delay: 0.06s;
+}
+
+.hero-enter--2 {
+  animation-delay: 0.16s;
+}
+
+.hero-enter--3 {
+  animation-delay: 0.28s;
+}
+
+.hero-enter--4 {
+  animation-delay: 0.4s;
+}
+
+.hero-enter--5 {
+  animation-delay: 0.52s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .hero-scroll-arrow {
+    animation: none;
+    opacity: 0.75;
+  }
+
+  .hero-build-title-part {
+    animation: none !important;
+    fill: rgb(255 255 255) !important;
+    stroke: transparent !important;
+    stroke-width: 0 !important;
+  }
+}
+
+/* 首屏主标题：整体同步描边 + 差速收束 → 填充（设计落成感） */
+@keyframes hero-build-title-draw {
+  0% {
+    fill: transparent;
+    stroke-dashoffset: var(--dash);
+  }
+  58% {
+    fill: transparent;
+    stroke-dashoffset: 0;
+  }
+  100% {
+    fill: rgb(255 255 255);
+    stroke: transparent;
+    stroke-dashoffset: 0;
+  }
+}
+
+.hero-build-title-svg {
+  filter: drop-shadow(0 2px 24px rgba(0, 0, 0, 0.35));
+}
+
+.hero-build-title-part {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 1.65px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: transparent;
+  paint-order: stroke fill;
+  stroke-dasharray: var(--dash);
+  stroke-dashoffset: var(--dash);
+  animation-name: hero-build-title-draw;
+  animation-duration: var(--dur);
+  animation-delay: var(--delay);
+  animation-timing-function: var(--ease);
+  animation-fill-mode: both;
+}
+
+.hero-build-title-part.hero-build-title-part--hold {
+  animation: none;
+  stroke-dashoffset: var(--dash);
+  fill: transparent;
+}
+
+/* RevealItem：首次进入视口播上滑+淡入；both 在 delay 期间保持首帧，避免阶梯延迟时空白闪 */
+@keyframes reveal-item-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, clamp(22px, 3.6vh, 40px), 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.reveal-item {
+  overflow-anchor: none;
+  min-width: 0;
+}
+
+.reveal-item--fill-outer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.reveal-item--fill-inner {
+  display: flex;
+  flex: 1 1 0%;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.reveal-item--idle {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, clamp(22px, 3.6vh, 40px), 0);
+}
+
+.reveal-item--enter {
+  animation: reveal-item-up 0.96s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-item--idle,
+  .reveal-item--enter {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    pointer-events: auto;
+  }
+}
+
+/* 浮悬深顶栏内的 tab：浅色字 + 悬停下划线仍用主色 */
+.floating-nav-shell .nav-tab-link {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.floating-nav-shell .nav-tab-link:hover {
+  color: #fff;
+}
+
+.floating-nav-shell .nav-tab-link::after {
+  background-color: #fff;
+  height: 1px;
+  border-radius: 0.5px;
+}
+
+/* 首屏外：白底顶栏内 tab 黑字 + 悬停黑色下划线 */
+.floating-nav-shell.floating-nav-shell--solid .nav-tab-link {
+  color: rgba(17, 24, 39, 0.62);
+}
+
+.floating-nav-shell.floating-nav-shell--solid .nav-tab-link:hover {
+  color: var(--color-text-primary);
+}
+
+.floating-nav-shell.floating-nav-shell--solid .nav-tab-link::after {
+  background-color: var(--color-text-primary);
+  height: 2px;
+  border-radius: 1px;
+}
+
+/* 顶栏 tab：下划线由中间向两侧 scaleX 展开 */
+.nav-tab-link {
+  position: relative;
+}
+
+.nav-tab-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background-color: var(--color-primary);
+  transform: translate3d(-50%, 0, 0) scaleX(0);
+  transform-origin: center;
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-tab-link:hover::after {
+  transform: translate3d(-50%, 0, 0) scaleX(1);
+}
+
+/* 当前选中的 tab：点击后不收留 hover 下划线（仍用 transition 收起） */
+.nav-tab-link.nav-tab-link--current:hover::after {
+  transform: translate3d(-50%, 0, 0) scaleX(0);
+}
+
+.floating-nav-shell .nav-tab-link.nav-tab-link--current:hover::after {
+  transform: translate3d(-50%, 0, 0) scaleX(0);
+}
+
+.product-nav-trigger {
+  position: relative;
+}
+
+.product-nav-trigger::before {
+  content: none;
+}
+
+.product-nav-popover {
+  position: absolute;
+  left: var(--product-popover-x, 50%);
+  top: calc(1.5rem + 3.5rem + 4px);
+  z-index: 60;
+  width: min(240px, calc(100vw - 48px));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  color: #fff;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transform: translate3d(-50%, -8px, 0);
+  transform-origin: top center;
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  will-change: backdrop-filter, opacity, transform;
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.18s ease-out,
+    background-color 0.3s ease-out,
+    border-color 0.3s ease-out,
+    box-shadow 0.3s ease-out;
+}
+
+.product-nav-popover__content {
+  position: relative;
+  z-index: 1;
+}
+
+.product-nav-popover--open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(-50%, 0, 0);
+}
+
+.product-nav-popover--solid {
+  border-color: rgba(17, 24, 39, 0.08);
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+  color: var(--color-text-primary);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.product-nav-popover__item {
+  display: flex;
+  min-width: 0;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: rgba(255, 255, 255, 0.6);
+  transition:
+    background-color 0.16s ease-out,
+    color 0.16s ease-out,
+    transform 0.16s ease-out;
+}
+
+.product-nav-popover__item:hover,
+.product-nav-popover__item:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.product-nav-popover--solid .product-nav-popover__item {
+  color: rgba(17, 24, 39, 0.62);
+}
+
+.product-nav-popover--solid .product-nav-popover__item:hover,
+.product-nav-popover--solid .product-nav-popover__item:focus-visible {
+  background: rgba(17, 24, 39, 0.06);
+  color: var(--color-text-primary);
+}
+
+.product-nav-popover__title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.product-nav-popover__icon {
+  display: inline-flex;
+  shrink: 0;
+  color: currentcolor;
+  opacity: 0;
+  transform: translate3d(-2px, 0, 0);
+  transition:
+    opacity 0.16s ease-out,
+    transform 0.16s ease-out;
+}
+
+.product-nav-popover__item--external:hover .product-nav-popover__icon,
+.product-nav-popover__item--external:focus-visible .product-nav-popover__icon {
+  opacity: 1;
+  transform: translate3d(1px, -1px, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-tab-link::after {
+    transition-duration: 0.01ms;
+  }
+
+  .product-nav-popover,
+  .product-nav-popover__item {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* 能力卡片图标：默认完整显示；悬停卡片时重播描边绘制（pathLength=1 时 dash 与 offset 为归一化长度） */
+.capability-icon-stroke {
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .group:hover .capability-icon-stroke,
+  .group:focus-within .capability-icon-stroke {
+    animation: capability-icon-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .group:hover .capability-icon-stroke--delay-1,
+  .group:focus-within .capability-icon-stroke--delay-1 {
+    animation-delay: 90ms;
+  }
+
+  .group:hover .capability-icon-stroke--delay-2,
+  .group:focus-within .capability-icon-stroke--delay-2 {
+    animation-delay: 180ms;
+  }
+
+  /* 纯触屏无 hover：按压卡片时重播描边 */
+  @media (hover: none) {
+    .group:active .capability-icon-stroke {
+      animation: capability-icon-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .group:active .capability-icon-stroke--delay-1 {
+      animation-delay: 90ms;
+    }
+
+    .group:active .capability-icon-stroke--delay-2 {
+      animation-delay: 180ms;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .capability-icon-stroke {
+    animation: none !important;
+  }
+}
+
+/* Featured model card: expand description area on hover / focus-within */
+.group:hover .model-desc-wrap,
+.group:focus-within .model-desc-wrap {
+  max-height: calc(2.75rem + 88px) !important;
+}
+
+@keyframes capability-icon-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Hero / CTA button hover states ── */
+.marketing-page .hero-cta-primary:hover {
+  background: #555ed9 !important;
+  box-shadow: 0 22px 44px rgba(85, 94, 217, 0.38) !important;
+}
+
+.marketing-page .hero-cta-primary:active {
+  background: #4448c9 !important;
+}
+
+.marketing-page .hero-cta-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.22) !important;
+}
+
+.marketing-page .hero-scroll-btn:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 36px rgba(102, 115, 255, 0.22) !important;
+}
+
+.marketing-page .cta-closing-primary:hover {
+  background: #555ed9 !important;
+  box-shadow: 0 18px 34px rgba(85, 94, 217, 0.22) !important;
+}
+
+.marketing-page .cta-closing-primary:active {
+  background: #4448c9 !important;
+}
+
+.hermes-cta-primary:hover {
+  background: #1f2937 !important;
+}
+
+.hermes-cta-primary:active {
+  background: #1f2937 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-page .hero-cta-primary:hover,
+  .marketing-page .hero-cta-ghost:hover,
+  .marketing-page .hero-scroll-btn:hover,
+  .marketing-page .cta-closing-primary:hover {
+    transform: none !important;
+  }
+}
+
+/* Footer「联系我们」二维码浮层：固定尺寸，避免全局 img max-width:100% 在窄父级下压成竖条 */
+.footer-contact-qr-popover img {
+  max-width: none !important;
+}
+
+.marketing-footer-contact__item:hover .rounded-md,
+.marketing-footer-contact__item:focus-visible .rounded-md {
+  background: rgba(102, 115, 255, 0.14);
+}
+
+/* GEO: FAQ 区块 */
+.faq-section {
+  max-width: 880px;
+  margin: 80px auto;
+  padding: 0 20px;
+}
+.faq-section h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.faq-subtitle {
+  color: #666;
+  margin-bottom: 32px;
+}
+.faq-section details {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.faq-section details[open] {
+  border-color: #2563eb;
+  background: #f8faff;
+}
+.faq-section summary {
+  font-size: 16px;
+  font-weight: 600;
+  list-style: none;
+}
+.faq-section summary::-webkit-details-marker {
+  display: none;
+}
+.faq-answer {
+  margin-top: 12px;
+  line-height: 1.8;
+  color: #374151;
+}
+.faq-answer ul,
+.faq-answer ol {
+  padding-left: 20px;
+}
+
+/* GEO: 对比表格 */
+.compare-section {
+  max-width: 960px;
+  margin: 80px auto;
+  padding: 0 20px;
+}
+.compare-section h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.compare-subtitle {
+  color: #666;
+  margin-bottom: 32px;
+}
+.compare-table-wrap {
+  overflow-x: auto;
+}
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.compare-table th {
+  background: #1e293b;
+  color: #fff;
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.compare-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.compare-table tr:nth-child(even) td {
+  background: #f8fafc;
+}
+.compare-note {
+  margin-top: 16px;
+  color: #666;
+  text-align: center;
+}
+
+/* GEO: 性能指标 */
+.performance-section {
+  max-width: 960px;
+  margin: 80px auto;
+  padding: 0 20px;
+}
+.performance-section h2 {
+  font-size: 28px;
+  margin-bottom: 8px;
+}
+.perf-subtitle {
+  color: #666;
+  margin-bottom: 32px;
+}
+.perf-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+.perf-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 28px 24px;
+  text-align: center;
+}
+.perf-card h3 {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+.perf-number {
+  font-size: 36px;
+  font-weight: 800;
+  color: #2563eb;
+}
+.perf-desc {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+.perf-models {
+  margin-top: 40px;
+}
+.perf-models h3 {
+  margin-bottom: 16px;
+}
+.perf-model-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.perf-model-list li {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .perf-grid,
+  .perf-model-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 首页右侧悬浮：加入群聊 */
+.marketing-floating-group-chat {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+
+.marketing-floating-group-chat__trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border-radius: 12px 0 0 12px;
+  background: rgba(17, 24, 39, 0.82);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(8px);
+  cursor: default;
+}
+
+.marketing-floating-group-chat__icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.marketing-floating-group-chat__label {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.marketing-floating-group-chat__popover {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  width: max-content;
+  padding-right: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%) translateX(8px);
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    transform 0.2s ease;
+  pointer-events: none;
+}
+
+.marketing-floating-group-chat__popover-card {
+  padding: 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  line-height: 0;
+}
+
+.marketing-floating-group-chat--open .marketing-floating-group-chat__popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+  pointer-events: auto;
+}
+
+/* 固定尺寸，避免全局 .marketing-page img max-width:100% 在窄父级下压成竖条 */
+.marketing-page .marketing-floating-group-chat__qr {
+  display: block;
+  width: 176px;
+  height: 176px;
+  max-width: none !important;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+@media (max-width: 640px) {
+  .marketing-floating-group-chat__trigger {
+    padding: 10px 8px;
+  }
+
+  .marketing-floating-group-chat__icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .marketing-floating-group-chat__label {
+    font-size: 11px;
+  }
+
+  .marketing-page .marketing-floating-group-chat__qr {
+    width: 148px;
+    height: 148px;
+  }
+}
+

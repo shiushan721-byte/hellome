@@ -1,5 +1,5 @@
 import { getDefaultHomePageConfig, HOME_CONFIG_KEY, HOME_CONFIG_SCOPE } from '../../lib/homePageConfigDefaults';
-import { getHeroAdImageSizeHint } from '../../lib/homeHeroAds';
+import { getHeroAdImageSizeHint, heroAdHasImage } from '../../lib/homeHeroAds';
 import { normalizeHomePageConfigPayload } from '../../lib/homePageConfigNormalize';
 import {
   HOME_RECOMMEND_DESC_MAX,
@@ -11,15 +11,7 @@ import type {
   HomePageOperationConfig,
 } from '../../types/homePageConfig';
 import { getPrismaClient } from '../db/prisma';
-import { publishFrontendConfig, upsertFrontendConfig } from './adminService';
 import { listOnlineAgentsForMarket } from './adminAgentService';
-
-let memoryDraft: {
-  id: string;
-  payload: HomePageConfigPayload;
-  version: number;
-  updatedAt: string;
-} | null = null;
 
 let memoryPublished: {
   id: string;
@@ -160,26 +152,107 @@ function toPublicConfig(
   };
 }
 
+async function findPublishedHomeConfigRow() {
+  const prisma = getPrismaClient();
+  if (!prisma) return null;
+  try {
+    return await prisma.frontendConfig.findFirst({
+      where: { key: HOME_CONFIG_KEY, status: 'published' },
+      orderBy: { version: 'desc' },
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function upsertPublishedHomeConfig(input: {
+  configId?: string | null;
+  payload: HomePageConfigPayload;
+  actorId: string;
+}) {
+  const prisma = getPrismaClient();
+  const now = new Date();
+
+  if (prisma) {
+    const existing =
+      (input.configId
+        ? await prisma.frontendConfig.findFirst({
+            where: { id: input.configId, key: HOME_CONFIG_KEY },
+          })
+        : null) ?? (await findPublishedHomeConfigRow());
+
+    if (existing) {
+      return prisma.frontendConfig.update({
+        where: { id: existing.id },
+        data: {
+          payload: input.payload as object,
+          status: 'published',
+          publishedAt: now,
+          updatedBy: input.actorId,
+        },
+      });
+    }
+
+    const latest = await prisma.frontendConfig.findFirst({
+      where: { key: HOME_CONFIG_KEY },
+      orderBy: { version: 'desc' },
+    });
+    const version = (latest?.version ?? 0) + 1;
+
+    return prisma.frontendConfig.create({
+      data: {
+        key: HOME_CONFIG_KEY,
+        name: '首页运营配置',
+        scope: HOME_CONFIG_SCOPE,
+        version,
+        status: 'published',
+        payload: input.payload as object,
+        createdBy: input.actorId,
+        updatedBy: input.actorId,
+        publishedAt: now,
+      },
+    });
+  }
+
+  const updatedAt = now.toISOString();
+  if (memoryPublished && (!input.configId || memoryPublished.id === input.configId)) {
+    memoryPublished = {
+      ...memoryPublished,
+      payload: input.payload,
+      version: memoryPublished.version + 1,
+      updatedAt,
+    };
+    return {
+      id: memoryPublished.id,
+      version: memoryPublished.version,
+      updatedAt: new Date(updatedAt),
+    };
+  }
+
+  memoryPublished = {
+    id: `mem-${Date.now()}`,
+    payload: input.payload,
+    version: 1,
+    updatedAt,
+  };
+  return {
+    id: memoryPublished.id,
+    version: memoryPublished.version,
+    updatedAt: new Date(updatedAt),
+  };
+}
+
 export async function getPublishedHomePageConfig(): Promise<HomePageOperationConfig> {
   const onlineIds = await resolveOnlineAgentIds();
-  const prisma = getPrismaClient();
-  if (prisma) {
-    try {
-      const published = await prisma.frontendConfig.findFirst({
-        where: { key: HOME_CONFIG_KEY, status: 'published' },
-        orderBy: { version: 'desc' },
-      });
-      if (published) {
-        return toPublicConfig(
-          normalizeHomePageConfigPayload(published.payload),
-          published.version,
-          published.updatedAt.toISOString(),
-          onlineIds,
-        );
-      }
-    } catch {
-      // fall through
-    }
+  const published = await findPublishedHomeConfigRow();
+
+  if (published) {
+    return toPublicConfig(
+      normalizeHomePageConfigPayload(published.payload),
+      published.version,
+      published.updatedAt.toISOString(),
+      onlineIds,
+    );
   }
 
   if (memoryPublished) {
@@ -191,145 +264,84 @@ export async function getPublishedHomePageConfig(): Promise<HomePageOperationCon
 }
 
 export async function getAdminHomeConfigState(): Promise<AdminHomeConfigState> {
-  const prisma = getPrismaClient();
-  if (prisma) {
-    try {
-      const draft = await prisma.frontendConfig.findFirst({
-        where: { key: HOME_CONFIG_KEY, status: 'draft' },
-        orderBy: { version: 'desc' },
-      });
-      const published = await prisma.frontendConfig.findFirst({
-        where: { key: HOME_CONFIG_KEY, status: 'published' },
-        orderBy: { version: 'desc' },
-      });
-      const source = draft ?? published;
-      const config = source
-        ? normalizeHomePageConfigPayload(source.payload)
-        : getDefaultHomePageConfig();
+  const published = await findPublishedHomeConfigRow();
 
-      return {
-        draftId: draft?.id ?? null,
-        status: draft ? 'draft' : published ? 'published' : 'default',
-        publishedVersion: published?.version ?? 0,
-        version: source?.version ?? 0,
-        updatedAt: (source?.updatedAt ?? new Date()).toISOString(),
-        config,
-      };
-    } catch {
-      // fall through
-    }
+  if (published) {
+    return {
+      configId: published.id,
+      status: 'published',
+      version: published.version,
+      updatedAt: published.updatedAt.toISOString(),
+      config: normalizeHomePageConfigPayload(published.payload),
+    };
   }
 
-  if (memoryDraft || memoryPublished) {
-    const source = memoryDraft ?? memoryPublished!;
+  if (memoryPublished) {
     return {
-      draftId: memoryDraft?.id ?? null,
-      status: memoryDraft ? 'draft' : 'published',
-      publishedVersion: memoryPublished?.version ?? 0,
-      version: source.version,
-      updatedAt: source.updatedAt,
-      config: source.payload,
+      configId: memoryPublished.id,
+      status: 'published',
+      version: memoryPublished.version,
+      updatedAt: memoryPublished.updatedAt,
+      config: normalizeHomePageConfigPayload(memoryPublished.payload),
     };
   }
 
   return {
-    draftId: null,
+    configId: null,
     status: 'default',
-    publishedVersion: 0,
     version: 0,
     updatedAt: new Date().toISOString(),
     config: getDefaultHomePageConfig(),
   };
 }
 
-export async function saveAdminHomeConfigDraft(input: {
-  draftId?: string | null;
+/** 保存首页配置并立即生效（上架即前台可见，无独立发布步骤） */
+export async function saveAdminHomeConfig(input: {
+  configId?: string | null;
   config: HomePageConfigPayload;
   actorId: string;
 }) {
   const payload = normalizeHomePageConfigPayload(input.config);
-  const row = await upsertFrontendConfig({
-    id: input.draftId ?? undefined,
-    key: HOME_CONFIG_KEY,
-    name: '首页运营配置',
-    scope: HOME_CONFIG_SCOPE,
-    payload,
-    actorId: input.actorId,
-  });
-
-  if (!getPrismaClient()) {
-    memoryDraft = {
-      id: row.id,
-      payload,
-      version: row.version,
-      updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : new Date().toISOString(),
-    };
-  }
-
-  return {
-    draftId: row.id,
-    status: 'draft' as const,
-    version: row.version,
-    updatedAt: typeof row.updatedAt === 'string' ? row.updatedAt : new Date(row.updatedAt as Date).toISOString(),
-    config: payload,
-  };
-}
-
-export async function publishAdminHomeConfig(draftId: string, actorId: string) {
-  const prisma = getPrismaClient();
-  let payload: HomePageConfigPayload = getDefaultHomePageConfig();
-
-  if (prisma) {
-    const draft = await prisma.frontendConfig.findUnique({ where: { id: draftId } });
-    if (!draft) throw new Error('草稿不存在');
-    payload = normalizeHomePageConfigPayload(draft.payload);
-  } else if (memoryDraft?.id === draftId) {
-    payload = memoryDraft.payload;
-  } else {
-    throw new Error('草稿不存在');
-  }
-
   const errors = validateHomePageConfig(payload);
   if (errors.length > 0) {
     throw new Error(errors.join('；'));
   }
 
-  const published = await publishFrontendConfig(draftId, actorId);
+  const row = await upsertPublishedHomeConfig({
+    configId: input.configId,
+    payload,
+    actorId: input.actorId,
+  });
 
-  if (!prisma) {
+  if (!getPrismaClient()) {
     memoryPublished = {
-      id: published.id,
+      id: row.id,
       payload,
-      version: published.version,
-      updatedAt: new Date().toISOString(),
+      version: row.version,
+      updatedAt:
+        row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt ?? new Date().toISOString()),
     };
-    memoryDraft = null;
   }
 
   return {
-    draftId: published.id,
-    version: published.version,
-    publishedAt:
-      typeof published.publishedAt === 'string'
-        ? published.publishedAt
-        : published.publishedAt
-          ? new Date(published.publishedAt as Date).toISOString()
-          : new Date().toISOString(),
+    configId: row.id,
+    status: 'published' as const,
+    version: row.version,
+    updatedAt:
+      row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt ?? new Date().toISOString()),
+    config: payload,
   };
 }
 
-export async function listHomePublishRecords() {
-  const prisma = getPrismaClient();
-  if (prisma) {
-    try {
-      return await prisma.publishRecord.findMany({
-        where: { module: HOME_CONFIG_SCOPE },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      });
-    } catch {
-      // fall through
-    }
-  }
-  return [];
+/** @deprecated 使用 saveAdminHomeConfig */
+export async function saveAdminHomeConfigDraft(input: {
+  draftId?: string | null;
+  config: HomePageConfigPayload;
+  actorId: string;
+}) {
+  return saveAdminHomeConfig({
+    configId: input.draftId,
+    config: input.config,
+    actorId: input.actorId,
+  });
 }

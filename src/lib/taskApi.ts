@@ -31,7 +31,15 @@ export async function uploadTaskFile(file: File): Promise<{
   });
 }
 
-export async function createRemoteUgcTask(input: UgcTaskInput): Promise<Task> {
+export async function createRemoteUgcTask(
+  input: UgcTaskInput,
+  context?: {
+    projectId?: string;
+    projectName?: string;
+    temporarySessionId?: string;
+    taskScope?: 'project' | 'temporary';
+  },
+): Promise<Task> {
   const user = getUser();
   const externalId = user.email || user.phone || 'local-user';
   return requestJson('/api/tasks/ugc', {
@@ -41,6 +49,7 @@ export async function createRemoteUgcTask(input: UgcTaskInput): Promise<Task> {
     },
     body: JSON.stringify({
       input,
+      context,
       user: {
         externalId,
         displayName: user.name,

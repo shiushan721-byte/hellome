@@ -1,0 +1,383 @@
+/* ===== 全局 ===== */
+.pay-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== 居中布局（成功/加载/错误） ===== */
+.pay-page-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+/* ===== 主布局（订单详情页） ===== */
+.pay-page-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.pay-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pay-content {
+  padding: 24px 16px 32px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ===== 订单卡片 ===== */
+.pay-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pay-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.pay-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pay-card-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.pay-card-company {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 4px;
+}
+
+.pay-card-order-id {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0;
+  word-break: break-all;
+}
+
+.pay-card-check {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #12B76A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 16px;
+}
+
+.pay-card-amount {
+  font-size: 36px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.pay-card-hint {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.pay-card-product-name {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 4px;
+  text-align: center;
+}
+
+/* ===== 特性标签 ===== */
+.pay-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pay-feature-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pay-feature-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ecfdf3;
+  color: #12B76A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pay-feature-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* ===== 状态横幅 ===== */
+.pay-status-banner {
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pay-status-banner p {
+  margin: 0;
+}
+
+.pay-status-banner--success {
+  background: #ecfdf3;
+  color: #12B76A;
+}
+
+.pay-status-banner--closed {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.pay-alipay-hint {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.pay-error-inline {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #ef4444;
+}
+
+/* ===== 底部固定支付栏 ===== */
+.pay-bottom-bar {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #e2e8f0;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.pay-bottom-inner {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.pay-countdown-text {
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 10px;
+}
+
+/* ===== 按钮 ===== */
+.pay-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  padding: 14px 24px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pay-btn--primary {
+  background: #12B76A;
+  color: #fff;
+}
+
+.pay-btn--primary:active:not(:disabled) {
+  background: #0e9e5a;
+}
+
+.pay-btn--full {
+  width: 100%;
+}
+
+.pay-btn-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: pay-spin 0.6s linear infinite;
+}
+
+/* ===== 加载动画 ===== */
+.pay-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #12B76A;
+  border-radius: 50%;
+  animation: pay-spin 0.7s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes pay-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pay-loading-text {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ===== 结果页 ===== */
+.pay-result-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.pay-result-icon--success {
+  background: #ecfdf3;
+  color: #12B76A;
+}
+
+.pay-result-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.pay-result-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #12B76A;
+  margin: 0 0 8px;
+}
+
+.pay-result-desc {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ===== Toast 提示 ===== */
+.pay-toast {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  padding: 16px 16px 0;
+  pointer-events: none;
+  animation: pay-toast-in 0.3s ease-out;
+}
+
+.pay-toast-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1e293b;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  pointer-events: auto;
+}
+
+.pay-toast-icon {
+  flex-shrink: 0;
+  color: #fbbf24;
+}
+
+@keyframes pay-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 通用消息 ===== */
+.pay-msg-text {
+  font-size: 15px;
+  color: #64748b;
+  margin: 0;
+}
+
+.pay-error-text {
+  font-size: 15px;
+  color: #ef4444;
+  margin: 0 0 8px;
+}
+
+.pay-card-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.pay-card-desc {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 4px;
+}

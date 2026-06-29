@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Link2, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { getAgentById } from '../../data/agentsCatalog';
 import type { AgentEntryState } from '../../types/agentNavigation';
 import { DEFAULT_AGENT_RETURN_PATH } from '../../types/agentNavigation';
@@ -10,6 +10,17 @@ import {
   subscribeHermesConnection,
 } from '../../lib/hermesConnection';
 import HermesActionModal from '../../components/app/HermesActionModal';
+import ProjectContextSelector from '../../components/app/projects/ProjectContextSelector';
+import {
+  buildGeoInputFromProject,
+  getActiveProjectId,
+  getProject,
+  subscribeProjects,
+} from '../../lib/projectStore';
+import type { ProjectProfile } from '../../types/workbench';
+import { createGeoTask } from '../../lib/taskStore';
+import { runGeoTask } from '../../lib/geoTaskRunner';
+import { DEFAULT_GEO_MODELS } from '../../types/workbench';
 
 const MODELS = ['豆包', 'DeepSeek', '腾讯元宝', 'Kimi', '文心一言', 'Qwen', '智谱', 'MiniMax'];
 
@@ -20,11 +31,22 @@ export default function GeoAgentPage() {
   const agent = getAgentById(entry.agentId ?? 'geo');
   const agentName = agent?.name ?? 'GEO 智能体';
   const returnPath = entry.from ?? DEFAULT_AGENT_RETURN_PATH;
+  void returnPath;
 
   const [executionCollapsed, setExecutionCollapsed] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [runProgress, setRunProgress] = useState(10);
   const [showHermesModal, setShowHermesModal] = useState(false);
+  const activeProjectId = useSyncExternalStore(subscribeProjects, getActiveProjectId, getActiveProjectId);
+  const [selectedProjectId, setSelectedProjectId] = useState(activeProjectId);
+  const [brandName, setBrandName] = useState('');
+  const [targetMarket, setTargetMarket] = useState('');
+  const [productService, setProductService] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
+  const [keywords, setKeywords] = useState('');
+  const [competitors, setCompetitors] = useState('');
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState('');
   const hermes = useSyncExternalStore(
     subscribeHermesConnection,
     getHermesConnection,
@@ -46,6 +68,47 @@ export default function GeoAgentPage() {
     }, 1800);
     return () => window.clearInterval(timer);
   }, [isRunning]);
+
+  const selectedProject = getProject(selectedProjectId);
+  const draftInput = {
+    brandName: brandName.trim(),
+    websiteUrl: websiteUrl.trim(),
+    keywords: keywords.trim() || productService.trim(),
+    competitors: competitors.trim(),
+    models: DEFAULT_GEO_MODELS,
+    depth: 'standard' as const,
+  };
+
+  const handleSelectProject = (project: ProjectProfile | null) => {
+    setSelectedProjectId(project?.id ?? '');
+    if (!project) return;
+    const preset = buildGeoInputFromProject(project);
+    setBrandName((value) => value || preset.brandName || '');
+    setWebsiteUrl((value) => value || preset.websiteUrl || '');
+    setKeywords((value) => value || preset.keywords || '');
+    setCompetitors((value) => value || preset.competitors || '');
+    setProductService((value) => value || project.productIntro || '');
+    setNotes((value) => value || project.notes || '');
+  };
+
+  const handleExecute = () => {
+    setError('');
+    if (hermes.status !== 'connected') {
+      setShowHermesModal(true);
+      return;
+    }
+    if (!brandName.trim()) {
+      setError('请先填写品牌名称');
+      return;
+    }
+    if (!websiteUrl.trim() && !notes.trim()) {
+      setError('请至少填写官网 URL 或补充说明');
+      return;
+    }
+    const task = createGeoTask(draftInput, { projectId: selectedProjectId || undefined });
+    runGeoTask(task.id);
+    navigate(`/app/tasks/${task.id}`);
+  };
 
   return (
     <div className="min-h-full bg-white">
@@ -100,11 +163,24 @@ export default function GeoAgentPage() {
               <p className="mt-2 text-sm text-black/45">补齐品牌资料后即可提交，检测 AI 平台提及与内容缺口。</p>
             </div>
 
+            <div className="mt-5">
+              <ProjectContextSelector
+                selectedProjectId={selectedProjectId}
+                onSelectProject={handleSelectProject}
+                seed={draftInput}
+              />
+              <p className="mt-2 text-xs text-black/42">
+                {selectedProject
+                  ? `当前将创建项目任务：${selectedProject.name}`
+                  : '当前将创建临时任务。本次任务不会读取或沉淀项目资料。'}
+              </p>
+            </div>
+
             <div className="mt-5 grid md:grid-cols-2 gap-3">
-              <Field label="品牌名称 *" value="UU教育" hint="4/20" />
-              <Field label="城市 / 目标市场 *" value="北京市/通州区" />
-              <Field label="产品 / 服务 *" value="UU教育; UU教育怎么样, UU教育靠谱吗, UU考研" hint="300/300" />
-              <Field label="官网 URL（可选）" value="https://www.example.com" />
+              <Field label="品牌名称 *" value={brandName} onChange={setBrandName} placeholder="例如：HelloMe" />
+              <Field label="城市 / 目标市场" value={targetMarket} onChange={setTargetMarket} placeholder="例如：上海 / 全国" />
+              <Field label="产品 / 服务" value={productService} onChange={setProductService} placeholder="例如：AI 智能体平台" />
+              <Field label="官网 URL（可选）" value={websiteUrl} onChange={setWebsiteUrl} placeholder="https://example.com" />
             </div>
 
             <p className="mt-2 text-[11px] text-[#14958A] font-medium">
@@ -117,30 +193,36 @@ export default function GeoAgentPage() {
 
               <div className="mt-3 rounded-xl bg-white border border-black/8 p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-black/60">参考链接</p>
-                  <p className="text-[11px] text-black/35">已添加 0/10 条</p>
+                  <p className="text-xs font-medium text-black/60">核心关键词</p>
+                  <p className="text-[11px] text-black/35">可从项目资料自动带入</p>
                 </div>
-                <div className="mt-2 flex gap-2">
-                  <div className="flex-1 min-w-0 h-10 border border-black/10 rounded-lg px-3 flex items-center gap-2 text-black/35 text-sm">
-                    <Link2 className="w-4 h-4" />
-                    粘贴文章、竞品或发布内容链接
-                  </div>
-                  <button
-                    type="button"
-                    className="w-[92px] h-10 border border-black/10 rounded-lg text-sm text-black/45 hover:bg-black/[0.02]"
-                  >
-                    + 添加
-                  </button>
-                </div>
+                <input
+                  value={keywords}
+                  onChange={(event) => setKeywords(event.target.value)}
+                  className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:border-[#14958A]/40"
+                  placeholder="智能体平台, GEO 优化"
+                />
+              </div>
+
+              <div className="mt-3 rounded-xl bg-white border border-black/8 p-3">
+                <p className="text-xs font-medium text-black/60">竞品名称</p>
+                <input
+                  value={competitors}
+                  onChange={(event) => setCompetitors(event.target.value)}
+                  className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:border-[#14958A]/40"
+                  placeholder="竞品 A, 竞品 B"
+                />
               </div>
 
               <div className="mt-3 rounded-xl bg-white border border-black/8 p-3">
                 <p className="text-xs font-medium text-black/60">补充说明</p>
-                <div className="mt-2 rounded-lg border border-black/10 bg-[#FCFCFD] px-3 py-2 text-sm text-black/70 leading-relaxed min-h-[96px]">
-                  UU教育(北京鸿途优学教育科技有限公司)创立于2015年，总部位于北京市通州区，是一家以法律职业资格、注册会计师为核心，
-                  覆盖医药、建筑、考研、财会等多领域的互联网职业教育平台，提供直播课程、在线精品课、真机模拟、学管师陪学等服务。
-                </div>
-                <p className="mt-1 text-right text-[11px] text-black/30">136/300 字</p>
+                <textarea
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  className="mt-2 min-h-[96px] w-full rounded-lg border border-black/10 bg-[#FCFCFD] px-3 py-2 text-sm leading-relaxed outline-none focus:border-[#14958A]/40"
+                  placeholder="可补充品牌背景、产品特点、目标客户，项目资料会自动带入这里。"
+                />
+                <p className="mt-1 text-right text-[11px] text-black/30">{notes.length}/300 字</p>
               </div>
             </section>
 
@@ -162,19 +244,13 @@ export default function GeoAgentPage() {
                 ))}
               </div>
             </section>
+            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
             </section>
 
             <ExecutionPanel
               collapsed={false}
               onToggle={() => {}}
-              onExecute={() => {
-                if (hermes.status !== 'connected') {
-                  setShowHermesModal(true);
-                  return;
-                }
-                setIsRunning(true);
-                setRunProgress(10);
-              }}
+              onExecute={handleExecute}
               forceExpanded={isRunning}
               disableExecute={isRunning}
             />
@@ -221,14 +297,26 @@ export default function GeoAgentPage() {
   );
 }
 
-function Field({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
   return (
     <div>
       <p className="text-sm text-black/65 mb-1.5">{label}</p>
-      <div className="h-11 rounded-lg border border-black/10 bg-white px-3 flex items-center justify-between gap-3">
-        <span className="text-sm text-black/75 truncate">{value}</span>
-        {hint && <span className="text-[11px] text-black/30 shrink-0">{hint}</span>}
-      </div>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="h-11 w-full rounded-lg border border-black/10 bg-white px-3 text-sm text-black/75 outline-none focus:border-[#14958A]/40 focus:ring-2 focus:ring-[#14958A]/15"
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import TaskStatusBadge, { formatDuration } from './TaskStatusBadge';
 import ConfirmationNode from './ConfirmationNode';
 import { formatToken, formatTokenRange } from '../../../lib/tokenBilling';
 import { buildMediaDeliveryView, deriveMediaTaskStage } from '../../../lib/mediaTaskPresentation';
+import { formatTaskProjectLabel } from '../../../lib/projectStore';
 
 interface TaskRunLayoutProps {
   task: Task;
@@ -59,6 +60,11 @@ export default function TaskRunLayout({
       : task.status === 'failed'
         ? '执行中断，待人工处理'
         : '执行中';
+  const scopeLabel = (task.taskScope ?? 'temporary') === 'project' ? '项目任务' : '临时任务';
+  const scopeDescription =
+    (task.taskScope ?? 'temporary') === 'project'
+      ? `所属项目：${formatTaskProjectLabel(task)}。本任务可复用项目资料。`
+      : '本次任务未关联项目，不会读取或沉淀项目资料。';
 
   return (
     <div className="h-full overflow-y-auto bg-[#F5F5F7] px-4 pb-6 pt-4 sm:px-6 lg:px-8 xl:px-10">
@@ -102,7 +108,13 @@ export default function TaskRunLayout({
                         : '准备中'
                 }
               />
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <SummaryCard
+                  eyebrow="上下文"
+                  title={scopeLabel}
+                  description={scopeDescription}
+                  compact
+                />
                 <SummaryCard
                   eyebrow={isUgcTask ? '状态' : '运行'}
                   title={

@@ -12,6 +12,7 @@ import GeoAgentPage from './pages/app/GeoAgentPage';
 import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
+import ProjectsPage from './pages/app/ProjectsPage';
 import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
@@ -35,10 +36,12 @@ import AdminIntegrationsPage from './pages/admin/AdminIntegrationsPage';
 import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage';
 import AdminSkillsPage from './pages/admin/AdminSkillsPage';
 import MarketingPage from './pages/MarketingPage';
+import RouteSeo from './components/RouteSeo';
 
 export default function App() {
   return (
     <LoginModalProvider>
+      <RouteSeo />
       <Routes>
       <Route path="/" element={<HomeRedirect />} />
       <Route path="/login" element={null} />
@@ -77,6 +80,7 @@ export default function App() {
         <Route path="agents/sales" element={<AgentComingSoonPage agentId="sales" />} />
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
         <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
+        <Route path="projects" element={<ProjectsPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="results" element={<ResultsPage />} />

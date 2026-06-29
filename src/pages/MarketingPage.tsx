@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Zap } from 'lucide-react';
 import HeroPortal from '../components/HeroPortal';
-import AgentRecommendations from '../components/AgentRecommendations';
 import AgentsShowcase from '../components/AgentsShowcase';
 import HermesSection from '../components/HermesSection';
 import InfoSections from '../components/InfoSections';
@@ -86,7 +85,6 @@ export default function MarketingPage() {
         <section className="relative z-10 min-h-[calc(100dvh-5rem)] flex items-center justify-center">
           <HeroPortal ads={heroAds} actionContext={actionContext} />
         </section>
-        <AgentRecommendations items={pageConfig.agentRecommendations} actionContext={actionContext} />
         <AgentsShowcase config={pageConfig.agentShowcase} actionContext={actionContext} />
         <HermesSection />
         <InfoSections />

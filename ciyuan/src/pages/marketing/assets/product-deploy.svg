@@ -1,0 +1,23 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" fill="#0A1020"/>
+  <ellipse cx="920" cy="188" rx="180" ry="150" fill="url(#paint0_radial)"/>
+  <rect x="112" y="136" width="300" height="180" rx="24" fill="#101827" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="444" y="136" width="300" height="180" rx="24" fill="#101827" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="776" y="136" width="312" height="180" rx="24" fill="#101827" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="112" y="360" width="976" height="168" rx="28" fill="#0F1728" stroke="rgba(255,255,255,0.08)"/>
+  <rect x="146" y="396" width="284" height="96" rx="18" fill="#131D32"/>
+  <rect x="462" y="396" width="592" height="18" rx="9" fill="#D9DDF8" fill-opacity="0.12"/>
+  <rect x="462" y="432" width="514" height="18" rx="9" fill="#6673FF" fill-opacity="0.22"/>
+  <rect x="462" y="468" width="620" height="18" rx="9" fill="#D9DDF8" fill-opacity="0.08"/>
+  <rect x="112" y="588" width="976" height="160" rx="28" fill="#101827" stroke="rgba(255,255,255,0.06)"/>
+  <rect x="146" y="628" width="196" height="80" rx="18" fill="#131D32"/>
+  <rect x="372" y="628" width="196" height="80" rx="18" fill="#131D32"/>
+  <rect x="598" y="628" width="196" height="80" rx="18" fill="#131D32"/>
+  <rect x="824" y="628" width="230" height="80" rx="18" fill="#131D32"/>
+  <defs>
+    <radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(920 188) rotate(90) scale(150 180)">
+      <stop stop-color="#6673FF" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#6673FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

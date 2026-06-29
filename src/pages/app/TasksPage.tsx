@@ -11,7 +11,8 @@ import TaskStatusBadge, {
   formatTime,
 } from '../../components/app/tasks/TaskStatusBadge';
 import { formatTokenRange } from '../../lib/tokenBilling';
-import type { TaskStatus } from '../../types/workbench';
+import { formatTaskProjectLabel } from '../../lib/projectStore';
+import type { TaskScope, TaskStatus } from '../../types/workbench';
 
 const filters: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -21,11 +22,18 @@ const filters: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'failed', label: '失败' },
 ];
 
+const scopeFilters: { value: TaskScope | 'all'; label: string }[] = [
+  { value: 'all', label: '全部类型' },
+  { value: 'project', label: '项目任务' },
+  { value: 'temporary', label: '临时任务' },
+];
+
 export default function TasksPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const agentFilter = searchParams.get('agent');
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
+  const [scopeFilter, setScopeFilter] = useState<TaskScope | 'all'>('all');
   const [actionError, setActionError] = useState('');
   const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
 
@@ -37,8 +45,11 @@ export default function TasksPage() {
     if (filter !== 'all') {
       list = list.filter((t) => t.status === filter);
     }
+    if (scopeFilter !== 'all') {
+      list = list.filter((t) => (t.taskScope ?? 'temporary') === scopeFilter);
+    }
     return list;
-  }, [tasks, agentFilter, filter]);
+  }, [tasks, agentFilter, filter, scopeFilter]);
 
   const agentName = agentFilter ? getAgentById(agentFilter)?.name : null;
 
@@ -69,6 +80,21 @@ export default function TasksPage() {
       )}
 
       <div className="flex flex-wrap gap-2">
+        {scopeFilters.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setScopeFilter(f.value)}
+            className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+              scopeFilter === f.value ? 'bg-[#14958A] text-white' : 'bg-[#F2F0ED] text-black/60 hover:text-black'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
           <button
             key={f.value}
@@ -92,8 +118,9 @@ export default function TasksPage() {
               <tr className="text-[10px] font-bold uppercase tracking-wider text-black/40 border-b border-black/10">
                 <th className="pb-3 pr-4">任务名称</th>
                 <th className="pb-3 pr-4">智能体</th>
+                <th className="pb-3 pr-4 hidden md:table-cell">所属项目</th>
                 <th className="pb-3 pr-4">状态</th>
-                <th className="pb-3 pr-4 hidden md:table-cell">创建时间</th>
+                <th className="pb-3 pr-4 hidden lg:table-cell">创建时间</th>
                 <th className="pb-3 pr-4 hidden lg:table-cell">耗时</th>
                   <th className="pb-3 pr-4 hidden lg:table-cell">Token 消耗</th>
                 <th className="pb-3">操作</th>
@@ -104,10 +131,21 @@ export default function TasksPage() {
                 <tr key={task.id} className="group">
                   <td className="py-3 pr-4 font-medium">{task.name}</td>
                   <td className="py-3 pr-4 text-black/55 text-xs">{agentLabel(task.agentType)}</td>
+                  <td className="py-3 pr-4 text-xs hidden md:table-cell">
+                    <span
+                      className={`inline-flex px-2 py-1 rounded-full ${
+                        (task.taskScope ?? 'temporary') === 'project'
+                          ? 'bg-[#EAF6F4] text-[#0F766E]'
+                          : 'bg-[#F2F0ED] text-black/45'
+                      }`}
+                    >
+                      {formatTaskProjectLabel(task)}
+                    </span>
+                  </td>
                   <td className="py-3 pr-4">
                     <TaskStatusBadge status={task.status} />
                   </td>
-                  <td className="py-3 pr-4 text-xs text-black/45 hidden md:table-cell">
+                  <td className="py-3 pr-4 text-xs text-black/45 hidden lg:table-cell">
                     {formatTime(task.createdAt)}
                   </td>
                   <td className="py-3 pr-4 text-xs text-black/45 hidden lg:table-cell">

@@ -22,6 +22,7 @@ import { tryUseAgent } from '../../lib/useAgentAccess';
 import { replayPendingIntent } from '../../lib/pendingAgentIntent';
 import { getAgentWorkspacePath } from '../../lib/openAgentWorkspace';
 import WorkflowMarketSection from '../../components/app/workflows/WorkflowMarketSection';
+import AgentProjectChoiceModal from '../../components/app/projects/AgentProjectChoiceModal';
 
 type AgentsPageProps = {
   variant?: 'public' | 'app';
@@ -41,6 +42,7 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
   const { openLogin } = useLoginModal();
   const [showHermesModal, setShowHermesModal] = useState(false);
   const [pendingAgentId, setPendingAgentId] = useState<string | null>(null);
+  const [projectChoiceAgent, setProjectChoiceAgent] = useState<AgentMarketCard | null>(null);
 
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
   const hermesConnected = useSyncExternalStore(
@@ -112,8 +114,18 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
       return;
     }
     if (result.ok) {
-      navigate(getAgentWorkspacePath(agentId));
+      const agent = pageData.marketAgents.find((card) => card.id === agentId);
+      if (agent) {
+        setProjectChoiceAgent(agent);
+      } else {
+        navigate(getAgentWorkspacePath(agentId));
+      }
     }
+  };
+
+  const openAgentAfterProjectChoice = (agentId: string) => {
+    setProjectChoiceAgent(null);
+    navigate(getAgentWorkspacePath(agentId));
   };
 
   const filteredMarket = useMemo(() => {
@@ -172,6 +184,14 @@ export default function AgentsPage({ variant = 'app' }: AgentsPageProps) {
           }}
         />
       )}
+
+      {projectChoiceAgent && !isPublic ? (
+        <AgentProjectChoiceModal
+          agent={projectChoiceAgent}
+          onClose={() => setProjectChoiceAgent(null)}
+          onConfirm={openAgentAfterProjectChoice}
+        />
+      ) : null}
     </div>
   );
 }

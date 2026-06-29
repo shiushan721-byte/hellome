@@ -1,0 +1,16 @@
+# Agent云 Token 工场
+> 国内领先的大模型 API 聚合与极速推理云平台，提供 Qwen3.6、DeepSeek-V4、Kimi K2.5、豆包 Seed 等 20+ 主流模型 API 服务。
+
+## 核心页面
+- [产品首页](https://www.agentsyun.com/marketing): 大模型 API 聚合平台，开箱即用、微调托管、私有化部署
+- [API 密钥管理](https://www.agentsyun.com/hub/keys): 获取 API Key，开始调用模型
+- [模型列表](https://www.agentsyun.com/hub/models): 浏览 20+ 可用大模型
+
+## 生态产品
+- [汇影漫剧](https://shortdrama.agentsyun.com): AI 短剧创作平台
+- [汇智爱马仕助手](https://hermes.agentsyun.com): 桌面端 AI 智能助手
+- [OPC 南京专区](https://opc.agentsyun.com): 政企 AI 解决方案
+
+## 可选阅读
+- [定价方案](https://www.agentsyun.com/pricing): 各模型价格详情
+- [API 文档](https://www.agentsyun.com/docs): 接入指南与接口说明

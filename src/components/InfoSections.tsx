@@ -295,7 +295,7 @@ export default function InfoSections() {
             您的智能体平台入口。让智能体完成复杂任务。过程看得见，结果可交付。
           </p>
           <div className="text-[10px] text-black/35">
-            © {new Date().getFullYear()} HelloMe Inc. 保留所有权利及著作权。
+            © {new Date().getFullYear()}江苏汇智智能数字科技有限公司保留所有权利及著作权。
           </div>
         </div>
       </footer>

@@ -7,6 +7,7 @@ import {
 } from './tokenBilling';
 import { settleTaskTokens } from './usageStore';
 import { recordAgentTaskCompletion } from './agentSlotStore';
+import { updateProjectFromGeoResult } from './projectStore';
 
 function nowTime(): string {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
@@ -78,6 +79,9 @@ function finalizeTask(task: Task, startMs: number, actualTotal: number, stepToke
   task.completedAt = new Date().toISOString();
   task.durationMs = Date.now() - startMs;
   task.status = 'completed';
+  if (task.projectId && task.input && 'brandName' in task.input && task.result) {
+    updateProjectFromGeoResult(task.projectId, task.input, task.result);
+  }
   addLog(task, `任务完成，实际消耗 ${actualTotal.toLocaleString('zh-CN')} Token`, 'success');
   saveTask(task);
   settleTaskTokens({

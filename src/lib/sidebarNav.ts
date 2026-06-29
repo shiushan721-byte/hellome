@@ -1,8 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  BookOpen,
   Code2,
-  Folder,
+  FolderKanban,
   Gauge,
   Home,
   LayoutDashboard,
@@ -19,14 +18,13 @@ export const MARKET_SUBCATEGORIES = CATEGORIES.filter((c) => c.id !== 'all');
 export type AppNavId =
   | 'workbench'
   | 'market'
+  | 'projects'
   | 'tasks'
-  | 'results'
   | 'usage'
-  | 'tutorial'
   | 'api'
   | 'settings';
 
-export type GuestNavId = 'market' | 'tutorial' | 'api' | 'login';
+export type GuestNavId = 'market' | 'api' | 'login';
 
 export interface AppNavItem {
   id: AppNavId;
@@ -64,16 +62,16 @@ export const APP_NAV_PRIMARY: AppNavItem[] = [
     end: true,
   },
   {
+    id: 'projects',
+    label: '项目',
+    icon: FolderKanban,
+    to: '/app/projects',
+  },
+  {
     id: 'tasks',
     label: '任务中心',
     icon: ListChecks,
     to: '/app/tasks',
-  },
-  {
-    id: 'results',
-    label: '成果中心',
-    icon: Folder,
-    to: '/app/results',
   },
   {
     id: 'usage',
@@ -84,12 +82,6 @@ export const APP_NAV_PRIMARY: AppNavItem[] = [
 ];
 
 export const APP_NAV_SECONDARY: AppNavItem[] = [
-  {
-    id: 'tutorial',
-    label: '教程',
-    icon: BookOpen,
-    to: '/app/agents',
-  },
   {
     id: 'api',
     label: 'API',
@@ -112,12 +104,6 @@ export const GUEST_NAV_ITEMS: GuestNavItem[] = [
     to: '/agents',
   },
   {
-    id: 'tutorial',
-    label: '教程',
-    icon: BookOpen,
-    to: '/agents',
-  },
-  {
     id: 'api',
     label: 'API',
     icon: Code2,
@@ -137,13 +123,12 @@ export function isAppNavActive(id: AppNavId, pathname: string): boolean {
       return pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(pathname);
     case 'market':
       return pathname === '/app/agents';
+    case 'projects':
+      return pathname === '/app/projects';
     case 'tasks':
       return pathname === '/app/tasks' || pathname.startsWith('/app/tasks/');
-    case 'results':
-      return pathname === '/app/results' || pathname.startsWith('/app/results/');
     case 'usage':
       return pathname === '/app/usage' || pathname.startsWith('/app/usage/');
-    case 'tutorial':
     case 'api':
       return false;
     case 'settings':

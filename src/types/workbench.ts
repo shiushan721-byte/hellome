@@ -25,6 +25,8 @@ export type DetectionDepth = 'quick' | 'standard' | 'deep';
 
 export type LedgerStatus = 'reserved' | 'settled' | 'refunded' | 'failed';
 
+export type TaskScope = 'project' | 'temporary';
+
 export interface TaskStep {
   id: string;
   name: string;
@@ -55,6 +57,7 @@ export interface Task {
   status: TaskStatus;
   executionMode?: TaskExecutionMode;
   createdAt: string;
+  updatedAt?: string;
   completedAt?: string;
   durationMs?: number;
   estimatedTokenMin: number;
@@ -75,6 +78,27 @@ export interface Task {
     message: string;
     action: string;
   };
+  taskScope?: TaskScope;
+  projectId?: string;
+  projectName?: string;
+  temporarySessionId?: string;
+}
+
+export interface ProjectProfile {
+  id: string;
+  name: string;
+  description?: string;
+  brandName?: string;
+  websiteUrl?: string;
+  productIntro?: string;
+  targetAudience?: string;
+  keywords?: string;
+  competitors?: string;
+  sellingPoints?: string;
+  tone?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UsageSnapshot {

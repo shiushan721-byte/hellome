@@ -1,0 +1,129 @@
+/* 付费服务协议页面样式 — 与 gnomic 项目保持一致 */
+
+.terms-of-service-page {
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+.terms-of-service-page .terms-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.terms-of-service-page .terms-header {
+  padding: 24px 0;
+  border-bottom: 1px solid #e5eaf0;
+}
+
+.terms-of-service-page .terms-header .logo {
+  height: 32px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.terms-of-service-page .terms-header .logo:hover {
+  opacity: 0.8;
+}
+
+.terms-of-service-page .terms-content {
+  padding: 48px 0 80px;
+  max-width: 900px;
+  margin: 0 auto;
+  font-size: 14px;
+  line-height: 20px;
+  color: #5c6672;
+}
+
+.terms-of-service-page .terms-content .terms-intro {
+  margin-bottom: 40px;
+}
+
+.terms-of-service-page .terms-content .terms-intro p {
+  font-size: 14px;
+  line-height: 20px;
+  color: #5c6672;
+  margin-bottom: 16px;
+}
+
+.terms-of-service-page .terms-content .terms-section {
+  margin-bottom: 40px;
+}
+
+.terms-of-service-page .terms-content .terms-section h2 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #131b26;
+  margin-bottom: 20px;
+  margin-top: 40px;
+}
+
+.terms-of-service-page .terms-content .terms-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #131b26;
+  margin-bottom: 16px;
+  margin-top: 24px;
+}
+
+.terms-of-service-page .terms-content .terms-section p {
+  font-size: 14px;
+  line-height: 20px;
+  color: #5c6672;
+  margin-bottom: 16px;
+}
+
+.terms-of-service-page .terms-content .terms-section ol,
+.terms-of-service-page .terms-content .terms-section ul {
+  padding-left: 24px;
+}
+
+.terms-of-service-page .terms-content .terms-section ol li,
+.terms-of-service-page .terms-content .terms-section ul li {
+  font-size: 14px;
+  line-height: 20px;
+  color: #5c6672;
+  margin-bottom: 12px;
+}
+
+.terms-of-service-page .terms-content .terms-section ol li strong,
+.terms-of-service-page .terms-content .terms-section ul li strong {
+  color: #131b26;
+  font-weight: 600;
+}
+
+.terms-of-service-page .terms-content .terms-section .letter-list {
+  list-style-type: lower-alpha;
+}
+
+/* 工具类 — 仅在此页面使用 */
+.terms-of-service-page .mb-2 { margin-bottom: 8px; }
+.terms-of-service-page .mb-4 { margin-bottom: 16px; }
+.terms-of-service-page .mb-5 { margin-bottom: 20px; }
+.terms-of-service-page .mt-2 { margin-top: 8px; }
+.terms-of-service-page .mt-5 { margin-top: 20px; }
+.terms-of-service-page .ml-4 { margin-left: 16px; }
+.terms-of-service-page .text-2xl { font-size: 24px; }
+.terms-of-service-page .text-lg { font-size: 18px; }
+.terms-of-service-page .font-bold { font-weight: 700; }
+.terms-of-service-page .text-center { text-align: center; }
+.terms-of-service-page .leading-5 { line-height: 20px; }
+.terms-of-service-page .list-none { list-style: none; }
+.terms-of-service-page .list-inside { list-style-position: inside; }
+.terms-of-service-page .flex { display: flex; }
+.terms-of-service-page .flex-col { flex-direction: column; }
+.terms-of-service-page .gap-2 { gap: 8px; }
+
+@media (max-width: 768px) {
+  .terms-of-service-page .terms-container {
+    padding: 0 16px;
+  }
+
+  .terms-of-service-page .terms-content {
+    padding: 24px 0 40px;
+  }
+
+  .terms-of-service-page .text-2xl {
+    font-size: 20px;
+  }
+}

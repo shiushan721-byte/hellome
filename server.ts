@@ -71,6 +71,7 @@ import { startGnomicSso } from './src/server/gnomic/gnomicSsoService';
 import { AgentsyunSsoError } from './src/server/agentsyun/agentsyunTypes';
 import { startAgentsyunSso } from './src/server/agentsyun/agentsyunSsoService';
 import { registerDbHealthRoute } from './src/server/bootstrap/dbHealth';
+import { registerSiteSeoRoutes } from './src/server/siteSeoRoutes';
 import { assertDatabaseReady, isFallbackAllowed } from './src/server/db/runtime';
 
 dotenv.config();
@@ -132,6 +133,7 @@ if (apiKey && apiKey !== 'MY_GEMINI_API_KEY') {
 authKit.registerRoutes(app);
 registerAdminRoutes(app, authKit);
 registerDbHealthRoute(app);
+registerSiteSeoRoutes(app);
 
 app.get('/api/billing/usage', async (req, res) => {
   try {

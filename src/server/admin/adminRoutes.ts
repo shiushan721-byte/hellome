@@ -24,9 +24,7 @@ import {
 import {
   getAdminHomeConfigState,
   getPublishedHomePageConfig,
-  listHomePublishRecords,
-  publishAdminHomeConfig,
-  saveAdminHomeConfigDraft,
+  saveAdminHomeConfig,
 } from './homeConfigService';
 import { registerAdminAgentRoutes } from './adminAgentRoutes';
 import {
@@ -97,56 +95,33 @@ export function registerAdminRoutes(app: express.Express, authKit: AuthKit): voi
   app.put('/api/admin/home-config', requireAdmin, async (req, res) => {
     try {
       const session = (req as express.Request & { adminSession: NonNullable<ReturnType<AuthKit['currentSession']>> }).adminSession;
-      const data = await saveAdminHomeConfigDraft({
-        draftId: typeof req.body?.draftId === 'string' ? req.body.draftId : null,
+      const actor = actorFromSession(session);
+      const configId =
+        typeof req.body?.configId === 'string'
+          ? req.body.configId
+          : typeof req.body?.draftId === 'string'
+            ? req.body.draftId
+            : null;
+      const data = await saveAdminHomeConfig({
+        configId,
         config: req.body?.config ?? {},
-        actorId: actorFromSession(session).id,
+        actorId: actor.id,
       });
       await writeAuditLog(
-        auditFromRequest(req, actorFromSession(session), {
+        auditFromRequest(req, actor, {
           module: 'home_config',
-          action: 'save_draft',
+          action: 'save',
           targetType: 'frontend_config',
-          targetId: data.draftId,
+          targetId: data.configId,
           after: { version: data.version },
         }),
       );
       res.json({ success: true, data });
     } catch (error) {
-      res.status(500).json({ success: false, error: error instanceof Error ? error.message : '保存首页配置失败' });
-    }
-  });
-
-  app.post('/api/admin/home-config/publish', requireAdmin, async (req, res) => {
-    try {
-      const session = (req as express.Request & { adminSession: NonNullable<ReturnType<AuthKit['currentSession']>> }).adminSession;
-      const draftId = String(req.body?.draftId ?? '').trim();
-      if (!draftId) {
-        res.status(400).json({ success: false, error: '缺少草稿 ID' });
-        return;
-      }
-      const data = await publishAdminHomeConfig(draftId, actorFromSession(session).id);
-      await writeAuditLog(
-        auditFromRequest(req, actorFromSession(session), {
-          module: 'home_config',
-          action: 'publish',
-          targetType: 'frontend_config',
-          targetId: draftId,
-          after: data,
-        }),
-      );
-      res.json({ success: true, data });
-    } catch (error) {
-      res.status(400).json({ success: false, error: error instanceof Error ? error.message : '发布首页配置失败' });
-    }
-  });
-
-  app.get('/api/admin/home-config/publish-records', requireAdmin, async (_req, res) => {
-    try {
-      const data = await listHomePublishRecords();
-      res.json({ success: true, data });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error instanceof Error ? error.message : '读取发布记录失败' });
+      res.status(400).json({
+        success: false,
+        error: error instanceof Error ? error.message : '保存首页配置失败',
+      });
     }
   });
 

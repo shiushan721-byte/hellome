@@ -99,10 +99,13 @@ export type HomePageOperationConfig = HomePageConfigPayload & {
 };
 
 export type AdminHomeConfigState = {
-  draftId: string | null;
-  status: 'default' | 'draft' | 'published';
-  publishedVersion: number;
+  configId: string | null;
+  status: 'default' | 'published';
   version: number;
   updatedAt: string;
   config: HomePageConfigPayload;
+  /** @deprecated 使用 configId */
+  draftId?: string | null;
+  /** @deprecated */
+  publishedVersion?: number;
 };

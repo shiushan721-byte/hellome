@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
@@ -31,6 +31,13 @@ import ConfirmationNode from '../../components/app/tasks/ConfirmationNode';
 import HermesLogPanel from '../../components/app/tasks/HermesLogPanel';
 import TaskStatusBadge from '../../components/app/tasks/TaskStatusBadge';
 import UgcDeliveryPanel from '../../components/app/tasks/UgcDeliveryPanel';
+import ProjectContextSelector from '../../components/app/projects/ProjectContextSelector';
+import {
+  getActiveProjectId,
+  getProject,
+  subscribeProjects,
+} from '../../lib/projectStore';
+import type { ProjectProfile } from '../../types/workbench';
 
 type ExecutionPreset = {
   platform: string;
@@ -196,6 +203,8 @@ export default function UgcVideoAgentPage() {
   const [showOptionalSettings, setShowOptionalSettings] = useState(false);
   const [activeTask, setActiveTask] = useState<LiveRemoteTask | null>(null);
   const [taskError, setTaskError] = useState('');
+  const activeProjectId = useSyncExternalStore(subscribeProjects, getActiveProjectId, getActiveProjectId);
+  const [selectedProjectId, setSelectedProjectId] = useState(activeProjectId);
 
   const title = skillExperience?.title ?? profile?.title ?? '视频智能体';
   const promiseLine =
@@ -267,6 +276,7 @@ export default function UgcVideoAgentPage() {
     stage === 'prepared'
       ? businessDescription.trim()
       : businessBlueprint.defaultShowcaseCopy;
+  const selectedProject = getProject(selectedProjectId);
 
   useEffect(() => {
     if (!activeTask?.id || !activeTask.status || isTerminalTaskStatus(activeTask.status)) return;
@@ -387,9 +397,20 @@ export default function UgcVideoAgentPage() {
     };
 
     try {
-      const task = await createRemoteUgcTask(payload);
+      const taskContext = selectedProject
+        ? {
+            taskScope: 'project' as const,
+            projectId: selectedProject.id,
+            projectName: selectedProject.name,
+          }
+        : {
+            taskScope: 'temporary' as const,
+            temporarySessionId: `tmp-${Date.now()}`,
+          };
+      const task = await createRemoteUgcTask(payload, taskContext);
       setActiveTask({
         ...task,
+        ...taskContext,
         events: [],
       });
       setTaskError('');
@@ -397,6 +418,23 @@ export default function UgcVideoAgentPage() {
       setError(submitError instanceof Error ? submitError.message : '创建任务失败');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSelectProject = (project: ProjectProfile | null) => {
+    setSelectedProjectId(project?.id ?? '');
+    if (!project || businessDescriptionTouched) return;
+    const projectLines = [
+      project.brandName ? `品牌：${project.brandName}` : '',
+      project.productIntro ? `产品/服务：${project.productIntro}` : '',
+      project.sellingPoints ? `卖点：${project.sellingPoints}` : '',
+      project.targetAudience ? `目标人群：${project.targetAudience}` : '',
+    ].filter(Boolean);
+    if (projectLines.length > 0) {
+      setBusinessDescription(`${autoBusinessDescription}\n${projectLines.join('\n')}`);
+    }
+    if (project.websiteUrl && !referenceUrl.trim()) {
+      setReferenceUrl(project.websiteUrl);
     }
   };
 
@@ -499,6 +537,23 @@ export default function UgcVideoAgentPage() {
                   title="当前智能体方向"
                   items={businessBlueprint.directionSummary}
                 />
+
+                <ProjectContextSelector
+                  selectedProjectId={selectedProjectId}
+                  onSelectProject={handleSelectProject}
+                  seed={{
+                    brandName: selectedProject?.brandName,
+                    websiteUrl: selectedProject?.websiteUrl,
+                    keywords: selectedProject?.keywords,
+                    competitors: selectedProject?.competitors,
+                  }}
+                />
+
+                <p className="text-xs text-black/42">
+                  {selectedProject
+                    ? `当前将创建项目任务：${selectedProject.name}`
+                    : '当前将创建临时任务。本次任务不会读取或沉淀项目资料。'}
+                </p>
 
                 <div className="space-y-4">
                   <SectionTitle

@@ -1,4 +1,5 @@
 import { getVideoAgentProfile } from '../config/videoAgentProfiles';
+import { resolveAgentCategorySlug } from '../data/agentCategories';
 import { getSkill, getSkillExperienceConfig } from './skillStudioService';
 import { listOnlineAgentsForMarket } from './admin/adminAgentService';
 import type { SkillShowcaseVideo } from '../types/skills';
@@ -20,9 +21,13 @@ export interface PublishedMarketAgent {
   status: 'published';
   entryLabel: string;
   tokenRange: string;
-  category: 'content';
+  category: string;
   iconUrl?: string;
   showcaseVideo?: SkillShowcaseVideo;
+}
+
+function resolvePublishedCategory(slug: string, dbCategory?: string | null): string {
+  return dbCategory?.trim() || resolveAgentCategorySlug(slug) || 'content';
 }
 
 function isPublishedVideoSkill(skill: { id: string; category: string; status: string }): boolean {
@@ -46,7 +51,7 @@ function toPublishedMarketAgent(input: {
     status: 'published',
     entryLabel: profile.marketEntryLabel,
     tokenRange: profile.tokenRange,
-    category: 'content',
+    category: resolvePublishedCategory(input.skillId),
     iconUrl: input.iconUrl,
     showcaseVideo: input.showcaseVideo,
   };
@@ -109,7 +114,7 @@ export async function listPublishedMarketAgents(): Promise<PublishedMarketAgent[
       status: 'published',
       entryLabel: profile?.marketEntryLabel ?? '立即使用',
       tokenRange: profile?.tokenRange ?? '—',
-      category: 'content',
+      category: resolvePublishedCategory(online.slug, online.category),
       iconUrl: online.iconUrl,
     });
   }

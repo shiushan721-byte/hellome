@@ -1,0 +1,1107 @@
+/* Wallet 充值页面 - 按 Figma 设计稿自定义样式 */
+
+.wallet-design-root {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  box-sizing: border-box;
+  color: #111827;
+}
+
+.wallet-design-root *,
+.wallet-design-root *::before,
+.wallet-design-root *::after {
+  box-sizing: border-box;
+}
+
+/* 面包屑 */
+.wallet-design-breadcrumb {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 24px;
+}
+
+/* 标题区 */
+.wallet-design-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+.wallet-design-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 24px;
+}
+
+/* 余额卡片 */
+.wallet-design-balance-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.wallet-design-balance-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+.wallet-design-balance-amount {
+  font-size: 32px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+  color: #111827;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.wallet-design-balance-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.wallet-design-balance-stats span {
+  white-space: nowrap;
+}
+
+.wallet-design-balance-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.wallet-design-invoice-hint {
+  font-size: 13px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.wallet-design-invoice-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.wallet-design-invoice-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+/* Tab */
+.wallet-design-tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0;
+}
+
+.wallet-design-tab {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  background: transparent;
+}
+
+.wallet-design-tab:hover {
+  color: #374151;
+  background: #f9fafb;
+}
+
+.wallet-design-tab.active {
+  border-bottom-color: #1f2937;
+  color: #111827;
+  background: #ffffff;
+}
+
+/* 充值内容区域（在 tab 下方） */
+.wallet-design-tab-content {
+  padding: 24px 0;
+}
+
+/* 注意事项区域 */
+.wallet-design-notice {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 32px;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 2;
+}
+
+.wallet-design-notice p {
+  margin: 0;
+}
+
+.wallet-design-notice-link {
+  color: #2563eb;
+  text-decoration: none;
+  margin: 0 2px;
+}
+
+.wallet-design-notice-link:hover {
+  text-decoration: underline;
+}
+
+/* 表单行 */
+.wallet-design-form-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.wallet-design-form-label {
+  width: 80px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  padding-top: 8px;
+  flex-shrink: 0;
+}
+
+.wallet-design-form-content {
+  flex: 1;
+}
+
+/* 金额按钮网格 */
+.wallet-design-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.wallet-design-amount-btn {
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wallet-design-amount-btn:hover {
+  border-color: #d1d5db;
+}
+
+.wallet-design-amount-btn.selected {
+  border: 2px solid #1f2937;
+  background: #f9fafb;
+  color: #111827;
+}
+
+/* 自定义金额输入 */
+.wallet-design-custom-wrap {
+  position: relative;
+  height: 40px;
+}
+
+.wallet-design-custom-btn {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wallet-design-custom-btn:hover {
+  border-color: #d1d5db;
+}
+
+.wallet-design-custom-input-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 2px solid #1f2937;
+  background: #f9fafb;
+  padding: 0 12px;
+}
+
+.wallet-design-custom-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  text-align: center;
+  min-width: 0;
+}
+
+.wallet-design-custom-input::placeholder {
+  color: #9ca3af;
+}
+
+.wallet-design-custom-suffix {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-left: 4px;
+}
+
+/* 支付方式按钮 */
+.wallet-design-pay-grid {
+  display: flex;
+  gap: 12px;
+}
+
+.wallet-design-pay-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 24px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wallet-design-pay-btn:hover {
+  border-color: #d1d5db;
+}
+
+.wallet-design-pay-btn.selected {
+  border: 2px solid #1f2937;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.wallet-design-pay-btn .wallet-design-check-icon {
+  display: none;
+}
+
+.wallet-design-pay-btn.selected .wallet-design-check-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* 协议 */
+.wallet-design-agreement {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 32px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.wallet-design-agreement input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #1f2937;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.wallet-design-agreement a {
+  color: #111827;
+  text-decoration: none;
+}
+
+.wallet-design-agreement a:hover {
+  text-decoration: underline;
+}
+
+/* 错误提示 */
+.wallet-design-error-msg {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #dc2626;
+  text-align: center;
+}
+
+/* 确认支付按钮 */
+.wallet-design-submit-row {
+  display: flex;
+  justify-content: center;
+}
+
+.wallet-design-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 48px;
+  background: #1f2937;
+  color: #ffffff;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wallet-design-btn-submit:hover {
+  background: #111827;
+}
+
+.wallet-design-btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 充值记录表格 */
+.wallet-design-table-wrap {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wallet-design-table {
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  border-collapse: collapse;
+}
+
+.wallet-design-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f9fafb;
+}
+
+.wallet-design-table th {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.wallet-design-table tbody tr {
+  transition: background 0.1s ease;
+}
+
+.wallet-design-table tbody tr:hover {
+  background: rgba(249, 250, 251, 0.5);
+}
+
+.wallet-design-table td {
+  padding: 16px 24px;
+  color: #374151;
+  border-top: 1px solid #f3f4f6;
+}
+
+.wallet-design-table tbody tr:first-child td {
+  border-top: none;
+}
+
+.wallet-design-table .wallet-design-code {
+  font-family:
+    'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* 状态标签 */
+.wallet-design-status {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.wallet-design-status-completed {
+  background: #def7ec;
+  color: #03543f;
+}
+
+.wallet-design-status-pending {
+  background: #fdf6b2;
+  color: #723b13;
+}
+
+.wallet-design-status-failed {
+  background: #fde8e8;
+  color: #9b1c1c;
+}
+
+.wallet-design-status-closed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Modal */
+.wallet-design-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.wallet-design-modal {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  width: 100%;
+  max-width: 448px;
+  margin: 0 16px;
+  overflow: hidden;
+}
+
+.wallet-design-modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-design-modal-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #111827;
+}
+
+.wallet-design-modal-body {
+  padding: 24px;
+}
+
+.wallet-design-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.wallet-design-btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wallet-design-btn-close:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.wallet-design-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 16px;
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.wallet-design-btn-secondary:hover {
+  background: #f9fafb;
+}
+
+/* Loading */
+.wallet-design-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 400px;
+}
+
+@keyframes wallet-design-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wallet-design-spinner {
+  animation: wallet-design-spin 1s linear infinite;
+  color: #6b7280;
+}
+
+/* Skeleton */
+.wallet-design-skeleton {
+  height: 36px;
+  width: 128px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  animation: wallet-design-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes wallet-design-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ====== Wallet 骨架屏 ====== */
+@keyframes wallet-skeleton-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.wallet-skeleton-block {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 37%, #f3f4f6 63%);
+  background-size: 200% 100%;
+  animation: wallet-skeleton-pulse 1.8s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+.wallet-skeleton-balance-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.wallet-skeleton-balance-label {
+  height: 14px;
+  width: 80px;
+  margin-bottom: 8px;
+}
+
+.wallet-skeleton-balance-amount {
+  height: 36px;
+  width: 160px;
+  margin-bottom: 12px;
+}
+
+.wallet-skeleton-balance-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.wallet-skeleton-balance-stat {
+  height: 14px;
+  width: 120px;
+}
+
+.wallet-skeleton-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.wallet-skeleton-tab {
+  height: 14px;
+  width: 64px;
+  margin: 12px 24px;
+}
+
+.wallet-skeleton-form-section {
+  padding: 24px 0;
+}
+
+.wallet-skeleton-form-label {
+  height: 14px;
+  width: 60px;
+  margin-bottom: 12px;
+}
+
+.wallet-skeleton-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.wallet-skeleton-amount-btn {
+  height: 40px;
+  border-radius: 8px;
+}
+
+.wallet-skeleton-pay-grid {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.wallet-skeleton-pay-btn {
+  height: 40px;
+  width: 120px;
+  border-radius: 8px;
+}
+
+.wallet-skeleton-agreement {
+  height: 14px;
+  width: 200px;
+  margin-bottom: 32px;
+}
+
+.wallet-skeleton-submit {
+  height: 44px;
+  width: 200px;
+  border-radius: 8px;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Wallet 充值记录骨架行 */
+.wallet-skeleton-record-row {
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #f3f4f6;
+  gap: 24px;
+}
+
+.wallet-skeleton-record-row:first-child {
+  border-top: none;
+}
+
+.wallet-skeleton-record-cell {
+  height: 14px;
+  width: 80px;
+}
+
+.wallet-skeleton-record-cell-wide {
+  height: 14px;
+  width: 140px;
+}
+
+.wallet-skeleton-record-status {
+  height: 20px;
+  width: 52px;
+  border-radius: 9999px;
+}
+
+/* 金额按钮第二行适配 */
+@media (max-width: 640px) {
+  .wallet-design-amount-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .wallet-design-balance-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .wallet-design-balance-right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* ========== 深色模式 ========== */
+.dark .wallet-design-root {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-breadcrumb {
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-title {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-subtitle {
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-balance-card {
+  background: #0c101a;
+  border-color: #111626;
+}
+
+.dark .wallet-design-balance-label {
+  color: #6f7690;
+}
+
+.dark .wallet-design-balance-amount {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-balance-stats {
+  color: #6f7690;
+}
+
+.dark .wallet-design-tabs {
+  border-bottom-color: #111626;
+}
+
+.dark .wallet-design-tab {
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-tab:hover {
+  color: #c8cdd8;
+  background: #0c101a;
+}
+
+.dark .wallet-design-tab.active {
+  border-bottom-color: #e9ecf5;
+  color: #e9ecf5;
+  background: transparent;
+}
+
+.dark .wallet-design-notice {
+  background: #0c101a;
+  border-color: #111626;
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-notice-link {
+  color: #60a5fa;
+}
+
+.dark .wallet-design-notice-link:hover {
+  color: #93c5fd;
+}
+
+.dark .wallet-design-form-label {
+  color: #c8cdd8;
+}
+
+.dark .wallet-design-amount-btn {
+  border-color: #202742;
+  background: #0c101a;
+  color: #c8cdd8;
+}
+
+.dark .wallet-design-amount-btn:hover {
+  border-color: #3a4263;
+}
+
+.dark .wallet-design-amount-btn.selected {
+  border-color: #e9ecf5;
+  background: #161b2d;
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-custom-btn {
+  border-color: #202742;
+  background: #0c101a;
+  color: #c8cdd8;
+}
+
+.dark .wallet-design-custom-btn:hover {
+  border-color: #3a4263;
+}
+
+.dark .wallet-design-custom-input-wrap {
+  border-color: #e9ecf5;
+  background: #161b2d;
+}
+
+.dark .wallet-design-custom-input {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-custom-input::placeholder {
+  color: #6f7690;
+}
+
+.dark .wallet-design-custom-suffix {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-pay-btn {
+  border-color: #202742;
+  background: #0c101a;
+  color: #c8cdd8;
+}
+
+.dark .wallet-design-pay-btn:hover {
+  border-color: #3a4263;
+}
+
+.dark .wallet-design-pay-btn.selected {
+  border-color: #e9ecf5;
+  background: #161b2d;
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-agreement {
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-agreement a {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-error-msg {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.dark .wallet-design-btn-submit {
+  background: #e9ecf5;
+  color: #070a12;
+  border-color: #e9ecf5;
+}
+
+.dark .wallet-design-btn-submit:hover {
+  background: #c8cdd8;
+}
+
+.dark .wallet-design-table-wrap {
+  background: #0c101a;
+  border-color: #111626;
+}
+
+.dark .wallet-design-table thead {
+  background: #070a12;
+}
+
+.dark .wallet-design-table th {
+  background: #070a12;
+  border-bottom-color: #111626;
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-table tbody tr:hover {
+  background: rgba(22, 27, 45, 0.5);
+}
+
+.dark .wallet-design-table td {
+  color: #c8cdd8;
+  border-top-color: #111626;
+}
+
+.dark .wallet-design-table .wallet-design-code {
+  background: #161b2d;
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-status-completed {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.dark .wallet-design-status-pending {
+  background: rgba(234, 179, 8, 0.15);
+  color: #fbbf24;
+}
+
+.dark .wallet-design-status-failed {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.dark .wallet-design-status-closed {
+  background: #161b2d;
+  color: #6f7690;
+}
+
+.dark .wallet-design-modal-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dark .wallet-design-modal {
+  background: #0c101a;
+  border-color: #111626;
+}
+
+.dark .wallet-design-modal-header {
+  border-bottom-color: #111626;
+}
+
+.dark .wallet-design-modal-title {
+  color: #e9ecf5;
+}
+
+.dark .wallet-design-modal-footer {
+  border-top-color: #111626;
+}
+
+.dark .wallet-design-btn-close {
+  color: #6f7690;
+}
+
+.dark .wallet-design-btn-close:hover {
+  background: #161b2d;
+  color: #a3a9bc;
+}
+
+.dark .wallet-design-btn-secondary {
+  background: #0c101a;
+  color: #c8cdd8;
+  border-color: #202742;
+}
+
+.dark .wallet-design-btn-secondary:hover {
+  background: #161b2d;
+}
+
+.dark .wallet-design-skeleton {
+  background: #161b2d;
+}
+
+.dark .wallet-skeleton-block {
+  background: linear-gradient(90deg, #161b2d 25%, #202742 37%, #161b2d 63%);
+  background-size: 200% 100%;
+  animation: wallet-skeleton-pulse 1.8s ease-in-out infinite;
+}
+
+.dark .wallet-skeleton-balance-card {
+  background: #0c101a;
+  border-color: #111626;
+}
+
+.dark .wallet-design-spinner {
+  color: #6f7690;
+}
+
+/* ========================================
+   移动端响应式 (≤768px)
+   ======================================== */
+@media (max-width: 768px) {
+  .wallet-design-root {
+    padding: 0;
+  }
+
+  .wallet-design-title {
+    font-size: 20px;
+  }
+
+  .wallet-design-form-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .wallet-design-form-label {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .wallet-design-form-content {
+    width: 100%;
+  }
+
+  .wallet-design-tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .wallet-design-tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .wallet-design-tab-btn {
+    white-space: nowrap;
+    font-size: 13px;
+    padding: 8px 16px;
+  }
+
+  .wallet-design-submit-btn {
+    width: 100%;
+    max-width: none;
+  }
+
+  .wallet-design-notice-content {
+    font-size: 12px;
+  }
+
+  .wallet-design-notice-content li {
+    font-size: 12px;
+  }
+
+  .wallet-design-table {
+    font-size: 13px;
+  }
+
+  .wallet-design-table th,
+  .wallet-design-table td {
+    padding: 10px 8px;
+  }
+
+  .wallet-design-code {
+    font-size: 11px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+}

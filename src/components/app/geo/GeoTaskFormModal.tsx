@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Shield, X } from 'lucide-react';
 import {
@@ -11,6 +11,14 @@ import { createGeoTask } from '../../../lib/taskStore';
 import { canAffordTask, getUsage } from '../../../lib/usageStore';
 import { runGeoTask } from '../../../lib/geoTaskRunner';
 import { estimateGeoTokens, formatToken, formatTokenRange } from '../../../lib/tokenBilling';
+import ProjectContextSelector from '../projects/ProjectContextSelector';
+import {
+  buildGeoInputFromProject,
+  getActiveProjectId,
+  getProject,
+  subscribeProjects,
+} from '../../../lib/projectStore';
+import type { ProjectProfile } from '../../../types/workbench';
 
 interface GeoTaskFormModalProps {
   open: boolean;
@@ -33,6 +41,8 @@ export default function GeoTaskFormModal({
   const [models, setModels] = useState<string[]>([...DEFAULT_GEO_MODELS]);
   const [depth, setDepth] = useState<DetectionDepth>('standard');
   const [error, setError] = useState('');
+  const activeProjectId = useSyncExternalStore(subscribeProjects, getActiveProjectId, getActiveProjectId);
+  const [selectedProjectId, setSelectedProjectId] = useState(activeProjectId);
 
   const usage = getUsage();
 
@@ -82,11 +92,23 @@ export default function GeoTaskFormModal({
       return;
     }
 
-    const task = createGeoTask(draftInput);
+    const task = createGeoTask(draftInput, { projectId: selectedProjectId || undefined });
     runGeoTask(task.id);
     onClose();
     navigate(`/app/tasks/${task.id}`);
   };
+
+  const handleSelectProject = (project: ProjectProfile | null) => {
+    setSelectedProjectId(project?.id ?? '');
+    if (!project) return;
+    const preset = buildGeoInputFromProject(project);
+    setBrandName((value) => value || preset.brandName || '');
+    setWebsiteUrl((value) => value || preset.websiteUrl || '');
+    setKeywords((value) => value || preset.keywords || '');
+    setCompetitors((value) => value || preset.competitors || '');
+  };
+
+  const selectedProject = getProject(selectedProjectId);
 
   if (!open) return null;
 
@@ -134,6 +156,22 @@ export default function GeoTaskFormModal({
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <ProjectContextSelector
+              selectedProjectId={selectedProjectId}
+              onSelectProject={handleSelectProject}
+              seed={draftInput}
+            />
+
+            {selectedProject ? (
+              <p className="text-xs text-[#0F766E]">
+                当前将创建项目任务：{selectedProject.name}
+              </p>
+            ) : (
+              <p className="text-xs text-black/40">
+                当前将创建临时任务。本次任务不会读取或沉淀项目资料。
+              </p>
+            )}
+
             <Field label="品牌名 *">
               <input
                 required

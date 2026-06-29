@@ -204,10 +204,31 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
           showWorkbenchTabs ? 'flex items-start overflow-visible' : 'overflow-visible'
         }`}
       >
-        {showWorkbenchTabs ? <WorkbenchTabsBar variant="topbar" /> : null}
+        {showWorkbenchTabs ? (
+          <WorkbenchTabsBar variant="topbar" />
+        ) : (
+          <div className="flex h-full items-center pl-5">
+            <button
+              type="button"
+              onClick={() => navigate('/welcome')}
+              className="text-xs font-medium text-black/55 hover:text-black transition-colors"
+            >
+              营销页
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2.5 shrink-0 pr-5 self-center">
+        {showWorkbenchTabs ? (
+          <button
+            type="button"
+            onClick={() => navigate('/welcome')}
+            className="hidden md:inline-flex text-[11px] px-2.5 py-1 rounded-full border border-black/15 bg-white text-black/70 hover:border-black/25 font-medium transition-colors"
+          >
+            营销页
+          </button>
+        ) : null}
         <button type="button" className="text-black/45 hover:text-black transition-colors" aria-label="通知">
           <Bell className="w-[15px] h-[15px]" />
         </button>

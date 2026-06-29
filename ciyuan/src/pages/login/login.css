@@ -1,0 +1,92 @@
+/* ── 登录页：与设计版一致的入场动画 + 主题变量 ── */
+
+/* 登录页是独立路由，不挂 MarketingLayout，需要自带主题变量 */
+.login-page-shell-enter {
+  --color-primary: #6673ff;
+  --color-bg: #ffffff;
+  --color-bg-muted: #f9fafb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-placeholder: #9ca3af;
+  --color-text-disabled: #d1d5db;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+
+  transform-origin: 50% 42%;
+  animation: login-page-shell-in 0.66s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes login-page-shell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.login-page-header-enter {
+  animation: login-page-header-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes login-page-header-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes login-page-block-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.login-page-logo-enter {
+  animation: login-page-block-in 0.58s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.login-page-form-enter {
+  animation: login-page-block-in 0.68s cubic-bezier(0.22, 1, 0.36, 1) 0.09s both;
+}
+
+.login-page-footer-enter {
+  animation: login-page-footer-in 0.52s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+
+@keyframes login-page-footer-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-page-shell-enter,
+  .login-page-header-enter,
+  .login-page-logo-enter,
+  .login-page-form-enter,
+  .login-page-footer-enter {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 协议区到登录按钮的间距：保留协议块 mb-[40px] + space-y-5 的叠加效果（合 60px），
+   让按钮与协议有充足的视觉呼吸。 */

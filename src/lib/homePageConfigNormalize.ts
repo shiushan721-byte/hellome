@@ -1,5 +1,6 @@
 import { getDefaultHomePageConfig } from './homePageConfigDefaults';
 import { normalizeHeroAds } from './homeHeroAds';
+import { syncShowcaseTabsWithMarketCategories } from './agentMarketCategories';
 import {
   HOME_RECOMMEND_DESC_MAX,
   HOME_RECOMMEND_TITLE_MAX,
@@ -61,6 +62,7 @@ function normalizeShowcase(raw: unknown, fallback: HomePageConfigPayload['agentS
     ? raw.tabs.map((tab, index) => migrateShowcaseTab(isRecord(tab) ? tab : {}, index))
     : fallback.tabs;
   const defaultTabKey = String(raw.defaultTabKey ?? raw.defaultAgentId ?? fallback.defaultTabKey ?? 'all');
+  const syncedTabs = syncShowcaseTabsWithMarketCategories(tabs);
   return {
     ...fallback,
     enabled: raw.enabled !== false,
@@ -69,7 +71,7 @@ function normalizeShowcase(raw: unknown, fallback: HomePageConfigPayload['agentS
     defaultTabKey,
     defaultButtonLabel: raw.defaultButtonLabel ? String(raw.defaultButtonLabel) : fallback.defaultButtonLabel,
     footerText: raw.footerText ? String(raw.footerText) : fallback.footerText,
-    tabs,
+    tabs: syncedTabs,
   };
 }
 

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getDefaultHomePageConfig } from '../../src/lib/homePageConfigDefaults';
 import { normalizeHomePageConfigPayload } from '../../src/lib/homePageConfigNormalize';
+import { MARKET_CATEGORY_TABS } from '../../src/lib/agentMarketCategories';
 import { normalizeHeroAds, HERO_AD_SLOT_COUNT } from '../../src/lib/homeHeroAds';
 import { validateHomePageConfig } from '../../src/server/admin/homeConfigService';
 
@@ -36,8 +37,15 @@ test('normalizeHomePageConfigPayload migrates legacy showcase tabs', () => {
   });
 
   assert.equal(normalized.agentShowcase.defaultTabKey, 'geo');
-  assert.equal(normalized.agentShowcase.tabs[0]?.agents[0]?.agentId, 'geo');
-  assert.equal(normalized.agentShowcase.tabs[0]?.agents[0]?.buttonLabel, '立即使用');
+  assert.equal(normalized.agentShowcase.tabs.length, MARKET_CATEGORY_TABS.length);
+  const geoTab = normalized.agentShowcase.tabs.find((tab) => tab.tabKey === 'geo');
+  assert.equal(geoTab?.tabLabel, 'GEO 营销');
+  assert.equal(geoTab?.agents[0]?.agentId, 'geo');
+  assert.equal(geoTab?.agents[0]?.buttonLabel, '立即使用');
+  assert.deepEqual(
+    normalized.agentShowcase.tabs.map((tab) => tab.tabKey),
+    MARKET_CATEGORY_TABS.map((cat) => cat.id),
+  );
 });
 
 test('validateHomePageConfig checks recommendation title and description length', () => {

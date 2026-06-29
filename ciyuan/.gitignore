@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.rslib/
+
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+.cache/
+.turbo/
+
+# Claude Code
+.claude/
+
+# Cursor agent local config (MCP / rules / skills / 中间产物)
+.cursor/mcp.json
+.cursor/mcp.json.bak-*
+.cursor/rules/
+.cursor/skills/

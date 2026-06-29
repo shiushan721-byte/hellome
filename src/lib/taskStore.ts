@@ -1,5 +1,6 @@
 import type { GeoTaskInput, Task, TaskStep } from '../types/workbench';
 import { GEO_STEPS } from '../types/workbench';
+import { getProject, updateProjectFromGeoInput } from './projectStore';
 import { estimateGeoTokens } from './tokenBilling';
 import { ensureDemoTasks } from './taskSeed';
 
@@ -23,6 +24,15 @@ function normalizeTask(raw: Task & Record<string, unknown>): Task {
 
   return {
     ...raw,
+    taskScope: raw.taskScope === 'project' ? 'project' : 'temporary',
+    projectId: typeof raw.projectId === 'string' ? raw.projectId : undefined,
+    projectName: typeof raw.projectName === 'string' ? raw.projectName : undefined,
+    temporarySessionId:
+      typeof raw.temporarySessionId === 'string'
+        ? raw.temporarySessionId
+        : raw.taskScope === 'project'
+          ? undefined
+          : `tmp-${raw.id}`,
     estimatedTokenMin: est.min,
     estimatedTokenMax: est.max,
     tokenUsed: Number(raw.tokenUsed ?? 0),
@@ -145,8 +155,16 @@ function buildSteps(): TaskStep[] {
   }));
 }
 
-export function createGeoTask(input: GeoTaskInput): Task {
+export function createGeoTask(
+  input: GeoTaskInput,
+  options: { projectId?: string } = {},
+): Task {
   const est = estimateGeoTokens(input);
+  const project = getProject(options.projectId);
+  const taskScope = project ? 'project' : 'temporary';
+  if (project) {
+    updateProjectFromGeoInput(project.id, input);
+  }
   const task: Task = {
     id: `task-${Date.now()}`,
     name: `${input.brandName} GEO 可见度检测`,
@@ -160,6 +178,10 @@ export function createGeoTask(input: GeoTaskInput): Task {
     input,
     steps: buildSteps(),
     logs: [],
+    taskScope,
+    projectId: project?.id,
+    projectName: project?.name,
+    temporarySessionId: project ? undefined : `tmp-${Date.now()}`,
   };
   saveTask(task);
   return task;
@@ -168,5 +190,5 @@ export function createGeoTask(input: GeoTaskInput): Task {
 export function duplicateTask(id: string): Task | undefined {
   const source = getTask(id);
   if (!isGeoTaskInput(source?.input)) return undefined;
-  return createGeoTask(source.input);
+  return createGeoTask(source.input, { projectId: source.projectId });
 }

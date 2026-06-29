@@ -1,15 +1,9 @@
 import { AGENT_ICONS } from './agentIcons';
 import { getVideoAgentProfile } from '../config/videoAgentProfiles';
+import { CATEGORIES, type AgentCategory } from './agentCategories';
 
-export type AgentCategory =
-  | 'all'
-  | 'geo'
-  | 'content'
-  | 'sales'
-  | 'office'
-  | 'growth'
-  | 'data'
-  | 'tech';
+export type { AgentCategory } from './agentCategories';
+export { CATEGORIES } from './agentCategories';
 
 export interface AgentItem {
   id: string;
@@ -26,17 +20,6 @@ export interface AgentItem {
   path: string;
   badge?: string;
 }
-
-export const CATEGORIES: { id: AgentCategory; label: string }[] = [
-  { id: 'all', label: '全部' },
-  { id: 'geo', label: 'GEO 营销' },
-  { id: 'content', label: '内容创作' },
-  { id: 'sales', label: '销售获客' },
-  { id: 'office', label: '办公协同' },
-  { id: 'growth', label: '品牌增长' },
-  { id: 'data', label: '数据分析' },
-  { id: 'tech', label: '技术工程' },
-];
 
 export const RANKING_SECTIONS = [
   {

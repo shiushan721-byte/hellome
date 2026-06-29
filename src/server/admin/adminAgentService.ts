@@ -543,7 +543,21 @@ export async function seedAdminAgentsFromSkills(
 
   for (const item of items) {
     const existing = await prisma.agent.findUnique({ where: { slug: item.slug } });
-    if (existing) continue;
+    if (existing) {
+      await prisma.agent.update({
+        where: { id: existing.id },
+        data: {
+          name: item.name,
+          description: item.description,
+          iconUrl: item.iconUrl,
+          category: item.category ?? null,
+          status: item.status,
+          skillId: item.skillId,
+          updatedBy: 'seed',
+        },
+      });
+      continue;
+    }
 
     const agent = await prisma.agent.create({
       data: {

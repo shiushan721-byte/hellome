@@ -117,14 +117,20 @@ export const adminApi = {
     requestJson(`/api/admin/frontend-configs/${id}/publish`, { method: 'POST' }),
 
   homeConfig: () => requestJson<import('../types/homePageConfig').AdminHomeConfigState>('/api/admin/home-config'),
-  saveHomeConfig: (body: { draftId?: string | null; config: import('../types/homePageConfig').HomePageConfigPayload }) =>
-    requestJson<{ draftId: string; status: string; version: number; updatedAt: string }>('/api/admin/home-config', {
+  saveHomeConfig: (body: {
+    configId?: string | null;
+    draftId?: string | null;
+    config: import('../types/homePageConfig').HomePageConfigPayload;
+  }) =>
+    requestJson<{
+      configId: string;
+      status: string;
+      version: number;
+      updatedAt: string;
+    }>('/api/admin/home-config', {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
-  publishHomeConfig: (draftId: string) =>
-    requestJson('/api/admin/home-config/publish', { method: 'POST', body: JSON.stringify({ draftId }) }),
-  homePublishRecords: () => requestJson<Array<Record<string, unknown>>>('/api/admin/home-config/publish-records'),
 
   workflowTemplates: () => requestJson<Array<Record<string, unknown>>>('/api/admin/workflow-templates'),
   updateWorkflowTemplate: (templateId: string, body: Record<string, unknown>) =>

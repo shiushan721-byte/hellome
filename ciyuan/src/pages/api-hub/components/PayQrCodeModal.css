@@ -1,0 +1,484 @@
+/* PayQrCodeModal 样式 — 与 gnomic 项目 OrderDetailQrModal 保持一致 */
+
+/* ====== 遮罩层 ====== */
+.pay-qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* ====== 外层容器 — 双栏背景 ====== */
+.pay-qr-modal-bg {
+  display: flex;
+  width: 760px;
+  min-height: 340px;
+  overflow: hidden;
+  border-radius: 16px;
+  background-color: #fff;
+  background-image: url('https://filefront.oss-cn-hangzhou.aliyuncs.com/0_web/gnomic/home/pay_dialog_white_bg.png');
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: cover;
+  border: 1px solid #e5eaf0;
+  position: relative;
+}
+
+/* 关闭按钮 */
+.pay-qr-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  z-index: 1;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.pay-qr-close-btn:hover {
+  opacity: 1;
+}
+
+.pay-qr-close-btn img {
+  width: 16px;
+  height: 16px;
+}
+
+/* ====== 左侧：价格 + 二维码 + 支付方式 + 协议 ====== */
+.pay-qr-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+  width: 280px;
+  flex-shrink: 0;
+}
+
+/* 金额 */
+.pay-qr-price {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+.pay-qr-price-symbol {
+  align-self: flex-end;
+  padding-bottom: 4px;
+  font-size: 18px;
+  font-weight: 500;
+  color: #FF5C4D;
+  line-height: 26px;
+}
+
+.pay-qr-price-value {
+  font-size: 32px;
+  font-weight: 600;
+  color: #FF5C4D;
+  line-height: 45px;
+}
+
+/* 二维码容器 */
+.pay-qr-code-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+  padding: 12px;
+  border: 1px solid #E5EAF0;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.pay-qr-code-wrap.pay-qr-clickable {
+  cursor: pointer;
+}
+
+.pay-qr-expired {
+  filter: blur(6px);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 刷新覆盖层 */
+.pay-qr-refresh-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(2px);
+  border-radius: 4px;
+}
+
+.pay-qr-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6B7280, #4B5563);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pay-qr-code-wrap:hover .pay-qr-refresh-btn {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.pay-qr-refresh-label {
+  font-size: 11px;
+  color: #5C6672;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.pay-qr-refresh-btn.spinning svg {
+  animation: pay-qr-spin 0.8s linear infinite;
+}
+
+@keyframes pay-qr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 倒计时 */
+.pay-qr-countdown {
+  font-size: 12px;
+  color: #8E98A3;
+  margin: 0;
+  text-align: center;
+  line-height: 16px;
+}
+
+.pay-qr-countdown--expired {
+  color: #8E98A3;
+}
+
+/* 支付方式提示 */
+.pay-qr-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #8E98A3;
+  line-height: 16px;
+}
+
+.pay-qr-hint svg,
+.pay-qr-hint img {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
+/* 协议 */
+.pay-qr-agreement {
+  font-size: 12px;
+  color: #8E98A3;
+  text-align: center;
+  line-height: 16px;
+  margin: 0;
+}
+
+.pay-qr-agreement a {
+  color: #7080FF;
+  text-decoration: none;
+}
+
+.pay-qr-agreement a:hover {
+  text-decoration: underline;
+}
+
+/* ====== 右侧：套餐信息 + 说明条款 ====== */
+.pay-qr-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px;
+  background: linear-gradient(
+    to bottom,
+    rgba(247, 249, 252, 0.2),
+    rgba(247, 249, 252, 0.4)
+  );
+}
+
+/* 标题区块 */
+.pay-qr-right-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 0;
+}
+
+.pay-qr-right-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  color: #000;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pay-qr-right-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: #5C6672;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 描述文字块 */
+.pay-qr-right-desc-box {
+  font-size: 13px;
+  line-height: 20px;
+  color: #5C6672;
+  background: #F7F9FC;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+/* 商品信息卡片 */
+.pay-qr-goods-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #F7F9FC;
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.pay-qr-goods-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pay-qr-goods-label {
+  font-size: 12px;
+  color: #8E98A3;
+  line-height: 16px;
+}
+
+.pay-qr-goods-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1A1A2E;
+  line-height: 20px;
+}
+
+/* 说明条款 */
+.pay-qr-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 8px;
+}
+
+.pay-qr-note-item {
+  display: flex;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 20px;
+  color: #8E98A3;
+}
+
+.pay-qr-note-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 8px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+/* ====== 暗色模式 ====== */
+.dark .pay-qr-modal-bg {
+  background-color: #111626;
+  background-image: url('https://filefront.oss-cn-hangzhou.aliyuncs.com/0_web/gnomic/home/pay_dialog_blank_bg.png');
+  border-color: #161b2d;
+}
+
+.dark .pay-qr-price-symbol,
+.dark .pay-qr-price-value {
+  color: #CC4428;
+}
+
+.dark .pay-qr-code-wrap {
+  border-color: #1f2937;
+  background: #ffffff;
+}
+
+.dark .pay-qr-countdown {
+  color: #A3A9BC;
+}
+
+.dark .pay-qr-hint {
+  color: #E9ECF5;
+}
+
+.dark .pay-qr-agreement {
+  color: #A3A9BC;
+}
+
+.dark .pay-qr-agreement a {
+  color: #6673FF;
+}
+
+.dark .pay-qr-right {
+  background: linear-gradient(
+    to bottom,
+    rgba(17, 22, 38, 0.2),
+    rgba(17, 22, 38, 0.4)
+  );
+}
+
+.dark .pay-qr-right-header {
+  border-bottom-color: #161B2D;
+}
+
+.dark .pay-qr-right-title {
+  color: #E9ECF5;
+}
+
+.dark .pay-qr-right-desc {
+  color: #6F7690;
+}
+
+.dark .pay-qr-note-item {
+  color: #A3A9BC;
+}
+
+.dark .pay-qr-right-desc-box {
+  background: #1A2035;
+  color: #6F7690;
+}
+
+.dark .pay-qr-goods-card {
+  background: #1A2035;
+}
+
+.dark .pay-qr-goods-label {
+  color: #6F7690;
+}
+
+.dark .pay-qr-goods-value {
+  color: #E9ECF5;
+}
+
+.dark .pay-qr-close-btn {
+  opacity: 0.6;
+}
+
+.dark .pay-qr-refresh-overlay {
+  background: rgba(17, 22, 38, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.dark .pay-qr-refresh-label {
+  color: #A3A9BC;
+}
+
+/* ========================================
+   移动端响应式 (≤768px)
+   ======================================== */
+@media (max-width: 768px) {
+  .pay-qr-modal-bg {
+    width: calc(100vw - 32px);
+    max-width: 360px;
+    min-height: auto;
+    flex-direction: column;
+    border-radius: 16px;
+    padding: 24px 20px;
+  }
+
+  .pay-qr-right {
+    display: none;
+  }
+
+  .pay-qr-left {
+    width: 100%;
+    padding: 0;
+    align-items: center;
+  }
+
+  .pay-qr-price {
+    margin-bottom: 16px;
+  }
+
+  .pay-qr-price-value {
+    font-size: 32px;
+  }
+
+  .pay-qr-code-wrap {
+    width: 140px;
+    height: 140px;
+  }
+
+  .pay-qr-code-wrap svg {
+    width: 140px !important;
+    height: 140px !important;
+  }
+
+  .pay-qr-countdown {
+    font-size: 12px;
+    margin-top: 10px;
+  }
+
+  .pay-qr-hint {
+    font-size: 12px;
+    margin-top: 12px;
+  }
+
+  .pay-qr-hint img {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pay-qr-agreement {
+    font-size: 10px;
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  .pay-qr-close-btn {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .pay-qr-close-btn img {
+    width: 14px;
+    height: 14px;
+  }
+}

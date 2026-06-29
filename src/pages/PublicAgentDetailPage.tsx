@@ -4,6 +4,8 @@ import { getAgentById } from '../data/agentsCatalog';
 import AgentIcon from '../components/app/agents/AgentIcon';
 import { useLoginModal } from '../context/LoginModalProvider';
 import PublicMarketLayout from '../layouts/PublicMarketLayout';
+import SeoHead from '../components/SeoHead';
+import { buildAgentDetailSeo } from '../lib/siteSeo';
 
 export default function PublicAgentDetailPage() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -17,6 +19,7 @@ export default function PublicAgentDetailPage() {
   if (!agent) {
     return (
       <PublicMarketLayout>
+        <SeoHead noIndex path={agentId ? `/agents/${agentId}` : '/agents'} />
         <div className="p-8 text-center text-sm text-black/50">未找到该智能体</div>
       </PublicMarketLayout>
     );
@@ -24,6 +27,7 @@ export default function PublicAgentDetailPage() {
 
   return (
     <PublicMarketLayout>
+      <SeoHead {...buildAgentDetailSeo(agent)} />
       <div className="px-4 sm:px-6 lg:px-8 xl:px-10 py-6 lg:py-8 w-full max-w-3xl">
         <Link to="/agents" className="text-xs text-black/45 hover:text-black mb-6 inline-block">
           ← 返回智能体市场

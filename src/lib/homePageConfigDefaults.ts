@@ -1,18 +1,9 @@
 import type { HomePageConfigPayload, HomeAgentShowcaseCard, HomeAgentShowcaseTab } from '../types/homePageConfig';
 import { createDefaultHeroSlot, HERO_AD_SLOT_COUNT } from './homeHeroAds';
+import { buildDefaultCardsForCategory, MARKET_CATEGORY_TABS } from './agentMarketCategories';
 
 export const HOME_CONFIG_KEY = 'home.page_config';
 export const HOME_CONFIG_SCOPE = 'home';
-
-function card(agentId: string, sortOrder: number, buttonLabel = '使用智能体'): HomeAgentShowcaseCard {
-  return {
-    id: `card-${agentId}`,
-    agentId,
-    buttonLabel,
-    visible: true,
-    sortOrder,
-  };
-}
 
 function tab(
   id: string,
@@ -20,19 +11,13 @@ function tab(
   tabKey: string,
   agents: HomeAgentShowcaseCard[],
   sortOrder: number,
+  enabled: boolean,
 ): HomeAgentShowcaseTab {
-  return { id, tabLabel, tabKey, enabled: true, sortOrder, agents };
+  return { id, tabLabel, tabKey, enabled, sortOrder, agents };
 }
 
 export function getDefaultHomePageConfig(): HomePageConfigPayload {
-  const contentAgents = [
-    card('media-seeding', 0),
-    card('media-review', 1),
-    card('media-conversion', 2),
-    card('media-showcase', 3),
-    card('media-demo', 4),
-    card('media-proposal', 5),
-  ];
+  const legacyEnabledKeys = new Set(['all', 'geo', 'content', 'sales']);
 
   return {
     heroAds: Array.from({ length: HERO_AD_SLOT_COUNT }, (_, index) => createDefaultHeroSlot(index)),
@@ -67,8 +52,8 @@ export function getDefaultHomePageConfig(): HomePageConfigPayload {
         title: '销售获客智能体',
         description: '客户画像与跟进闭环',
         badge: '高效获客',
-        status: 'coming_soon',
-        cta: { label: '即将开放', action: 'view_agent' },
+        status: 'open',
+        cta: { label: '使用智能体', action: 'use_agent' },
       },
     ],
     agentShowcase: {
@@ -78,16 +63,16 @@ export function getDefaultHomePageConfig(): HomePageConfigPayload {
       defaultTabKey: 'all',
       defaultButtonLabel: '使用智能体',
       footerText: '支持企业定制自建：可无缝结合内部研发 API 及数据库资源。',
-      tabs: [
-        tab('tab-all', '全部', 'all', [
-          card('geo', 0),
-          ...contentAgents,
-          card('sales', 7),
-        ], 0),
-        tab('tab-geo', 'GEO 营销', 'geo', [card('geo', 0), card('schema-optimizer', 1), card('competitor-scan', 2)], 1),
-        tab('tab-content', '内容创作', 'content', contentAgents, 2),
-        tab('tab-sales', '销售获客', 'sales', [card('sales', 0), card('outreach-mail', 1)], 3),
-      ],
+      tabs: MARKET_CATEGORY_TABS.map((cat, index) =>
+        tab(
+          `tab-${cat.id}`,
+          cat.label,
+          cat.id,
+          buildDefaultCardsForCategory(cat.id),
+          index,
+          legacyEnabledKeys.has(cat.id),
+        ),
+      ),
     },
   };
 }
