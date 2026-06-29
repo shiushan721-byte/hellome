@@ -31,13 +31,12 @@ import ConfirmationNode from '../../components/app/tasks/ConfirmationNode';
 import HermesLogPanel from '../../components/app/tasks/HermesLogPanel';
 import TaskStatusBadge from '../../components/app/tasks/TaskStatusBadge';
 import UgcDeliveryPanel from '../../components/app/tasks/UgcDeliveryPanel';
-import ProjectContextSelector from '../../components/app/projects/ProjectContextSelector';
 import {
+  consumePendingAgentContext,
   getActiveProjectId,
   getProject,
   subscribeProjects,
 } from '../../lib/projectStore';
-import type { ProjectProfile } from '../../types/workbench';
 
 type ExecutionPreset = {
   platform: string;
@@ -205,6 +204,7 @@ export default function UgcVideoAgentPage() {
   const [taskError, setTaskError] = useState('');
   const activeProjectId = useSyncExternalStore(subscribeProjects, getActiveProjectId, getActiveProjectId);
   const [selectedProjectId, setSelectedProjectId] = useState(activeProjectId);
+  const [contextReady, setContextReady] = useState(false);
 
   const title = skillExperience?.title ?? profile?.title ?? '视频智能体';
   const promiseLine =
@@ -241,6 +241,15 @@ export default function UgcVideoAgentPage() {
     setSelectedOptions(defaults);
     setBusinessDescriptionTouched(false);
   }, [businessBlueprint]);
+
+  useEffect(() => {
+    if (contextReady) return;
+    const context = consumePendingAgentContext(currentAgentId);
+    if (context?.taskScope === 'project') {
+      setSelectedProjectId(context.projectId);
+    }
+    setContextReady(true);
+  }, [contextReady, currentAgentId]);
 
   const autoBusinessDescription = useMemo(
     () => buildBusinessDescription(title, businessBlueprint, selectedOptions),
@@ -380,6 +389,10 @@ export default function UgcVideoAgentPage() {
       setError('请先确认系统整理的业务描述。');
       return;
     }
+    if (!selectedProject) {
+      setError('使用智能体前请先从智能体市场选择或新建项目。');
+      return;
+    }
 
     setIsSubmitting(true);
     setError('');
@@ -397,16 +410,11 @@ export default function UgcVideoAgentPage() {
     };
 
     try {
-      const taskContext = selectedProject
-        ? {
-            taskScope: 'project' as const,
-            projectId: selectedProject.id,
-            projectName: selectedProject.name,
-          }
-        : {
-            taskScope: 'temporary' as const,
-            temporarySessionId: `tmp-${Date.now()}`,
-          };
+      const taskContext = {
+        taskScope: 'project' as const,
+        projectId: selectedProject.id,
+        projectName: selectedProject.name,
+      };
       const task = await createRemoteUgcTask(payload, taskContext);
       setActiveTask({
         ...task,
@@ -421,22 +429,21 @@ export default function UgcVideoAgentPage() {
     }
   };
 
-  const handleSelectProject = (project: ProjectProfile | null) => {
-    setSelectedProjectId(project?.id ?? '');
-    if (!project || businessDescriptionTouched) return;
+  useEffect(() => {
+    if (!contextReady || !selectedProject || businessDescriptionTouched) return;
     const projectLines = [
-      project.brandName ? `品牌：${project.brandName}` : '',
-      project.productIntro ? `产品/服务：${project.productIntro}` : '',
-      project.sellingPoints ? `卖点：${project.sellingPoints}` : '',
-      project.targetAudience ? `目标人群：${project.targetAudience}` : '',
+      selectedProject.brandName ? `品牌：${selectedProject.brandName}` : '',
+      selectedProject.productIntro ? `产品/服务：${selectedProject.productIntro}` : '',
+      selectedProject.sellingPoints ? `卖点：${selectedProject.sellingPoints}` : '',
+      selectedProject.targetAudience ? `目标人群：${selectedProject.targetAudience}` : '',
     ].filter(Boolean);
     if (projectLines.length > 0) {
       setBusinessDescription(`${autoBusinessDescription}\n${projectLines.join('\n')}`);
     }
-    if (project.websiteUrl && !referenceUrl.trim()) {
-      setReferenceUrl(project.websiteUrl);
+    if (selectedProject.websiteUrl && !referenceUrl.trim()) {
+      setReferenceUrl(selectedProject.websiteUrl);
     }
-  };
+  }, [autoBusinessDescription, businessDescriptionTouched, contextReady, referenceUrl, selectedProject]);
 
   const handlePrimaryAction = async () => {
     if (isSubmitting) return;
@@ -538,22 +545,16 @@ export default function UgcVideoAgentPage() {
                   items={businessBlueprint.directionSummary}
                 />
 
-                <ProjectContextSelector
-                  selectedProjectId={selectedProjectId}
-                  onSelectProject={handleSelectProject}
-                  seed={{
-                    brandName: selectedProject?.brandName,
-                    websiteUrl: selectedProject?.websiteUrl,
-                    keywords: selectedProject?.keywords,
-                    competitors: selectedProject?.competitors,
-                  }}
-                />
-
-                <p className="text-xs text-black/42">
-                  {selectedProject
-                    ? `当前将创建项目任务：${selectedProject.name}`
-                    : '当前将创建临时任务。本次任务不会读取或沉淀项目资料。'}
-                </p>
+                <div className="rounded-2xl border border-black/[0.06] bg-[#F7F8FA] px-4 py-3">
+                  <p className="text-sm font-semibold text-black/75">
+                    {selectedProject ? `当前项目：${selectedProject.name}` : '未选择项目'}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-black/42">
+                    {selectedProject
+                      ? '已根据项目资料推荐业务描述，可继续修改后发起任务。'
+                      : '请返回智能体市场点击“使用智能体”，先选择或新建项目。'}
+                  </p>
+                </div>
 
                 <div className="space-y-4">
                   <SectionTitle

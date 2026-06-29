@@ -47,16 +47,6 @@ export default function AgentProjectChoiceModal({
     onConfirm(agent.id);
   };
 
-  const confirmTemporary = () => {
-    setPendingAgentContext({
-      agentId: agent.id,
-      taskScope: 'temporary',
-      temporarySessionId: `tmp-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    });
-    onConfirm(agent.id);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
@@ -74,7 +64,7 @@ export default function AgentProjectChoiceModal({
             <div>
               <h2 className="text-lg font-bold text-black/85">使用 {agent.name}</h2>
               <p className="mt-1 text-sm leading-6 text-black/48">
-                选择项目会复用项目资料；直接临时使用则每次都是新会话。
+                使用智能体前需要选择或新建项目。项目会隔离 Hermes 记忆，并复用你的业务资料。
               </p>
             </div>
           </div>
@@ -134,20 +124,6 @@ export default function AgentProjectChoiceModal({
               className="mt-3 h-10 w-full rounded-lg bg-black text-xs font-bold text-white disabled:opacity-35"
             >
               使用项目进入
-            </button>
-          </div>
-
-          <div className="rounded-xl border border-dashed border-black/12 bg-white p-4">
-            <p className="text-sm font-bold text-black/75">临时任务</p>
-            <p className="mt-1 text-xs leading-5 text-black/45">
-              不读取项目资料，不写入项目资料，也不会加入项目。
-            </p>
-            <button
-              type="button"
-              onClick={confirmTemporary}
-              className="mt-3 h-10 w-full rounded-lg border border-black/12 text-xs font-bold text-black/65 hover:bg-black/[0.03]"
-            >
-              直接临时使用
             </button>
           </div>
         </div>

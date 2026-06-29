@@ -6,7 +6,6 @@ export type ResultEntry = {
   id: string;
   title: string;
   agentLabel: string;
-  scope: 'project' | 'temporary';
   projectLabel: string;
   completedAtLabel: string;
   artifactCount: number;
@@ -39,13 +38,10 @@ export function buildResultEntries(
           ? task.input.skillId
           : undefined;
 
-      const scope: ResultEntry['scope'] = task.taskScope === 'project' ? 'project' : 'temporary';
-
       return {
         id: task.id,
         title: task.name,
         agentLabel: task.agentType === 'geo' ? 'GEO 智能体' : task.agentType === 'media' ? '视频交付' : '销售智能体',
-        scope,
         projectLabel: formatTaskProjectLabel(task),
         completedAtLabel: task.completedAt
           ? new Date(task.completedAt).toLocaleString('zh-CN', {

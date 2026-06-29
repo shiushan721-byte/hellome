@@ -23,11 +23,14 @@ import { isHermesConnected } from '../../lib/firstRunOnboarding';
 import { replayPendingIntent } from '../../lib/pendingAgentIntent';
 import { tryUseAgent } from '../../lib/useAgentAccess';
 import { getAgentWorkbenchPath } from '../../lib/agentWorkbench';
+import AgentProjectChoiceModal from '../../components/app/projects/AgentProjectChoiceModal';
+import type { AgentMarketCard } from '../../types/agentsPage';
 
 export default function AppHomePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [showHermesModal, setShowHermesModal] = useState(false);
+  const [projectChoiceAgent, setProjectChoiceAgent] = useState<AgentMarketCard | null>(null);
 
   useSyncExternalStore(subscribeTasks, getTasks, getTasks);
   useSyncExternalStore(subscribeUsage, getUsage, getUsage);
@@ -90,8 +93,15 @@ export default function AppHomePage() {
       return;
     }
     if (result.ok) {
-      navigate(getAgentWorkbenchPath(agentId));
+      const agent = getHomeEmptyMarketCards().find((card) => card.id === agentId);
+      if (agent) setProjectChoiceAgent(agent);
+      else navigate(getAgentWorkbenchPath(agentId));
     }
+  };
+
+  const openAgentAfterProjectChoice = (agentId: string) => {
+    setProjectChoiceAgent(null);
+    navigate(getAgentWorkbenchPath(agentId));
   };
 
   if (
@@ -130,6 +140,14 @@ export default function AppHomePage() {
           }}
         />
       )}
+
+      {projectChoiceAgent ? (
+        <AgentProjectChoiceModal
+          agent={projectChoiceAgent}
+          onClose={() => setProjectChoiceAgent(null)}
+          onConfirm={openAgentAfterProjectChoice}
+        />
+      ) : null}
     </>
   );
 }

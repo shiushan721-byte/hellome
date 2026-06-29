@@ -36,8 +36,7 @@ export async function createRemoteUgcTask(
   context?: {
     projectId?: string;
     projectName?: string;
-    temporarySessionId?: string;
-    taskScope?: 'project' | 'temporary';
+    taskScope?: 'project';
   },
 ): Promise<Task> {
   const user = getUser();

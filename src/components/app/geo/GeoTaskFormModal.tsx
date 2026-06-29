@@ -92,7 +92,12 @@ export default function GeoTaskFormModal({
       return;
     }
 
-    const task = createGeoTask(draftInput, { projectId: selectedProjectId || undefined });
+    if (!selectedProjectId || !selectedProject) {
+      setError('使用智能体前请先选择或新建项目');
+      return;
+    }
+
+    const task = createGeoTask(draftInput, { projectId: selectedProjectId });
     runGeoTask(task.id);
     onClose();
     navigate(`/app/tasks/${task.id}`);
@@ -166,11 +171,7 @@ export default function GeoTaskFormModal({
               <p className="text-xs text-[#0F766E]">
                 当前将创建项目任务：{selectedProject.name}
               </p>
-            ) : (
-              <p className="text-xs text-black/40">
-                当前将创建临时任务。本次任务不会读取或沉淀项目资料。
-              </p>
-            )}
+            ) : null}
 
             <Field label="品牌名 *">
               <input

@@ -67,7 +67,7 @@ export default function ProjectContextSelector({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-black/80">项目上下文</p>
           <p className="mt-0.5 text-xs leading-5 text-black/45">
-            选择项目会复用项目资料；不选择项目则作为临时任务，每次都是新会话。
+            选择项目会复用项目资料，并隔离 Hermes 记忆。
           </p>
         </div>
       </div>
@@ -78,7 +78,6 @@ export default function ProjectContextSelector({
           onChange={(event) => handleSelect(event.target.value)}
           className="h-10 rounded-lg border border-black/10 bg-white px-3 text-sm outline-none focus:border-[#14958A]/40 focus:ring-2 focus:ring-[#14958A]/15"
         >
-          <option value="">临时任务，不使用项目资料</option>
           {projects.map((project) => (
             <option key={project.id} value={project.id}>
               {project.name}

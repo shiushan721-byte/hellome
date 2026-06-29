@@ -12,7 +12,7 @@ import TaskStatusBadge, {
 } from '../../components/app/tasks/TaskStatusBadge';
 import { formatTokenRange } from '../../lib/tokenBilling';
 import { formatTaskProjectLabel } from '../../lib/projectStore';
-import type { TaskScope, TaskStatus } from '../../types/workbench';
+import type { TaskStatus } from '../../types/workbench';
 
 const filters: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -22,18 +22,11 @@ const filters: { value: TaskStatus | 'all'; label: string }[] = [
   { value: 'failed', label: '失败' },
 ];
 
-const scopeFilters: { value: TaskScope | 'all'; label: string }[] = [
-  { value: 'all', label: '全部类型' },
-  { value: 'project', label: '项目任务' },
-  { value: 'temporary', label: '临时任务' },
-];
-
 export default function TasksPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const agentFilter = searchParams.get('agent');
   const [filter, setFilter] = useState<TaskStatus | 'all'>('all');
-  const [scopeFilter, setScopeFilter] = useState<TaskScope | 'all'>('all');
   const [actionError, setActionError] = useState('');
   const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
 
@@ -45,11 +38,8 @@ export default function TasksPage() {
     if (filter !== 'all') {
       list = list.filter((t) => t.status === filter);
     }
-    if (scopeFilter !== 'all') {
-      list = list.filter((t) => (t.taskScope ?? 'temporary') === scopeFilter);
-    }
     return list;
-  }, [tasks, agentFilter, filter, scopeFilter]);
+  }, [tasks, agentFilter, filter]);
 
   const agentName = agentFilter ? getAgentById(agentFilter)?.name : null;
 
@@ -78,21 +68,6 @@ export default function TasksPage() {
           {actionError}
         </p>
       )}
-
-      <div className="flex flex-wrap gap-2">
-        {scopeFilters.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setScopeFilter(f.value)}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors ${
-              scopeFilter === f.value ? 'bg-[#14958A] text-white' : 'bg-[#F2F0ED] text-black/60 hover:text-black'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
 
       <div className="flex flex-wrap gap-2">
         {filters.map((f) => (
@@ -134,7 +109,7 @@ export default function TasksPage() {
                   <td className="py-3 pr-4 text-xs hidden md:table-cell">
                     <span
                       className={`inline-flex px-2 py-1 rounded-full ${
-                        (task.taskScope ?? 'temporary') === 'project'
+                        task.projectId
                           ? 'bg-[#EAF6F4] text-[#0F766E]'
                           : 'bg-[#F2F0ED] text-black/45'
                       }`}

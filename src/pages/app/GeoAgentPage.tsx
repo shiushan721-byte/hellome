@@ -10,14 +10,13 @@ import {
   subscribeHermesConnection,
 } from '../../lib/hermesConnection';
 import HermesActionModal from '../../components/app/HermesActionModal';
-import ProjectContextSelector from '../../components/app/projects/ProjectContextSelector';
 import {
   buildGeoInputFromProject,
+  consumePendingAgentContext,
   getActiveProjectId,
   getProject,
   subscribeProjects,
 } from '../../lib/projectStore';
-import type { ProjectProfile } from '../../types/workbench';
 import { createGeoTask } from '../../lib/taskStore';
 import { runGeoTask } from '../../lib/geoTaskRunner';
 import { DEFAULT_GEO_MODELS } from '../../types/workbench';
@@ -47,6 +46,7 @@ export default function GeoAgentPage() {
   const [competitors, setCompetitors] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const [contextReady, setContextReady] = useState(false);
   const hermes = useSyncExternalStore(
     subscribeHermesConnection,
     getHermesConnection,
@@ -58,6 +58,25 @@ export default function GeoAgentPage() {
     setRunProgress(10);
     setExecutionCollapsed(false);
   }, []);
+
+  useEffect(() => {
+    if (contextReady) return;
+    const context = consumePendingAgentContext('geo');
+    if (context?.taskScope === 'project') {
+      setSelectedProjectId(context.projectId);
+      const project = getProject(context.projectId);
+      if (project) {
+        const preset = buildGeoInputFromProject(project);
+        setBrandName(preset.brandName || '');
+        setWebsiteUrl(preset.websiteUrl || '');
+        setKeywords(preset.keywords || '');
+        setCompetitors(preset.competitors || '');
+        setProductService(project.productIntro || '');
+        setNotes(project.notes || '');
+      }
+    }
+    setContextReady(true);
+  }, [contextReady]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -79,22 +98,14 @@ export default function GeoAgentPage() {
     depth: 'standard' as const,
   };
 
-  const handleSelectProject = (project: ProjectProfile | null) => {
-    setSelectedProjectId(project?.id ?? '');
-    if (!project) return;
-    const preset = buildGeoInputFromProject(project);
-    setBrandName((value) => value || preset.brandName || '');
-    setWebsiteUrl((value) => value || preset.websiteUrl || '');
-    setKeywords((value) => value || preset.keywords || '');
-    setCompetitors((value) => value || preset.competitors || '');
-    setProductService((value) => value || project.productIntro || '');
-    setNotes((value) => value || project.notes || '');
-  };
-
   const handleExecute = () => {
     setError('');
     if (hermes.status !== 'connected') {
       setShowHermesModal(true);
+      return;
+    }
+    if (!selectedProjectId || !selectedProject) {
+      setError('使用智能体前请先从智能体市场选择或新建项目');
       return;
     }
     if (!brandName.trim()) {
@@ -105,7 +116,7 @@ export default function GeoAgentPage() {
       setError('请至少填写官网 URL 或补充说明');
       return;
     }
-    const task = createGeoTask(draftInput, { projectId: selectedProjectId || undefined });
+    const task = createGeoTask(draftInput, { projectId: selectedProjectId });
     runGeoTask(task.id);
     navigate(`/app/tasks/${task.id}`);
   };
@@ -163,16 +174,14 @@ export default function GeoAgentPage() {
               <p className="mt-2 text-sm text-black/45">补齐品牌资料后即可提交，检测 AI 平台提及与内容缺口。</p>
             </div>
 
-            <div className="mt-5">
-              <ProjectContextSelector
-                selectedProjectId={selectedProjectId}
-                onSelectProject={handleSelectProject}
-                seed={draftInput}
-              />
-              <p className="mt-2 text-xs text-black/42">
+            <div className="mt-5 rounded-xl border border-black/8 bg-[#F7F8FA] p-3">
+              <p className="text-sm font-semibold text-black/75">
+                {selectedProject ? `当前项目：${selectedProject.name}` : '未选择项目'}
+              </p>
+              <p className="mt-1 text-xs text-black/42">
                 {selectedProject
-                  ? `当前将创建项目任务：${selectedProject.name}`
-                  : '当前将创建临时任务。本次任务不会读取或沉淀项目资料。'}
+                  ? '已根据项目资料预填字段，可继续修改后发起任务。'
+                  : '请返回智能体市场点击“使用智能体”，先选择或新建项目。'}
               </p>
             </div>
 

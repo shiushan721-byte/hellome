@@ -221,26 +221,16 @@ export function formatTaskProjectLabel(task: {
   projectName?: string;
   projectId?: string;
 }): string {
-  if (task.taskScope === 'project') {
-    return task.projectName || getProject(task.projectId)?.name || '项目任务';
-  }
-  return '临时任务';
+  return task.projectName || getProject(task.projectId)?.name || '未归属项目';
 }
 
-export type PendingAgentContext =
-  | {
-      agentId: string;
-      taskScope: 'project';
-      projectId: string;
-      projectName: string;
-      createdAt: string;
-    }
-  | {
-      agentId: string;
-      taskScope: 'temporary';
-      temporarySessionId: string;
-      createdAt: string;
-    };
+export type PendingAgentContext = {
+  agentId: string;
+  taskScope: 'project';
+  projectId: string;
+  projectName: string;
+  createdAt: string;
+};
 
 export function setPendingAgentContext(context: PendingAgentContext): void {
   localStorage.setItem(AGENT_CONTEXT_KEY, JSON.stringify(context));

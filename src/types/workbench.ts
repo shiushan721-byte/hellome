@@ -25,7 +25,7 @@ export type DetectionDepth = 'quick' | 'standard' | 'deep';
 
 export type LedgerStatus = 'reserved' | 'settled' | 'refunded' | 'failed';
 
-export type TaskScope = 'project' | 'temporary';
+export type TaskScope = 'project';
 
 export interface TaskStep {
   id: string;
@@ -81,7 +81,6 @@ export interface Task {
   taskScope?: TaskScope;
   projectId?: string;
   projectName?: string;
-  temporarySessionId?: string;
 }
 
 export interface ProjectProfile {

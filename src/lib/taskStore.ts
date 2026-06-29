@@ -24,15 +24,9 @@ function normalizeTask(raw: Task & Record<string, unknown>): Task {
 
   return {
     ...raw,
-    taskScope: raw.taskScope === 'project' ? 'project' : 'temporary',
+    taskScope: raw.projectId || raw.taskScope === 'project' ? 'project' : undefined,
     projectId: typeof raw.projectId === 'string' ? raw.projectId : undefined,
     projectName: typeof raw.projectName === 'string' ? raw.projectName : undefined,
-    temporarySessionId:
-      typeof raw.temporarySessionId === 'string'
-        ? raw.temporarySessionId
-        : raw.taskScope === 'project'
-          ? undefined
-          : `tmp-${raw.id}`,
     estimatedTokenMin: est.min,
     estimatedTokenMax: est.max,
     tokenUsed: Number(raw.tokenUsed ?? 0),
@@ -157,11 +151,13 @@ function buildSteps(): TaskStep[] {
 
 export function createGeoTask(
   input: GeoTaskInput,
-  options: { projectId?: string } = {},
+  options: { projectId: string },
 ): Task {
   const est = estimateGeoTokens(input);
   const project = getProject(options.projectId);
-  const taskScope = project ? 'project' : 'temporary';
+  if (!project) {
+    throw new Error('使用智能体前请先选择项目');
+  }
   if (project) {
     updateProjectFromGeoInput(project.id, input);
   }
@@ -178,10 +174,9 @@ export function createGeoTask(
     input,
     steps: buildSteps(),
     logs: [],
-    taskScope,
-    projectId: project?.id,
-    projectName: project?.name,
-    temporarySessionId: project ? undefined : `tmp-${Date.now()}`,
+    taskScope: 'project',
+    projectId: project.id,
+    projectName: project.name,
   };
   saveTask(task);
   return task;

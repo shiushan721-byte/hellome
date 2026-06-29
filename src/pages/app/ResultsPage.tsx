@@ -1,26 +1,15 @@
-import { useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, FolderOpen } from 'lucide-react';
 import { getTasks, subscribeTasks } from '../../lib/taskStore';
 import { buildResultEntries } from '../../lib/resultsCenter';
 
-type ScopeFilter = 'all' | 'project' | 'temporary';
-
-const scopeFilters: { value: ScopeFilter; label: string }[] = [
-  { value: 'all', label: '全部成果' },
-  { value: 'project', label: '项目成果' },
-  { value: 'temporary', label: '临时成果' },
-];
-
 export default function ResultsPage() {
   const tasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
-  const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
 
   const entries = useMemo(() => {
-    const list = buildResultEntries(tasks, { canEditSkill: false });
-    if (scopeFilter === 'all') return list;
-    return list.filter((entry) => entry.scope === scopeFilter);
-  }, [tasks, scopeFilter]);
+    return buildResultEntries(tasks, { canEditSkill: false });
+  }, [tasks]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
@@ -31,26 +20,9 @@ export default function ResultsPage() {
         <div className="space-y-2">
           <h1 className="text-2xl font-bold font-display">成果中心</h1>
           <p className="text-sm text-black/55 leading-relaxed">
-            汇总已完成任务产出的报告、文档、视频和交付物。项目成果归属项目，临时成果只保留本次任务结果。
+            汇总已完成任务产出的报告、文档、视频和交付物。所有新成果都归属到项目。
           </p>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {scopeFilters.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            onClick={() => setScopeFilter(filter.value)}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors ${
-              scopeFilter === filter.value
-                ? 'bg-[#14958A] text-white'
-                : 'bg-[#F2F0ED] text-black/60 hover:text-black'
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
       </div>
 
       {entries.length === 0 ? (
@@ -74,7 +46,7 @@ export default function ResultsPage() {
                   <span>{entry.completedAtLabel}</span>
                   <span
                     className={`rounded-full px-2 py-0.5 ${
-                      entry.scope === 'project'
+                      entry.projectLabel !== '未归属项目'
                         ? 'bg-[#EAF6F4] text-[#0F766E]'
                         : 'bg-[#F2F0ED] text-black/45'
                     }`}
