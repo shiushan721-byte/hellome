@@ -13,7 +13,6 @@ import AgentComingSoonPage from './pages/app/AgentComingSoonPage';
 import AgentLauncherPage from './pages/app/AgentLauncherPage';
 import UgcVideoAgentPage from './pages/app/UgcVideoAgentPage';
 import ProjectsPage from './pages/app/ProjectsPage';
-import TasksPage from './pages/app/TasksPage';
 import TaskRunPage from './pages/app/TaskRunPage';
 import UsagePage from './pages/app/UsagePage';
 import UsageRechargePage from './pages/app/UsageRechargePage';
@@ -81,7 +80,7 @@ export default function App() {
         <Route path="agents/:agentId" element={<AgentLauncherPage />} />
         <Route path="agents-legacy" element={<AgentsLegacyRedirect />} />
         <Route path="projects" element={<ProjectsPage />} />
-        <Route path="tasks" element={<TasksPage />} />
+        <Route path="tasks" element={<Navigate to="/app/projects" replace />} />
         <Route path="tasks/:id" element={<TaskRunPage />} />
         <Route path="results" element={<ResultsPage />} />
         <Route path="usage" element={<UsagePage />} />

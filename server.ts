@@ -754,7 +754,7 @@ app.post('/api/uploads', (req, res) => {
 
 app.post('/api/tasks/ugc', async (req, res) => {
   try {
-    const { input, user } = req.body as {
+    const { input, user, context } = req.body as {
       input?: {
         skillId?: string;
         productImageUrl?: string;
@@ -772,6 +772,11 @@ app.post('/api/tasks/ugc', async (req, res) => {
         email?: string;
         phone?: string;
         workspaceName?: string;
+      };
+      context?: {
+        projectId?: string;
+        projectName?: string;
+        taskScope?: 'project';
       };
     };
 
@@ -797,6 +802,13 @@ app.post('/api/tasks/ugc', async (req, res) => {
       email: user?.email?.trim(),
       phone: user?.phone?.trim(),
       workspaceName: user?.workspaceName?.trim() || '个人空间',
+      context: context?.projectId
+        ? {
+            taskScope: 'project',
+            projectId: context.projectId,
+            projectName: context.projectName,
+          }
+        : undefined,
     });
 
     res.status(201).json({ success: true, data: task });

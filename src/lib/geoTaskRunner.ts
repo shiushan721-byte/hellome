@@ -1,6 +1,12 @@
 import type { GeoResultData } from '../types';
 import type { GeoTaskInput, Task } from '../types/workbench';
-import { getTask, saveTask } from './taskStore';
+import {
+  getGlobalActiveTask,
+  getNextQueuedTask,
+  getTask,
+  isTerminalTaskStatus,
+  saveTask,
+} from './taskStore';
 import {
   computeActualTokenUsage,
   distributeStepTokens,
@@ -103,14 +109,19 @@ export function isTaskRunning(id: string): boolean {
 
 export async function runGeoTask(taskId: string): Promise<void> {
   if (running.has(taskId)) return;
-  running.add(taskId);
 
   const startMs = Date.now();
   let task = getTask(taskId);
   if (!task || !isGeoTask(task)) {
-    running.delete(taskId);
     return;
   }
+  if (task.status === 'queued' && getGlobalActiveTask(taskId)) {
+    return;
+  }
+  if (task.status !== 'queued' && task.status !== 'running') {
+    return;
+  }
+  running.add(taskId);
   const geoInput = task.input as GeoTaskInput;
 
   const actualTotal = computeActualTokenUsage(
@@ -217,6 +228,10 @@ export async function runGeoTask(taskId: string): Promise<void> {
     }
   } finally {
     running.delete(taskId);
+    const latest = getTask(taskId);
+    if (latest && isTerminalTaskStatus(latest.status)) {
+      startNextQueuedGeoTask();
+    }
   }
 }
 
@@ -267,5 +282,15 @@ export async function resumeGeoTaskAfterConfirmation(taskId: string): Promise<vo
     saveTask(failed);
   } finally {
     running.delete(taskId);
+    const latest = getTask(taskId);
+    if (latest && isTerminalTaskStatus(latest.status)) {
+      startNextQueuedGeoTask();
+    }
   }
+}
+
+export function startNextQueuedGeoTask(): void {
+  const next = getNextQueuedTask();
+  if (!next || next.agentType !== 'geo') return;
+  void runGeoTask(next.id);
 }

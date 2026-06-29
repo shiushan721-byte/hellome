@@ -28,8 +28,8 @@ export default function ResultsPage() {
       {entries.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-sm text-black/40">暂无成果记录</p>
-          <Link to="/app/tasks" className="mt-3 inline-block text-xs font-bold underline">
-            前往任务中心
+          <Link to="/app/projects" className="mt-3 inline-block text-xs font-bold underline">
+            前往项目中心
           </Link>
         </div>
       ) : (

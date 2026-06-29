@@ -5,7 +5,6 @@ import {
   Gauge,
   Home,
   LayoutDashboard,
-  ListChecks,
   LogIn,
   Settings,
 } from 'lucide-react';
@@ -19,7 +18,6 @@ export type AppNavId =
   | 'workbench'
   | 'market'
   | 'projects'
-  | 'tasks'
   | 'usage'
   | 'api'
   | 'settings';
@@ -63,19 +61,13 @@ export const APP_NAV_PRIMARY: AppNavItem[] = [
   },
   {
     id: 'projects',
-    label: '项目',
+    label: '项目中心',
     icon: FolderKanban,
     to: '/app/projects',
   },
   {
-    id: 'tasks',
-    label: '任务中心',
-    icon: ListChecks,
-    to: '/app/tasks',
-  },
-  {
     id: 'usage',
-    label: '算力中心',
+    label: '账户总览',
     icon: Gauge,
     to: '/app/usage',
   },
@@ -125,8 +117,6 @@ export function isAppNavActive(id: AppNavId, pathname: string): boolean {
       return pathname === '/app/agents';
     case 'projects':
       return pathname === '/app/projects';
-    case 'tasks':
-      return pathname === '/app/tasks' || pathname.startsWith('/app/tasks/');
     case 'usage':
       return pathname === '/app/usage' || pathname.startsWith('/app/usage/');
     case 'api':

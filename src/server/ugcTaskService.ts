@@ -100,6 +100,11 @@ type CreateTaskPayload = {
   email?: string;
   phone?: string;
   workspaceName?: string;
+  context?: {
+    projectId?: string;
+    projectName?: string;
+    taskScope?: 'project';
+  };
 };
 
 type DebugRunPayload = {
@@ -580,6 +585,9 @@ function buildAggregate(payload: CreateTaskPayload): TaskAggregate {
     logs: [],
     understanding: undefined,
     artifacts: [],
+    taskScope: payload.context?.projectId ? 'project' : undefined,
+    projectId: payload.context?.projectId,
+    projectName: payload.context?.projectName,
   };
 
   const initialEvent: UgcTaskEvent = {

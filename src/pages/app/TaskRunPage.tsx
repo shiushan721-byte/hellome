@@ -6,6 +6,7 @@ import {
   runGeoTask,
   resumeGeoTaskAfterConfirmation,
   isTaskRunning,
+  startNextQueuedGeoTask,
 } from '../../lib/geoTaskRunner';
 import { isAgentActive } from '../../lib/agentSlotStore';
 import TaskRunLayout from '../../components/app/tasks/TaskRunLayout';
@@ -32,10 +33,10 @@ export default function TaskRunPage() {
         <p className="text-black/50 mb-4">任务不存在</p>
         <button
           type="button"
-          onClick={() => navigate('/app/tasks')}
+          onClick={() => navigate('/app/projects')}
           className="text-sm font-bold underline"
         >
-          返回任务中心
+          返回项目中心
         </button>
       </div>
     );
@@ -53,6 +54,7 @@ export default function TaskRunPage() {
       status: 'cancelled',
       pendingConfirmation: undefined,
     });
+    startNextQueuedGeoTask();
   };
 
   const handleRerun = () => {
@@ -70,11 +72,11 @@ export default function TaskRunPage() {
       <div className="px-6 py-3 border-b border-black/8">
         <button
           type="button"
-          onClick={() => navigate('/app/tasks')}
+          onClick={() => navigate('/app/projects')}
           className="inline-flex items-center gap-1.5 text-xs font-bold text-black/50 hover:text-black"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          任务中心
+          项目中心
         </button>
         {rerunError && (
           <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 px-3 py-2">

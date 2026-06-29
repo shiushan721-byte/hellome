@@ -60,7 +60,7 @@ export default function TasksPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-display">任务中心</h1>
+        <h1 className="text-2xl font-bold font-display">项目中心</h1>
       </div>
 
       {actionError && (

@@ -123,9 +123,36 @@ export function deleteTask(id: string): void {
 }
 
 const RUNNING_STATUSES = new Set(['running', 'waiting_confirmation']);
+const TERMINAL_STATUSES = new Set(['completed', 'failed', 'cancelled']);
 
 export function getRunningTasksForAgent(agentId: string): Task[] {
   return getTasks().filter((t) => t.agentType === agentId && RUNNING_STATUSES.has(t.status));
+}
+
+export function getGlobalActiveTask(exceptTaskId?: string): Task | undefined {
+  return getTasks()
+    .filter((task) => task.id !== exceptTaskId && RUNNING_STATUSES.has(task.status))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())[0];
+}
+
+export function getQueuedTasks(): Task[] {
+  return getTasks()
+    .filter((task) => task.status === 'queued')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+export function getQueuePosition(taskId: string): number {
+  const index = getQueuedTasks().findIndex((task) => task.id === taskId);
+  return index >= 0 ? index + 1 : 0;
+}
+
+export function getNextQueuedTask(): Task | undefined {
+  if (getGlobalActiveTask()) return undefined;
+  return getQueuedTasks()[0];
+}
+
+export function isTerminalTaskStatus(status: Task['status']): boolean {
+  return TERMINAL_STATUSES.has(status);
 }
 
 /** 取消智能体下所有进行中的任务，返回取消数量 */
@@ -165,7 +192,7 @@ export function createGeoTask(
     id: `task-${Date.now()}`,
     name: `${input.brandName} GEO 可见度检测`,
     agentType: 'geo',
-    status: 'running',
+    status: getGlobalActiveTask() ? 'queued' : 'running',
     createdAt: new Date().toISOString(),
     estimatedTokenMin: est.min,
     estimatedTokenMax: est.max,

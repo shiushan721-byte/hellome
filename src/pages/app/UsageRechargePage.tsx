@@ -57,7 +57,7 @@ export default function UsageRechargePage() {
           to="/app/usage"
           className="inline-flex justify-center px-5 py-2.5 text-xs font-bold border border-black/15 hover:bg-black/[0.02] rounded-lg"
         >
-          返回算力中心
+          返回账户总览
         </Link>
       </div>
 
@@ -139,7 +139,7 @@ export default function UsageRechargePage() {
             <p className="mt-2 text-xl font-bold font-display text-black">{formatToken(nextBalance)}</p>
           </div>
           <div className="rounded-2xl bg-[#F6F3EE] px-4 py-3 text-xs leading-6 text-black/55">
-            当前页是演示充值页，提交后会调用服务端接口写入充值记录，并刷新顶部 Token、算力中心余额和最近记录。
+            当前页是演示充值页，提交后会调用服务端接口写入充值记录，并刷新顶部 Token、账户总览余额和最近记录。
           </div>
         </div>
       </section>

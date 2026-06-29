@@ -1,48 +1,87 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { FolderKanban, Plus } from 'lucide-react';
+import { ChevronDown, Eye, FolderKanban, Plus, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   createProject,
   getProjects,
   subscribeProjects,
-  updateProject,
 } from '../../lib/projectStore';
-import type { ProjectProfile } from '../../types/workbench';
-
-const emptyDraft = {
-  name: '',
-  brandName: '',
-  websiteUrl: '',
-  productIntro: '',
-  targetAudience: '',
-  keywords: '',
-  competitors: '',
-  sellingPoints: '',
-  tone: '',
-  notes: '',
-};
+import {
+  duplicateTask,
+  getGlobalActiveTask,
+  getQueuePosition,
+  getQueuedTasks,
+  getTasks,
+  subscribeTasks,
+} from '../../lib/taskStore';
+import { listRemoteTasks } from '../../lib/taskApi';
+import { runGeoTask } from '../../lib/geoTaskRunner';
+import TaskStatusBadge, {
+  agentLabel,
+  formatDuration,
+  formatTime,
+} from '../../components/app/tasks/TaskStatusBadge';
+import { formatTokenRange } from '../../lib/tokenBilling';
+import type { ProjectProfile, Task } from '../../types/workbench';
 
 export default function ProjectsPage() {
+  const navigate = useNavigate();
   const projects = useSyncExternalStore(subscribeProjects, getProjects, getProjects);
-  const [activeId, setActiveId] = useState('');
-  const activeProject = projects.find((project) => project.id === activeId) ?? projects[0] ?? null;
+  const localTasks = useSyncExternalStore(subscribeTasks, getTasks, getTasks);
+  const [remoteTasks, setRemoteTasks] = useState<Task[]>([]);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<string[]>([]);
+  const tasks = mergeTasks(localTasks, remoteTasks);
+  const activeTask = getGlobalActiveTask();
+  const queuedCount = getQueuedTasks().length;
 
   useEffect(() => {
-    if (!activeId && projects[0]) setActiveId(projects[0].id);
-    if (activeId && !projects.some((project) => project.id === activeId)) setActiveId(projects[0]?.id ?? '');
-  }, [activeId, projects]);
+    if (expandedProjectIds.length === 0 && projects[0]) {
+      setExpandedProjectIds([projects[0].id]);
+      return;
+    }
+    const next = expandedProjectIds.filter((id) => projects.some((project) => project.id === id));
+    if (next.length !== expandedProjectIds.length) setExpandedProjectIds(next);
+  }, [expandedProjectIds, projects]);
+
+  useEffect(() => {
+    let mounted = true;
+    listRemoteTasks()
+      .then((items) => {
+        if (mounted) setRemoteTasks(items);
+      })
+      .catch(() => {
+        if (mounted) setRemoteTasks([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleCreate = () => {
     const project = createProject({ name: '新项目' });
-    setActiveId(project.id);
+    setExpandedProjectIds((ids) => [project.id, ...ids]);
+  };
+
+  const handleRerunTask = (taskId: string) => {
+    const task = duplicateTask(taskId);
+    if (!task) return;
+    runGeoTask(task.id);
+    navigate(`/app/tasks/${task.id}`);
+  };
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjectIds((ids) =>
+      ids.includes(projectId) ? ids.filter((id) => id !== projectId) : [projectId, ...ids],
+    );
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-display">项目</h1>
+          <h1 className="text-2xl font-bold font-display">项目中心</h1>
           <p className="mt-1 text-sm text-black/45">
-            项目用于沉淀品牌资料，并为不同智能体自动预填可复用信息。
+            项目用于沉淀资料、管理任务队列，并按项目查看任务过程和结果。
           </p>
         </div>
         <button
@@ -69,126 +108,281 @@ export default function ProjectsPage() {
           </button>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <aside className="rounded-2xl border border-black/8 bg-white p-2">
+        <div className="space-y-4">
+          <GlobalQueueSummary activeTask={activeTask} queuedCount={queuedCount} />
+          <section className="rounded-2xl border border-black/8 bg-white p-2">
             {projects.map((project) => (
-              <button
+              <ProjectAccordion
                 key={project.id}
-                type="button"
-                onClick={() => setActiveId(project.id)}
-                className={`w-full rounded-xl px-3 py-3 text-left transition-colors ${
-                  activeProject?.id === project.id ? 'bg-[#EAF6F4]' : 'hover:bg-black/[0.03]'
-                }`}
-              >
-                <p className="truncate text-sm font-bold text-black/80">{project.name}</p>
-                <p className="mt-1 truncate text-xs text-black/40">{project.brandName || '未填写品牌名'}</p>
-              </button>
+                project={project}
+                tasks={tasks.filter((task) => task.projectId === project.id)}
+                open={expandedProjectIds.includes(project.id)}
+                onToggle={() => toggleProject(project.id)}
+                onOpenTask={(taskId) => navigate(`/app/tasks/${taskId}`)}
+                onRerunTask={handleRerunTask}
+              />
             ))}
-          </aside>
-
-          {activeProject ? <ProjectEditor key={activeProject.id} project={activeProject} /> : null}
+          </section>
         </div>
       )}
     </div>
   );
 }
 
-function ProjectEditor({ project }: { project: ProjectProfile }) {
-  const [draft, setDraft] = useState({
-    ...emptyDraft,
-    ...project,
-  });
-  const [saved, setSaved] = useState(false);
+function mergeTasks(localTasks: Task[], remoteTasks: Task[]): Task[] {
+  const byId = new Map<string, Task>();
+  for (const task of remoteTasks) byId.set(task.id, task);
+  for (const task of localTasks) byId.set(task.id, task);
+  return [...byId.values()];
+}
 
-  const update = (key: keyof typeof emptyDraft, value: string) => {
-    setSaved(false);
-    setDraft((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleSave = () => {
-    updateProject(project.id, draft);
-    setSaved(true);
-  };
+function ProjectAccordion({
+  project,
+  tasks,
+  open,
+  onToggle,
+  onOpenTask,
+  onRerunTask,
+}: {
+  project: ProjectProfile;
+  tasks: Task[];
+  open: boolean;
+  onToggle: () => void;
+  onOpenTask: (taskId: string) => void;
+  onRerunTask: (taskId: string) => void;
+}) {
+  const runningCount = tasks.filter((task) => task.status !== 'completed').length;
+  const completedCount = tasks.filter((task) => task.status === 'completed').length;
+  const latest = [...tasks].sort(
+    (a, b) =>
+      new Date(b.updatedAt ?? b.completedAt ?? b.createdAt).getTime() -
+      new Date(a.updatedAt ?? a.completedAt ?? a.createdAt).getTime(),
+  )[0];
+  const latestTime = latest?.updatedAt ?? latest?.completedAt ?? latest?.createdAt ?? project.updatedAt;
 
   return (
-    <section className="rounded-2xl border border-black/8 bg-white p-5 space-y-5">
-      <div>
-        <h2 className="text-lg font-bold text-black/85">项目资料</h2>
-        <p className="mt-1 text-xs text-black/45">这些资料会用于智能体表单预填，用户在每次任务前仍可修改。</p>
-      </div>
+    <article className="rounded-xl transition-colors hover:bg-black/[0.02]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors ${
+          open ? 'bg-[#F0F0F2]' : 'hover:bg-[#F7F7F8]'
+        }`}
+      >
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-black/35 transition-transform ${open ? '' : '-rotate-90'}`}
+        />
+        <div className="min-w-0">
+          <p className="truncate text-base font-bold text-black/82">{project.name}</p>
+          <p className="mt-1 truncate text-xs text-black/40">
+            {project.brandName || '未填写品牌名'} · 任务中 {runningCount} · 已完成 {completedCount}
+          </p>
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-3">
+          {latest ? <TaskStatusBadge status={latest.status} /> : null}
+          <span className="min-w-12 text-right text-sm font-medium text-black/38">
+            {formatRelativeTime(latestTime)}
+          </span>
+        </div>
+      </button>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <TextField label="项目名称" value={draft.name} onChange={(value) => update('name', value)} required />
-        <TextField label="品牌名" value={draft.brandName || ''} onChange={(value) => update('brandName', value)} />
-        <TextField label="官网 URL" value={draft.websiteUrl || ''} onChange={(value) => update('websiteUrl', value)} />
-        <TextField label="目标客户" value={draft.targetAudience || ''} onChange={(value) => update('targetAudience', value)} />
-        <TextField label="核心关键词" value={draft.keywords || ''} onChange={(value) => update('keywords', value)} />
-        <TextField label="竞品" value={draft.competitors || ''} onChange={(value) => update('competitors', value)} />
-      </div>
+      {open ? (
+        <div className="px-4 pb-4 pt-2">
+          <ProjectTasksList
+            tasks={tasks}
+            onOpenTask={onOpenTask}
+            onRerunTask={onRerunTask}
+          />
+        </div>
+      ) : null}
+    </article>
+  );
+}
 
-      <TextArea label="产品 / 服务介绍" value={draft.productIntro || ''} onChange={(value) => update('productIntro', value)} />
-      <TextArea label="品牌卖点" value={draft.sellingPoints || ''} onChange={(value) => update('sellingPoints', value)} />
-      <TextArea label="常用语气" value={draft.tone || ''} onChange={(value) => update('tone', value)} />
-      <TextArea label="补充说明" value={draft.notes || ''} onChange={(value) => update('notes', value)} />
+function formatRelativeTime(value: string): string {
+  const diff = Date.now() - new Date(value).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return '刚刚';
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return '刚刚';
+  if (minutes < 60) return `${minutes} 分`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 时`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days} 天`;
+  const months = Math.floor(days / 30);
+  return `${months} 月`;
+}
 
-      <div className="flex items-center justify-end gap-3">
-        {saved ? <span className="text-xs text-[#0F766E]">已保存</span> : null}
-        <button
-          type="button"
-          onClick={handleSave}
-          className="rounded-lg bg-black px-4 py-2 text-xs font-bold text-white"
-        >
-          保存项目资料
-        </button>
+function GlobalQueueSummary({
+  activeTask,
+  queuedCount,
+}: {
+  activeTask?: Task;
+  queuedCount: number;
+}) {
+  return (
+    <section className="rounded-2xl border border-black/8 bg-white p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-bold text-black/85">全局任务队列</p>
+          <p className="mt-1 text-xs text-black/45">每次只运行一个任务，其他任务按创建时间排队。</p>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <span className="rounded-full bg-[#F2F0ED] px-3 py-1 font-semibold text-black/55">
+            队列中 {queuedCount}
+          </span>
+          {activeTask ? (
+            <span className="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-700">
+              当前执行：{activeTask.name}
+            </span>
+          ) : (
+            <span className="rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-700">
+              当前空闲
+            </span>
+          )}
+        </div>
       </div>
     </section>
   );
 }
 
-function TextField({
-  label,
-  value,
-  onChange,
-  required,
+function ProjectTasksList({
+  tasks,
+  onOpenTask,
+  onRerunTask,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
+  tasks: Task[];
+  onOpenTask: (taskId: string) => void;
+  onRerunTask: (taskId: string) => void;
 }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-bold text-black/55">
-        {label}
-        {required ? ' *' : ''}
-      </span>
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded-lg border border-black/10 px-3 text-sm outline-none focus:border-[#14958A]/40 focus:ring-2 focus:ring-[#14958A]/15"
+  const activeTasks = tasks
+    .filter((task) => task.status !== 'completed')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  const completedTasks = tasks
+    .filter((task) => task.status === 'completed')
+    .sort((a, b) => new Date(b.completedAt ?? b.createdAt).getTime() - new Date(a.completedAt ?? a.createdAt).getTime());
+
+  return tasks.length === 0 ? (
+    <p className="rounded-xl border border-dashed border-black/10 bg-[#FCFCFD] px-4 py-5 text-center text-sm text-black/35">
+      当前项目还没有任务。去首页选择智能体后，会在这里展示任务进度。
+    </p>
+  ) : (
+    <div className="space-y-4">
+      <TaskGroup
+        title="任务中"
+        empty="当前项目没有进行中任务"
+        tasks={activeTasks}
+        onOpenTask={onOpenTask}
+        onRerunTask={onRerunTask}
       />
-    </label>
+      <TaskGroup
+        title="已完成"
+        empty="当前项目还没有完成任务"
+        tasks={completedTasks}
+        onOpenTask={onOpenTask}
+        onRerunTask={onRerunTask}
+      />
+    </div>
   );
 }
 
-function TextArea({
-  label,
-  value,
-  onChange,
+function TaskGroup({
+  title,
+  empty,
+  tasks,
+  onOpenTask,
+  onRerunTask,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
+  title: string;
+  empty: string;
+  tasks: Task[];
+  onOpenTask: (taskId: string) => void;
+  onRerunTask: (taskId: string) => void;
 }) {
   return (
-    <label className="block">
-      <span className="text-xs font-bold text-black/55">{label}</span>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={3}
-        className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm leading-6 outline-none focus:border-[#14958A]/40 focus:ring-2 focus:ring-[#14958A]/15"
-      />
-    </label>
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-bold text-black/75">{title}</p>
+        <span className="rounded-full bg-[#F2F0ED] px-2.5 py-1 text-[11px] font-semibold text-black/45">
+          {tasks.length}
+        </span>
+      </div>
+      {tasks.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-black/10 bg-[#FCFCFD] px-4 py-5 text-center text-sm text-black/35">
+          {empty}
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {tasks.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              onOpen={() => onOpenTask(task.id)}
+              onRerun={() => onRerunTask(task.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({
+  task,
+  onOpen,
+  onRerun,
+}: {
+  task: Task;
+  onOpen: () => void;
+  onRerun: () => void;
+}) {
+  const queuePosition = task.status === 'queued' ? getQueuePosition(task.id) : 0;
+
+  return (
+    <div className="rounded-xl border border-black/8 bg-[#FCFCFD] px-4 py-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate text-sm font-bold text-black/80">{task.name}</p>
+            <TaskStatusBadge status={task.status} />
+            {queuePosition > 0 ? (
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-semibold text-violet-700">
+                第 {queuePosition} 位
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-black/40">
+            <span>{agentLabel(task.agentType)}</span>
+            <span>{formatTime(task.createdAt)}</span>
+            <span>{formatDuration(task.durationMs)}</span>
+            <span className="font-mono">
+              {task.tokenUsed > 0
+                ? `${task.tokenUsed.toLocaleString('zh-CN')} Token`
+                : formatTokenRange({ min: task.estimatedTokenMin, max: task.estimatedTokenMax })}
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onOpen}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 text-xs font-bold text-black/65 hover:border-black/20"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            查看
+          </button>
+          {task.agentType === 'geo' && (
+            <button
+              type="button"
+              onClick={onRerun}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-black/10 bg-white px-3 text-xs font-bold text-black/65 hover:border-black/20"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              再运行
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

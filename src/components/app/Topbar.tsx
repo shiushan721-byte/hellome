@@ -20,6 +20,7 @@ import {
   getVisibleRecentAgentIds,
   subscribeWorkbenchTabs,
 } from '../../lib/workbenchTabs';
+import RechargeModal from './RechargeModal';
 
 type TopbarProps = {
   variant?: 'app' | 'guest';
@@ -170,6 +171,7 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
     (location.pathname === '/app' || /^\/app\/agents\/[^/]+$/.test(location.pathname));
   const low = isLowBalance(usage);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showRechargeModal, setShowRechargeModal] = useState(false);
   const userButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleLogout = () => {
@@ -235,7 +237,7 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
 
         <button
           type="button"
-          onClick={() => navigate(low ? '/app/usage/recharge' : '/app/usage')}
+          onClick={() => setShowRechargeModal(true)}
           className={`hidden md:inline-flex text-[11px] px-2.5 py-1 rounded-full border font-semibold transition-colors ${
             low
               ? 'border-amber-400 bg-amber-100 text-amber-900 hover:bg-amber-200'
@@ -271,6 +273,7 @@ export default function Topbar({ variant = 'app' }: TopbarProps) {
           />
         </div>
       </div>
+      <RechargeModal open={showRechargeModal} onClose={() => setShowRechargeModal(false)} />
     </header>
   );
 }
